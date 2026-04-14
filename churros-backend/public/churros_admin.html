@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Churros La Esquina</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--kraft:#d4a96a;--kraft-dark:#b8832a;--brown:#3d1c02;--brown-mid:#6b3a1f;--brown-light:#8b5a2b;--cream:#fdf6e3;--cream-dark:#f5e8c8;--red-warm:#8b1a1a;--gold:#c9922a;--paper:#f7edd8;}
+html{scroll-behavior:smooth}
+body{font-family:'Crimson Text',Georgia,serif;background:var(--cream);color:var(--brown);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.6;}
+#login-screen{position:fixed;inset:0;background:var(--brown);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
+.login-box{background:var(--paper);border-radius:16px;border:2px solid var(--kraft);padding:32px 28px;width:100%;max-width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.35);}
+.login-logo{width:72px;height:72px;border-radius:50%;border:3px solid var(--kraft);object-fit:cover;margin:0 auto 12px;display:block;background:var(--cream-dark);}
+.login-title{font-family:'IM Fell English SC',serif;font-size:22px;color:var(--brown);margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--brown-light);font-style:italic;margin-bottom:20px;}
+.login-input{width:100%;background:var(--cream);border:1.5px solid var(--kraft);border-radius:8px;padding:10px 13px;font-family:'Crimson Text',serif;font-size:15px;color:var(--brown);outline:none;margin-bottom:10px;}
+.login-input:focus{border-color:var(--brown);}
+.login-btn{width:100%;background:var(--brown);color:var(--kraft);border:none;border-radius:9px;padding:12px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.04em;margin-top:4px;}
+.login-btn:hover{background:var(--brown-mid);}
+.login-error{color:var(--red-warm);font-size:12px;font-style:italic;margin-top:8px;min-height:18px;}
+.app-wrap{max-width:800px;margin:0 auto;position:relative;z-index:1;padding-bottom:40px;}
+.admin-header{background:var(--brown);padding:0;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--kraft);box-shadow:0 3px 12px rgba(61,28,2,.4);}
+.admin-header-inner{display:flex;align-items:center;gap:10px;padding:10px 14px;max-width:800px;margin:0 auto;}
+.admin-logo{width:42px;height:42px;border-radius:50%;border:2px solid var(--kraft);object-fit:cover;flex-shrink:0;background:var(--brown-mid);}
+.admin-title-wrap{flex:1}
+.admin-title{font-family:'IM Fell English SC',serif;font-size:17px;color:#fff;letter-spacing:.03em;}
+.admin-sub{font-size:11px;color:var(--kraft);font-style:italic;}
+.logout-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 11px;font-family:'Crimson Text',serif;font-size:12px;cursor:pointer;}
+.logout-btn:hover{background:rgba(255,255,255,.2);}
+.nav-tabs{display:flex;background:var(--brown);border-bottom:3px solid var(--kraft);overflow-x:auto;scrollbar-width:none;}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tab{flex-shrink:0;padding:10px 13px;font-family:'Playfair Display',serif;font-size:12px;color:rgba(212,169,106,.7);cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-3px;transition:all .2s;}
+.nav-tab.on{color:#fff;border-color:var(--kraft);}
+.panel{display:none;padding:12px;}
+.panel.active{display:block;}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+@media(min-width:560px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
+.stat-card{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:14px 12px;text-align:center;}
+.stat-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--brown);}
+.stat-lbl{font-size:11px;color:var(--brown-light);font-style:italic;margin-top:3px;}
+.stat-icon{font-size:20px;margin-bottom:4px;}
+.order-card{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:13px;margin-bottom:10px;}
+.order-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+.order-id{font-family:'IM Fell English SC',serif;font-size:11px;color:var(--brown-light);letter-spacing:.05em;}
+.order-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--brown);flex:1;}
+.order-time{font-size:11px;color:var(--brown-light);font-style:italic;margin-bottom:5px;}
+.order-badge{font-size:10px;padding:3px 9px;border-radius:20px;font-family:'Crimson Text',serif;font-weight:600;}
+.badge-new{background:#fef9c3;color:#713f12;border:1px solid #fde047;}
+.badge-prep{background:#dbeafe;color:#1e3a8a;border:1px solid #93c5fd;}
+.badge-ready{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+.badge-done{background:var(--cream-dark);color:var(--brown-light);border:1px solid var(--kraft);}
+.order-items{font-size:13px;color:var(--brown);line-height:1.6;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--kraft);}
+.order-delivery{font-size:12px;font-style:italic;color:var(--brown-light);margin-bottom:3px;}
+.order-total{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--red-warm);}
+.order-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.btn-sm{padding:5px 12px;border-radius:7px;font-family:'Crimson Text',serif;font-size:12px;cursor:pointer;border:1.5px solid;font-weight:600;}
+.btn-prep{background:#dbeafe;color:#1e3a8a;border-color:#93c5fd;}
+.btn-ready{background:#dcfce7;color:#166534;border-color:#86efac;}
+.btn-done{background:var(--cream-dark);color:var(--brown-light);border-color:var(--kraft);}
+.btn-del{background:#fff0f0;color:#b91c1c;border-color:#fca5a5;}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.ap-item{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.ap-thumb{width:52px;height:52px;border-radius:9px;border:1.5px solid var(--kraft);flex-shrink:0;background:var(--cream-dark);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--brown-light);overflow:hidden;}
+.ap-thumb img{width:100%;height:100%;object-fit:cover;}
+.ap-inf{flex:1;min-width:0;}
+.ap-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--brown);}
+.ap-meta{font-size:11px;color:var(--brown-light);font-style:italic;margin-top:2px;}
+.ap-stock{font-size:12px;font-weight:600;margin-top:3px;}
+.stock-ok{color:#166534;}.stock-low{color:#b45309;}.stock-out{color:var(--red-warm);}
+.edit-btn{background:var(--cream-dark);border:1px solid var(--kraft);border-radius:7px;padding:6px 11px;font-family:'Crimson Text',serif;font-size:12px;cursor:pointer;color:var(--brown);flex-shrink:0;}
+.edit-btn:hover{background:var(--kraft);color:#fff;}
+.add-btn{width:100%;background:var(--cream);border:2px dashed var(--brown);border-radius:10px;padding:13px;font-family:'Playfair Display',serif;font-size:14px;cursor:pointer;color:var(--brown);font-weight:600;margin-top:4px;margin-bottom:16px;}
+.slot-item{background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.slot-text{flex:1;font-size:14px;color:var(--brown);}
+.slot-type-lbl{font-size:11px;color:var(--brown-light);font-style:italic;}
+.slot-toggle{background:var(--cream-dark);border:1px solid var(--kraft);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Crimson Text',serif;}
+.slot-toggle.active{background:#dcfce7;border-color:#86efac;color:#166534;}
+.slot-del{background:none;border:none;color:#b91c1c;font-size:16px;cursor:pointer;padding:2px 6px;}
+.flabel{font-family:'IM Fell English SC',serif;font-size:11px;letter-spacing:.07em;color:var(--brown-light);margin-bottom:5px;display:block;}
+.flabel small{font-family:'Crimson Text',serif;font-style:italic;letter-spacing:0;font-size:10px;color:var(--kraft-dark);}
+.finput{width:100%;background:var(--cream);border:1.5px solid var(--kraft);border-radius:7px;padding:9px 11px;font-family:'Crimson Text',serif;font-size:14px;color:var(--brown);outline:none;}
+.finput:focus{border-color:var(--brown);box-shadow:0 0 0 3px rgba(61,28,2,.08)}
+.ftextarea{width:100%;background:var(--cream);border:1.5px solid var(--kraft);border-radius:7px;padding:9px 11px;font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);outline:none;resize:vertical;min-height:60px;line-height:1.5;}
+.ftextarea:focus{border-color:var(--brown);}
+.fbox{background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:13px;margin-bottom:12px;box-shadow:1px 2px 6px rgba(61,28,2,.08);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.img-upload-area{border:2px dashed var(--kraft-dark);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--cream-dark);margin-bottom:10px;position:relative;}
+.img-upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.img-preview{width:100%;max-height:150px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:none;}
+.img-upload-label{font-style:italic;color:var(--brown-light);font-size:13px;}
+.img-remove-btn{display:none;background:var(--red-warm);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'Crimson Text',serif;margin-top:4px;}
+.savebtn{width:100%;background:var(--brown);color:var(--kraft);border:none;border-radius:9px;padding:12px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;letter-spacing:.04em;}
+.savebtn:hover{background:var(--brown-mid);}
+.delbtn{width:100%;background:var(--cream);border:1.5px solid #fca5a5;border-radius:9px;padding:10px;font-family:'Crimson Text',serif;font-size:13px;cursor:pointer;color:#b91c1c;margin-top:6px;}
+.cancelbtn{width:100%;background:none;border:2px solid var(--brown);border-radius:9px;padding:10px;cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;color:var(--brown);font-weight:600;margin-top:6px;}
+.opts2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px;margin-bottom:10px;}
+.opt{border:1.5px solid var(--kraft);border-radius:9px;padding:9px 6px;cursor:pointer;text-align:center;background:var(--cream);transition:all .15s;}
+.opt.on{border-color:var(--brown);background:var(--cream-dark);}
+.opt .oi{font-size:17px;margin-bottom:3px;}.opt .ol{font-family:'Crimson Text',serif;font-size:12px;font-weight:600;color:var(--brown);}
+.logo-section{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.logo-preview-box{width:60px;height:60px;border-radius:50%;border:2.5px solid var(--kraft);background:var(--cream-dark);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.logo-preview-box img{width:100%;height:100%;object-fit:cover;}
+.logo-upload-btn{flex:1;background:var(--cream-dark);border:1.5px dashed var(--kraft-dark);border-radius:9px;padding:10px;cursor:pointer;font-family:'Crimson Text',serif;font-size:13px;color:var(--brown-light);text-align:center;font-style:italic;position:relative;}
+.logo-upload-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.modal-overlay{position:fixed;inset:0;background:rgba(61,28,2,.55);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--paper);border-radius:14px;width:100%;max-width:440px;padding:20px;margin-top:10px;margin-bottom:10px;border:2px solid var(--kraft);}
+.modal-box h3{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--brown);margin-bottom:14px;}
+.sec-label{font-family:'IM Fell English SC',serif;font-size:11px;letter-spacing:.12em;color:var(--brown-light);padding:10px 0 6px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--kraft);opacity:.4;}
+.chart-bar-wrap{margin-bottom:8px;}
+.chart-label{display:flex;justify-content:space-between;font-size:12px;color:var(--brown-light);margin-bottom:3px;}
+.chart-bar{height:10px;background:var(--cream-dark);border-radius:5px;overflow:hidden;}
+.chart-fill{height:100%;background:var(--kraft-dark);border-radius:5px;transition:width .5s;}
+.ornament{text-align:center;padding:8px;color:var(--kraft);font-size:13px;letter-spacing:.2em;}
+.empty-state{text-align:center;padding:28px 20px;color:var(--brown-light);font-style:italic;font-size:14px;}
+.field-mb{margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <img class="login-logo" id="login-logo" alt="Logo" onerror="this.style.display='none'">
+    <div class="login-title">Churros La Esquina</div>
+    <div class="login-sub">Panel de Administración</div>
+    <input class="login-input" type="text" id="login-user" placeholder="Usuario" autocomplete="username">
+    <input class="login-input" type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div class="app-wrap" id="admin-app" style="display:none">
+  <div class="admin-header">
+    <div class="admin-header-inner">
+      <img class="admin-logo" id="admin-logo-img" alt="Logo" onerror="this.style.display='none'">
+      <div class="admin-title-wrap">
+        <div class="admin-title">⚙ Administración</div>
+        <div class="admin-sub" id="admin-sub-name">Churros La Esquina</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab on" onclick="showPanel('stats')" id="ntab-stats">📊 Stats</div>
+      <div class="nav-tab" onclick="showPanel('orders')" id="ntab-orders">📋 Pedidos</div>
+      <div class="nav-tab" onclick="showPanel('products')" id="ntab-products">🥐 Productos</div>
+      <div class="nav-tab" onclick="showPanel('slots')" id="ntab-slots">🕐 Horarios</div>
+      <div class="nav-tab" onclick="showPanel('config')" id="ntab-config">⚙ Config</div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="panel active" id="panel-stats">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+      <div class="stat-grid" id="stat-grid"></div>
+      <div class="sec-label">Productos más pedidos</div>
+      <div id="top-products-chart"></div>
+      <div class="sec-label">Últimos pedidos</div>
+      <div id="recent-orders-list"></div>
+      <div class="sec-label">Métodos de pago</div>
+      <div id="payment-chart"></div>
+      <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="panel" id="panel-orders">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+      <div class="filter-bar">
+        <button class="btn-sm" style="background:var(--cream-dark);border:1.5px solid var(--kraft);color:var(--brown);font-weight:700" onclick="filterOrders('all')" id="filter-all">Todos</button>
+        <button class="btn-sm badge-new" onclick="filterOrders('new')" id="filter-new">Nuevos</button>
+        <button class="btn-sm badge-prep" onclick="filterOrders('prep')" id="filter-prep">Preparando</button>
+        <button class="btn-sm badge-ready" onclick="filterOrders('ready')" id="filter-ready">Listos</button>
+        <button class="btn-sm badge-done" onclick="filterOrders('done')" id="filter-done">Entregados</button>
+      </div>
+      <div id="orders-list"></div>
+      <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
+    </div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div class="panel" id="panel-products">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+      <div id="admin-list"></div>
+      <button class="add-btn" onclick="openModal(null)">+ Agregar nuevo producto</button>
+    </div>
+  </div>
+
+  <!-- SLOTS -->
+  <div class="panel" id="panel-slots">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Nueva franja horaria</div>
+        <div class="row2" style="margin-bottom:8px">
+          <div><label class="flabel">Desde</label><input class="finput" type="time" id="slot-from" value="09:00"></div>
+          <div><label class="flabel">Hasta</label><input class="finput" type="time" id="slot-to" value="10:00"></div>
+        </div>
+        <label class="flabel">Tipo</label>
+        <select class="finput" id="slot-type" style="margin-bottom:8px">
+          <option value="both">Retiro y envío</option>
+          <option value="pickup">Solo retiro</option>
+          <option value="delivery">Solo envío</option>
+        </select>
+        <button class="savebtn" style="margin-top:0" onclick="addSlot()">Agregar franja</button>
+      </div>
+      <div class="sec-label">Franjas configuradas</div>
+      <div id="slots-list"></div>
+      <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="panel" id="panel-config">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+
+      <!-- Logo & Access -->
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Logo del local</div>
+        <div class="logo-section">
+          <div class="logo-preview-box">
+            <img id="cfg-logo-preview" alt="Logo" style="display:none">
+            <span id="cfg-logo-placeholder" style="font-size:22px">🏪</span>
+          </div>
+          <div class="logo-upload-btn">
+            <input type="file" accept="image/*" id="cfg-logo-input" onchange="handleLogoUpload(event)">
+            Cambiar logo (imagen)
+          </div>
+        </div>
+        <div class="sec-label">Acceso administrador</div>
+        <label class="flabel">Usuario</label>
+        <input class="finput field-mb" id="cfg-admin-user" placeholder="admin">
+        <label class="flabel">Nueva contraseña <small>(dejar vacío para no cambiar)</small></label>
+        <input class="finput field-mb" type="password" id="cfg-admin-pass" placeholder="Nueva contraseña">
+      </div>
+
+      <!-- Local info -->
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Datos del local</div>
+        <label class="flabel">Nombre del local</label>
+        <input class="finput field-mb" id="cfg-name">
+        <label class="flabel">WhatsApp del local <small>(para comprobantes)</small></label>
+        <input class="finput field-mb" id="cfg-whatsapp" placeholder="Ej: 5493364123456">
+        <label class="flabel">Estado</label>
+        <div class="opts2">
+          <div class="opt on" id="cfg-open" onclick="setCfgStatus('open')"><div class="oi">🟢</div><div class="ol">Abierto</div></div>
+          <div class="opt" id="cfg-closed" onclick="setCfgStatus('closed')"><div class="oi">🔴</div><div class="ol">Cerrado</div></div>
+        </div>
+        <label class="flabel">Costo de envío ($)</label>
+        <input class="finput field-mb" id="cfg-envio" type="number">
+        <label class="flabel">Alias transferencia</label>
+        <input class="finput field-mb" id="cfg-alias">
+        <label class="flabel">Clave Web3Forms <small>(para recibir comprobantes por email)</small></label>
+        <input class="finput field-mb" id="cfg-web3forms-key" placeholder="Tu access_key de web3forms.com">
+        <label class="flabel">Link Mercado Pago</label>
+        <input class="finput" id="cfg-mp">
+      </div>
+
+      <!-- Texts: header & hero -->
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Textos · Encabezado y Hero</div>
+        <label class="flabel">Tagline del hero <small>(ej: Artesanales desde siempre)</small></label>
+        <input class="finput field-mb" id="cfg-tagline">
+        <label class="flabel">Estado abierto · subtítulo del header</label>
+        <input class="finput field-mb" id="cfg-txt-abierto">
+        <label class="flabel">Estado cerrado · subtítulo del header</label>
+        <input class="finput field-mb" id="cfg-txt-cerrado">
+        <label class="flabel">Banner de local cerrado</label>
+        <textarea class="ftextarea field-mb" id="cfg-txt-banner-cerrado"></textarea>
+        <label class="flabel">Texto local cerrado (en el carrito)</label>
+        <textarea class="ftextarea" id="cfg-txt-cerrado-inline"></textarea>
+      </div>
+
+      <!-- Texts: menu & cart -->
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Textos · Menú y Carrito</div>
+        <label class="flabel">Carrito vacío</label>
+        <input class="finput field-mb" id="cfg-txt-carrito-vacio">
+        <label class="flabel">Etiqueta sin stock en la card</label>
+        <input class="finput field-mb" id="cfg-txt-sin-stock">
+        <label class="flabel">Aviso stock bajo <small>(usá {n} para la cantidad)</small></label>
+        <input class="finput field-mb" id="cfg-txt-stock-bajo">
+        <label class="flabel">Texto del botón confirmar pedido</label>
+        <input class="finput" id="cfg-txt-confirmar-btn">
+      </div>
+
+      <!-- Texts: confirmation messages -->
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Textos · Mensajes de confirmación</div>
+        <p style="font-size:11px;color:var(--brown-light);font-style:italic;margin-bottom:10px;">Variables: <strong>{nombre}</strong> {id} {total} {alias} {momento} {horario}</p>
+        <label class="flabel">Mensaje · Efectivo</label>
+        <textarea class="ftextarea field-mb" id="cfg-txt-msg-efectivo"></textarea>
+        <label class="flabel">Mensaje · Transferencia</label>
+        <textarea class="ftextarea field-mb" id="cfg-txt-msg-transferencia"></textarea>
+        <label class="flabel">Mensaje · Mercado Pago</label>
+        <textarea class="ftextarea" id="cfg-txt-msg-mp"></textarea>
+      </div>
+
+      <button class="savebtn" onclick="saveCfg()">Guardar toda la configuración</button>
+      <div class="ornament" style="margin-top:16px">· · · ✦ · · ·</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add/Edit Product -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modal-title">Nuevo producto</h3>
+    <label class="flabel">Foto del producto</label>
+    <div class="img-upload-area">
+      <input type="file" accept="image/*" id="img-file-input" onchange="handleImgUpload(event)">
+      <img id="img-preview" class="img-preview" alt="Vista previa">
+      <div class="img-upload-label" id="img-upload-label">📷 Subir foto<br><small>Tocá para elegir una imagen</small></div>
+      <button class="img-remove-btn" id="img-remove-btn" onclick="removeImg(event)">✕ Quitar foto</button>
+    </div>
+    <label class="flabel">Nombre</label>
+    <input class="finput field-mb" id="m-name" placeholder="Ej: Churros con chocolate">
+    <label class="flabel">Descripción</label>
+    <input class="finput field-mb" id="m-desc" placeholder="Porción de 6 churros...">
+    <div class="row2" style="margin-bottom:10px">
+      <div><label class="flabel">Precio ($)</label><input class="finput" id="m-price" type="number" placeholder="1500"></div>
+      <div><label class="flabel">Categoría</label>
+        <select class="finput" id="m-cat">
+          <option>Clásicos</option><option>Especiales</option><option>Combos</option><option>Bebidas</option>
+        </select>
+      </div>
+    </div>
+    <label class="flabel">Stock</label>
+    <div class="row2" style="margin-bottom:10px">
+      <input class="finput" id="m-stock" type="number" placeholder="Cantidad disponible">
+      <div style="display:flex;align-items:center;gap:6px;padding-top:4px">
+        <input type="checkbox" id="m-unlimited" onchange="toggleUnlimited()" style="width:18px;height:18px;cursor:pointer">
+        <label for="m-unlimited" style="font-size:13px;cursor:pointer;color:var(--brown-light)">Sin límite</label>
+      </div>
+    </div>
+    <button class="savebtn" onclick="saveProduct()">Guardar producto</button>
+    <button class="delbtn" id="modal-del" onclick="deleteProduct()" style="display:none">Eliminar producto</button>
+    <button class="cancelbtn" onclick="closeModal()">Cancelar</button>
+  </div>
+</div>
+
+<script>
+const LS={get(k,d=null){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
+function defProducts(){return[{id:1,img:'',name:'Churros clásicos',desc:'Porción de 6, con azúcar y canela',price:1200,cat:'Clásicos',stock:0,unlimited:true},{id:2,img:'',name:'Con chocolate',desc:'6 churros + taza de chocolate caliente',price:1800,cat:'Clásicos',stock:0,unlimited:true},{id:3,img:'',name:'Rellenos DDL',desc:'6 churros rellenos de dulce de leche',price:2000,cat:'Especiales',stock:0,unlimited:true},{id:4,img:'',name:'Combo café',desc:'3 churros con café con leche',price:1500,cat:'Clásicos',stock:0,unlimited:true},{id:5,img:'',name:'Con helado',desc:'4 churros con 2 bochas a elección',price:2200,cat:'Especiales',stock:0,unlimited:true},{id:6,img:'',name:'Combo familiar',desc:'12 churros + 2 chocolates calientes',price:3500,cat:'Combos',stock:0,unlimited:true}];}
+function defCfg(){return{name:'Churros La Esquina',open:true,envio:500,alias:'churros.laesquina',mp:'https://mpago.la/demo',logo:'',adminUser:'admin',adminPass:'admin123',whatsapp:'',web3formsKey:'',tagline:'Artesanales desde siempre',txtAbierto:'Abierto · Envíos disponibles',txtCerrado:'Cerrado por hoy',txtBannerCerrado:'🔒 El local está cerrado por hoy. Podés ver el menú pero no realizar pedidos.',txtCarritoVacio:'Tu carrito está vacío. ¡Elegí tus churros desde el menú!',txtSinStock:'Sin stock',txtStockBajo:'Últimas {n} unidades',txtConfirmarBtn:'Confirmar pedido',txtMsgEfectivo:'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',txtMsgTransferencia:'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',txtMsgMP:'Pedido #{id}{horario}',txtCerradoInline:'🔒 El local está cerrado. No se pueden hacer pedidos en este momento.'};}
+function defSlots(){return[{id:1,from:'09:00',to:'11:00',type:'both',active:true},{id:2,from:'11:00',to:'13:00',type:'both',active:true},{id:3,from:'16:00',to:'19:00',type:'both',active:true}];}
+function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR')}
+
+// Ensure cfg has all keys
+function fullCfg(){const c=LS.get('churros_cfg',defCfg());const d=defCfg();Object.keys(d).forEach(k=>{if(c[k]===undefined)c[k]=d[k];});return c;}
+
+(function(){const cfg=fullCfg();if(cfg.logo)document.getElementById('login-logo').src=cfg.logo;})();
+
+function doLogin(){
+  const user=document.getElementById('login-user').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const cfg=fullCfg();
+  if(user===cfg.adminUser&&pass===cfg.adminPass){document.getElementById('login-screen').style.display='none';document.getElementById('admin-app').style.display='block';initAdmin();}
+  else{document.getElementById('login-error').textContent='Usuario o contraseña incorrectos.';document.getElementById('login-pass').value='';}
+}
+function doLogout(){document.getElementById('login-screen').style.display='flex';document.getElementById('admin-app').style.display='none';document.getElementById('login-pass').value='';document.getElementById('login-error').textContent='';}
+
+function initAdmin(){
+  const cfg=fullCfg();
+  if(cfg.logo){document.getElementById('admin-logo-img').src=cfg.logo;document.getElementById('cfg-logo-preview').src=cfg.logo;document.getElementById('cfg-logo-preview').style.display='block';document.getElementById('cfg-logo-placeholder').style.display='none';}
+  document.getElementById('admin-sub-name').textContent=cfg.name||'Churros La Esquina';
+  // Fill all config fields
+  const fill=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+  fill('cfg-name',cfg.name);fill('cfg-whatsapp',cfg.whatsapp);fill('cfg-envio',cfg.envio);fill('cfg-alias',cfg.alias);fill('cfg-mp',cfg.mp);fill('cfg-admin-user',cfg.adminUser);
+  fill('cfg-tagline',cfg.tagline);fill('cfg-txt-abierto',cfg.txtAbierto);fill('cfg-txt-cerrado',cfg.txtCerrado);
+  fill('cfg-txt-banner-cerrado',cfg.txtBannerCerrado);fill('cfg-txt-cerrado-inline',cfg.txtCerradoInline);
+  fill('cfg-txt-carrito-vacio',cfg.txtCarritoVacio);fill('cfg-txt-sin-stock',cfg.txtSinStock);fill('cfg-txt-stock-bajo',cfg.txtStockBajo);fill('cfg-txt-confirmar-btn',cfg.txtConfirmarBtn);
+  fill('cfg-txt-msg-efectivo',cfg.txtMsgEfectivo);fill('cfg-txt-msg-transferencia',cfg.txtMsgTransferencia);fill('cfg-txt-msg-mp',cfg.txtMsgMP);
+  document.getElementById('cfg-open').classList.toggle('on',cfg.open!==false);
+  document.getElementById('cfg-closed').classList.toggle('on',cfg.open===false);
+  renderStats();renderOrders();renderProductList();renderSlots();
+}
+
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('ntab-'+id).classList.add('on');
+  if(id==='stats')renderStats();if(id==='orders')renderOrders();
+  if(id==='products')renderProductList();if(id==='slots')renderSlots();
+}
+
+// STATS
+function renderStats(){
+  const orders=LS.get('churros_orders',[]);
+  const done=orders.filter(o=>o.status==='done');
+  const today=new Date().toDateString();
+  const todayIncome=orders.filter(o=>new Date(o.ts).toDateString()===today&&o.status==='done').reduce((a,o)=>a+o.total,0);
+  const totalIncome=done.reduce((a,o)=>a+o.total,0);
+  const pending=orders.filter(o=>o.status!=='done').length;
+  document.getElementById('stat-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-val">${orders.length}</div><div class="stat-lbl">Pedidos totales</div></div>
+    <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-val">${pending}</div><div class="stat-lbl">Pendientes</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val">${fmt(todayIncome)}</div><div class="stat-lbl">Ingresos hoy</div></div>
+    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val">${fmt(totalIncome)}</div><div class="stat-lbl">Total cobrado</div></div>`;
+  const pc={};orders.forEach(o=>{(o.items||[]).forEach(it=>{pc[it.name]=(pc[it.name]||0)+it.qty;});});
+  const sorted=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const mx=sorted.length?sorted[0][1]:1;
+  document.getElementById('top-products-chart').innerHTML=sorted.length?sorted.map(([n,q])=>`<div class="chart-bar-wrap"><div class="chart-label"><span>${n}</span><span>${q} uds.</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(q/mx*100)}%"></div></div></div>`).join(''):'<div class="empty-state">Sin datos aún.</div>';
+  const recent=[...orders].reverse().slice(0,5);
+  document.getElementById('recent-orders-list').innerHTML=recent.length?recent.map(o=>`<div class="order-card" style="margin-bottom:8px"><div class="order-header"><span class="order-id">#${o.id}</span><span class="order-name">${o.customer}</span><span class="order-total">${fmt(o.total)}</span><span class="order-badge badge-${o.status}">${statusLabel(o.status)}</span></div><div class="order-delivery">${o.delivery==='delivery'?'🛵 Envío':'🏪 Retiro'}${o.slot?' · ⏰ '+o.slot:''}</div></div>`).join(''):'<div class="empty-state">Sin pedidos aún.</div>';
+  const pmt={efectivo:0,transferencia:0,mercadopago:0};done.forEach(o=>{if(o.payment&&pmt[o.payment]!==undefined)pmt[o.payment]++;});
+  const pt=done.length||1;
+  document.getElementById('payment-chart').innerHTML=`
+    <div class="chart-bar-wrap"><div class="chart-label"><span>💵 Efectivo</span><span>${pmt.efectivo}</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(pmt.efectivo/pt*100)}%"></div></div></div>
+    <div class="chart-bar-wrap"><div class="chart-label"><span>📲 Transferencia</span><span>${pmt.transferencia}</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(pmt.transferencia/pt*100)}%"></div></div></div>
+    <div class="chart-bar-wrap"><div class="chart-label"><span>💳 Mercado Pago</span><span>${pmt.mercadopago}</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(pmt.mercadopago/pt*100)}%"></div></div></div>`;
+}
+function statusLabel(s){return{new:'Nuevo',prep:'Preparando',ready:'Listo',done:'Entregado'}[s]||s;}
+
+// ORDERS
+let orderFilter='all';
+function filterOrders(f){orderFilter=f;['all','new','prep','ready','done'].forEach(id=>{const el=document.getElementById('filter-'+id);if(el)el.style.fontWeight=id===f?'700':'400';});renderOrders();}
+function renderOrders(){
+  let orders=LS.get('churros_orders',[]);
+  if(orderFilter!=='all')orders=orders.filter(o=>o.status===orderFilter);
+  orders=[...orders].reverse();
+  const sb=s=>({new:'badge-new',prep:'badge-prep',ready:'badge-ready',done:'badge-done'}[s]||'');
+  document.getElementById('orders-list').innerHTML=orders.length?orders.map(o=>{
+    const items=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(', ')||'–';
+    const addr=o.address?' · '+o.address:'';
+    const gps=o.gps?` · 📍 GPS: ${o.gps}`:'';
+    const slot=o.slot?' · ⏰ '+o.slot:'';
+    const phone=o.phone?'<br>📱 '+o.phone:'';
+    const dt=new Date(o.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return`<div class="order-card">
+      <div class="order-header"><span class="order-id">#${o.id}</span><span class="order-name">${o.customer}</span><span class="order-badge ${sb(o.status)}">${statusLabel(o.status)}</span></div>
+      <div class="order-time">${dt}${slot}</div>
+      <div class="order-items" style="margin-top:6px">${items}</div>
+      <div class="order-delivery">${o.delivery==='delivery'?'🛵 Envío'+addr+gps:'🏪 Retiro'}${phone}</div>
+      <div class="order-delivery">💳 ${'efectivo'===o.payment?'Efectivo':'transferencia'===o.payment?'Transferencia':'Mercado Pago'}</div>
+      <div class="order-total">${fmt(o.total)}</div>
+      <div class="order-actions">
+        ${o.status==='new'?`<button class="btn-sm btn-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparar</button>`:''}
+        ${o.status==='prep'?`<button class="btn-sm btn-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
+        ${o.status==='ready'?`<button class="btn-sm btn-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
+        <button class="btn-sm btn-del" onclick="deleteOrder(${o.id})">✕</button>
+      </div>
+    </div>`;}).join(''):'<div class="empty-state">No hay pedidos con este filtro.</div>';
+}
+function setOrderStatus(id,status){const orders=LS.get('churros_orders',[]);const o=orders.find(x=>x.id===id);if(o){o.status=status;LS.set('churros_orders',orders);}renderOrders();renderStats();}
+function deleteOrder(id){if(!confirm('¿Eliminar este pedido?'))return;LS.set('churros_orders',LS.get('churros_orders',[]).filter(o=>o.id!==id));renderOrders();renderStats();}
+
+// PRODUCTS
+let editId=null,currentImg='';
+function renderProductList(){
+  const products=LS.get('churros_products',defProducts());
+  document.getElementById('admin-list').innerHTML=products.map(p=>{
+    const sl=p.unlimited?'<span class="ap-stock stock-ok">∞ Sin límite</span>':p.stock>5?`<span class="ap-stock stock-ok">Stock: ${p.stock}</span>`:p.stock>0?`<span class="ap-stock stock-low">⚠ Stock bajo: ${p.stock}</span>`:'<span class="ap-stock stock-out">✕ Sin stock</span>';
+    return`<div class="ap-item"><div class="ap-thumb">${p.img?`<img src="${p.img}" alt="">`:'📷'}</div><div class="ap-inf"><div class="ap-name">${p.name}</div><div class="ap-meta">${p.cat} · ${fmt(p.price)}</div>${sl}</div><button class="edit-btn" onclick="openModal(${p.id})">Editar</button></div>`;
+  }).join('');
+}
+function openModal(id){
+  editId=id;const products=LS.get('churros_products',defProducts());const p=id?products.find(x=>x.id===id):null;currentImg=p&&p.img?p.img:'';
+  document.getElementById('modal-title').textContent=p?'Editar producto':'Nuevo producto';
+  document.getElementById('m-name').value=p?p.name:'';document.getElementById('m-desc').value=p?p.desc:'';
+  document.getElementById('m-price').value=p?p.price:'';document.getElementById('m-cat').value=p?p.cat:'Clásicos';
+  const unl=p?p.unlimited!==false:true;
+  document.getElementById('m-unlimited').checked=unl;document.getElementById('m-stock').value=p&&!unl?p.stock:'';document.getElementById('m-stock').disabled=unl;
+  document.getElementById('modal-del').style.display=p?'':'none';
+  const prev=document.getElementById('img-preview'),lbl=document.getElementById('img-upload-label'),rb=document.getElementById('img-remove-btn');
+  if(currentImg){prev.src=currentImg;prev.style.display='block';lbl.style.display='none';rb.style.display='inline-block';}
+  else{prev.src='';prev.style.display='none';lbl.style.display='block';rb.style.display='none';}
+  document.getElementById('img-file-input').value='';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editId=null;currentImg='';}
+document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+function toggleUnlimited(){const c=document.getElementById('m-unlimited').checked;document.getElementById('m-stock').disabled=c;if(c)document.getElementById('m-stock').value='';}
+function handleImgUpload(event){const file=event.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){currentImg=e.target.result;document.getElementById('img-preview').src=currentImg;document.getElementById('img-preview').style.display='block';document.getElementById('img-upload-label').style.display='none';document.getElementById('img-remove-btn').style.display='inline-block';};r.readAsDataURL(file);}
+function removeImg(e){e.preventDefault();e.stopPropagation();currentImg='';document.getElementById('img-preview').src='';document.getElementById('img-preview').style.display='none';document.getElementById('img-upload-label').style.display='block';document.getElementById('img-remove-btn').style.display='none';document.getElementById('img-file-input').value='';}
+function saveProduct(){
+  const name=document.getElementById('m-name').value.trim(),desc=document.getElementById('m-desc').value.trim();
+  const price=parseInt(document.getElementById('m-price').value)||0,cat=document.getElementById('m-cat').value;
+  const unlimited=document.getElementById('m-unlimited').checked,stock=unlimited?0:(parseInt(document.getElementById('m-stock').value)||0);
+  if(!name||!price){alert('Completá nombre y precio');return}
+  let products=LS.get('churros_products',defProducts());
+  if(editId){const p=products.find(x=>x.id===editId);if(p)Object.assign(p,{img:currentImg,name,desc,price,cat,stock,unlimited});}
+  else products.push({id:Date.now(),img:currentImg,name,desc,price,cat,stock,unlimited});
+  LS.set('churros_products',products);closeModal();renderProductList();
+}
+function deleteProduct(){if(!confirm('¿Eliminar este producto?'))return;LS.set('churros_products',LS.get('churros_products',defProducts()).filter(p=>p.id!==editId));closeModal();renderProductList();}
+
+// SLOTS
+function renderSlots(){
+  const slots=LS.get('churros_slots',defSlots());
+  const tl={both:'Retiro y envío',pickup:'Solo retiro',delivery:'Solo envío'};
+  document.getElementById('slots-list').innerHTML=slots.length?slots.map(s=>`<div class="slot-item"><div><div class="slot-text">⏰ ${s.from} – ${s.to}</div><div class="slot-type-lbl">${tl[s.type]||s.type}</div></div><button class="slot-toggle ${s.active?'active':''}" onclick="toggleSlot(${s.id})">${s.active?'✓ Activo':'Inactivo'}</button><button class="slot-del" onclick="deleteSlot(${s.id})">✕</button></div>`).join(''):'<div class="empty-state">No hay franjas. Agregá una arriba.</div>';
+}
+function addSlot(){
+  const from=document.getElementById('slot-from').value,to=document.getElementById('slot-to').value,type=document.getElementById('slot-type').value;
+  if(!from||!to){alert('Completá los horarios');return}
+  const slots=LS.get('churros_slots',defSlots());slots.push({id:Date.now(),from,to,type,active:true});LS.set('churros_slots',slots);renderSlots();
+}
+function toggleSlot(id){const slots=LS.get('churros_slots',defSlots());const s=slots.find(x=>x.id===id);if(s)s.active=!s.active;LS.set('churros_slots',slots);renderSlots();}
+function deleteSlot(id){if(!confirm('¿Eliminar esta franja?'))return;LS.set('churros_slots',LS.get('churros_slots',defSlots()).filter(s=>s.id!==id));renderSlots();}
+
+// CONFIG
+function setCfgStatus(s){const cfg=fullCfg();cfg.open=s==='open';LS.set('churros_cfg',cfg);document.getElementById('cfg-open').classList.toggle('on',s==='open');document.getElementById('cfg-closed').classList.toggle('on',s==='closed');}
+function handleLogoUpload(event){const file=event.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){const data=e.target.result;const cfg=fullCfg();cfg.logo=data;LS.set('churros_cfg',cfg);['admin-logo-img','login-logo'].forEach(id=>{const el=document.getElementById(id);if(el)el.src=data;});document.getElementById('cfg-logo-preview').src=data;document.getElementById('cfg-logo-preview').style.display='block';document.getElementById('cfg-logo-placeholder').style.display='none';};r.readAsDataURL(file);}
+
+function gv(id){const el=document.getElementById(id);return el?el.value:'';}
+function saveCfg(){
+  const cfg=fullCfg();
+  cfg.name=gv('cfg-name')||cfg.name;cfg.whatsapp=gv('cfg-whatsapp');cfg.envio=parseInt(gv('cfg-envio'))||500;
+  cfg.alias=gv('cfg-alias');cfg.mp=gv('cfg-mp');cfg.web3formsKey=gv('cfg-web3forms-key');
+  const nu=gv('cfg-admin-user').trim(),np=gv('cfg-admin-pass');
+  if(nu)cfg.adminUser=nu;if(np)cfg.adminPass=np;
+  cfg.tagline=gv('cfg-tagline');cfg.txtAbierto=gv('cfg-txt-abierto');cfg.txtCerrado=gv('cfg-txt-cerrado');
+  cfg.txtBannerCerrado=gv('cfg-txt-banner-cerrado');cfg.txtCerradoInline=gv('cfg-txt-cerrado-inline');
+  cfg.txtCarritoVacio=gv('cfg-txt-carrito-vacio');cfg.txtSinStock=gv('cfg-txt-sin-stock');
+  cfg.txtStockBajo=gv('cfg-txt-stock-bajo');cfg.txtConfirmarBtn=gv('cfg-txt-confirmar-btn');
+  cfg.txtMsgEfectivo=gv('cfg-txt-msg-efectivo');cfg.txtMsgTransferencia=gv('cfg-txt-msg-transferencia');cfg.txtMsgMP=gv('cfg-txt-msg-mp');
+  LS.set('churros_cfg',cfg);
+  document.getElementById('admin-sub-name').textContent=cfg.name;
+  document.getElementById('cfg-admin-pass').value='';
+  alert('Configuración guardada ✓');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Churros La Esquina</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--kraft:#d4a96a;--kraft-dark:#b8832a;--brown:#3d1c02;--brown-mid:#6b3a1f;--brown-light:#8b5a2b;--cream:#fdf6e3;--cream-dark:#f5e8c8;--red-warm:#8b1a1a;--gold:#c9922a;--paper:#f7edd8;}
+html{scroll-behavior:smooth}
+body{font-family:'Crimson Text',Georgia,serif;background:var(--cream);color:var(--brown);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.6;}
+.header{background:var(--brown);padding:0;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--kraft);box-shadow:0 3px 12px rgba(61,28,2,.4);}
+.header-inner{display:flex;align-items:center;gap:12px;padding:10px 16px;max-width:700px;margin:0 auto;}
+.logo-img{width:52px;height:52px;border-radius:50%;border:2.5px solid var(--kraft);object-fit:cover;flex-shrink:0;}
+.header-text{flex:1}
+.header-title{font-family:'IM Fell English SC',serif;font-size:20px;color:#fff;letter-spacing:.04em;line-height:1.1;}
+.header-sub{font-size:12px;color:var(--kraft);font-style:italic;margin-top:1px;}
+.cart-pill{background:var(--kraft-dark);color:#fff;border:none;border-radius:20px;padding:7px 13px;font-family:'Crimson Text',serif;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.cart-pill:active{opacity:.85}
+.badge{background:var(--red-warm);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:600;display:none;align-items:center;justify-content:center;}
+.tabs{background:var(--cream-dark);border-bottom:2px solid var(--kraft);display:flex;max-width:700px;margin:0 auto;}
+.tab{flex:1;padding:11px;text-align:center;font-family:'Playfair Display',serif;font-size:13px;cursor:pointer;color:var(--brown-light);border-bottom:3px solid transparent;transition:all .2s;}
+.tab.on{color:var(--brown);border-color:var(--brown);background:var(--cream)}
+.tab-badge{display:inline-block;background:var(--red-warm);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;margin-left:4px;}
+.hero{background:var(--brown);padding:20px 16px 16px;text-align:center;border-bottom:3px solid var(--kraft);position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(201,146,42,.04) 10px,rgba(201,146,42,.04) 11px);pointer-events:none;}
+.hero-tagline{font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--kraft);letter-spacing:.06em;}
+.hero-divider{display:flex;align-items:center;gap:10px;margin:8px 0;color:var(--gold);font-size:12px;}
+.hero-divider::before,.hero-divider::after{content:'';flex:1;height:1px;background:var(--kraft-dark)}
+.sec-label{font-family:'IM Fell English SC',serif;font-size:11px;letter-spacing:.12em;color:var(--brown-light);padding:12px 16px 5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--kraft);opacity:.4;}
+.app-wrap{max-width:700px;margin:0 auto;position:relative;z-index:1;padding-bottom:40px;}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;padding:0 12px 12px;}
+@media(max-width:380px){.menu-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:600px){.menu-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:900px){.menu-grid{grid-template-columns:repeat(4,1fr)}}
+.pcard{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;overflow:hidden;cursor:pointer;box-shadow:2px 3px 8px rgba(61,28,2,.12);transition:transform .15s;}
+.pcard:active{transform:scale(.98)}
+.pcard.out-of-stock{opacity:.55;pointer-events:none;}
+.pcard-img-wrap{height:120px;background:linear-gradient(160deg,var(--cream-dark),var(--paper));border-bottom:1px solid var(--kraft);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.pcard-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+.pcard-img-wrap .no-img{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--brown-light);font-style:italic;}
+.out-badge{position:absolute;inset:0;background:rgba(61,28,2,.55);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:13px;color:#fff;font-weight:700;letter-spacing:.04em;}
+.pcard-body{padding:8px 9px 7px}
+.pcard-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:600;color:var(--brown);margin-bottom:2px;line-height:1.2;}
+.pcard-desc{font-size:11px;color:var(--brown-light);margin-bottom:7px;line-height:1.35;font-style:italic}
+.pcard-foot{display:flex;align-items:center;justify-content:space-between}
+.price{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--red-warm);}
+.stock-tag{font-size:10px;color:#b45309;font-style:italic;}
+.addbtn{background:var(--brown);color:var(--kraft);border:none;border-radius:7px;width:26px;height:26px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.addbtn:active{opacity:.8}
+.qctrl{display:flex;align-items:center;gap:4px}
+.qctrl button{background:var(--cream-dark);border:1px solid var(--kraft);border-radius:5px;width:22px;height:22px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--brown);}
+.qctrl span{font-size:12px;font-weight:600;min-width:14px;text-align:center;color:var(--brown)}
+.cart-wrap{padding:12px}
+.ci{background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:9px 11px;margin-bottom:8px;display:flex;align-items:center;gap:9px;}
+.ci-thumb{width:44px;height:44px;border-radius:7px;flex-shrink:0;background:var(--cream-dark);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.ci-thumb img{width:100%;height:100%;object-fit:cover;border-radius:7px;}
+.ci-inf{flex:1}
+.ci-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:600;color:var(--brown)}
+.ci-sub{font-size:11px;color:var(--brown-light);font-style:italic;margin-top:1px}
+.fbox{background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:13px;margin-bottom:10px;box-shadow:1px 2px 6px rgba(61,28,2,.08);}
+.fbox.has-error{border-color:#f87171;}
+/* FIELD VALIDATION */
+.field-wrap{margin-bottom:10px;}
+.flabel{font-family:'IM Fell English SC',serif;font-size:11px;letter-spacing:.07em;color:var(--brown-light);margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+.flabel .req{color:var(--red-warm);font-size:13px;line-height:1;}
+.finput{width:100%;background:var(--cream);border:1.5px solid var(--kraft);border-radius:7px;padding:9px 11px;font-family:'Crimson Text',serif;font-size:15px;color:var(--brown);outline:none;transition:border-color .15s;}
+.finput:focus{border-color:var(--brown);box-shadow:0 0 0 3px rgba(61,28,2,.08)}
+.finput::placeholder{color:var(--kraft-dark);opacity:.6;font-style:italic}
+.finput.error{border-color:#f87171;background:#fff5f5;}
+.field-error{font-size:11px;color:#b91c1c;font-style:italic;margin-top:4px;display:none;}
+.field-error.show{display:block;}
+/* SLOT */
+.slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
+.slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
+.slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
+.slot-btn:hover:not(.on){background:var(--cream-dark);}
+.slot-required{font-size:11px;color:#b91c1c;font-style:italic;margin-top:5px;display:none;}
+.slot-required.show{display:block;}
+/* OPTS */
+.opts2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
+.opts3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:5px}
+.opt{border:1.5px solid var(--kraft);border-radius:9px;padding:9px 6px;cursor:pointer;text-align:center;background:var(--cream);transition:all .15s;}
+.opt.on{border-color:var(--brown);background:var(--cream-dark)}
+.opt .oi{font-size:17px;margin-bottom:3px;}
+.opt .ol{font-family:'Crimson Text',serif;font-size:12px;font-weight:600;color:var(--brown);}
+.opt .os{font-size:10px;color:var(--brown-light);font-style:italic;margin-top:1px}
+/* PAYMENT BOXES */
+.pay-efectivo,.pay-transferencia,.pay-mp{border-radius:9px;padding:11px;margin-top:6px;}
+.pay-efectivo{background:#f0fdf4;border:1.5px solid #86efac}
+.pay-efectivo .pt{font-family:'Playfair Display',serif;font-size:12px;color:#166534;font-weight:600}
+.pay-efectivo .ps{font-size:11px;color:#166534;margin-top:3px;font-style:italic}
+.pay-transferencia{background:#eff6ff;border:1.5px solid #93c5fd}
+.pay-transferencia .pt{font-family:'Playfair Display',serif;font-size:12px;color:#1e3a8a;font-weight:600}
+.tf-row{display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--brown)}
+.tf-alias{font-size:11px;color:#1d4ed8;font-style:italic;margin-top:6px;padding-top:6px;border-top:1px solid #bfdbfe;text-align:center;font-weight:600;}
+.pay-mp{background:#fefce8;border:1.5px solid #fde047}
+.pay-mp .pt{font-family:'Playfair Display',serif;font-size:12px;color:#713f12;font-weight:600}
+.pay-mp .ps{font-size:11px;color:#92400e;margin-top:3px;font-style:italic}
+/* TOTBOX */
+.totbox{background:var(--cream-dark);border:2px solid var(--brown);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+.tot-row{display:flex;justify-content:space-between;font-size:13px;color:var(--brown-light);margin-bottom:4px;font-style:italic;}
+.tot-row.grand{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--brown);margin-top:8px;padding-top:8px;border-top:1.5px solid var(--kraft);margin-bottom:0;font-style:normal;}
+/* LOCATION */
+.locbtn{width:100%;background:var(--cream);border:1.5px dashed var(--kraft-dark);border-radius:9px;padding:10px;cursor:pointer;font-family:'Crimson Text',serif;font-size:13px;color:var(--brown-light);display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px;font-style:italic;}
+.locbtn.ok{background:#f0fdf4;border-color:#86efac;color:#166534;border-style:solid;}
+/* CONFIRM */
+.cfmbtn{width:100%;background:var(--brown);color:var(--kraft);border:none;border-radius:11px;padding:15px;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.04em;margin-top:4px;box-shadow:0 4px 12px rgba(61,28,2,.3);}
+.cfmbtn:disabled{background:var(--cream-dark);color:var(--kraft-dark);cursor:not-allowed;box-shadow:none;opacity:.6}
+.cfmbtn:not(:disabled):active{background:var(--brown-mid)}
+/* FORM ERROR SUMMARY */
+.form-errors{background:#fff5f5;border:1.5px solid #f87171;border-radius:9px;padding:11px 13px;margin-bottom:10px;display:none;}
+.form-errors.show{display:block;}
+.form-errors p{font-size:12px;color:#b91c1c;margin-bottom:2px;}
+.form-errors .fe-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:600;color:#b91c1c;margin-bottom:6px;}
+/* MISC */
+.empty{text-align:center;padding:40px 20px;color:var(--brown-light)}
+.empty .ei{font-size:44px;margin-bottom:12px}
+.empty p{font-style:italic;font-size:15px}
+.ornament{text-align:center;padding:8px;color:var(--kraft);font-size:13px;letter-spacing:.2em;}
+.success{text-align:center;padding:50px 20px}
+.success .si{font-size:56px;margin-bottom:14px}
+.success h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:8px;color:var(--brown)}
+.success p{font-size:15px;color:var(--brown-light);line-height:1.6;margin-bottom:22px;font-style:italic}
+.back-btn{background:none;border:2px solid var(--brown);border-radius:9px;padding:10px 28px;cursor:pointer;font-family:'Playfair Display',serif;font-size:14px;color:var(--brown);font-weight:600;}
+.closed-banner{background:var(--red-warm);color:#fff;text-align:center;padding:10px;font-family:'Playfair Display',serif;font-size:13px;letter-spacing:.04em;}
+.view{display:none}.view.active{display:block}
+/* COMPROBANTE */
+.comprobante-box{background:#eff6ff;border:1.5px solid #93c5fd;border-radius:9px;padding:13px;margin-top:8px;}
+.comprobante-box .cb-title{font-family:'Playfair Display',serif;font-size:12px;color:#1e3a8a;font-weight:600;margin-bottom:8px;}
+.comprobante-upload{border:2px dashed #93c5fd;border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:var(--cream);position:relative;transition:border-color .2s;}
+.comprobante-upload:hover{border-color:#1e3a8a;}
+.comprobante-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.comprobante-upload .cu-icon{font-size:26px;margin-bottom:4px;}
+.comprobante-upload .cu-label{font-size:13px;color:var(--brown-light);font-style:italic;}
+.comprobante-upload .cu-name{font-size:12px;color:#1e3a8a;font-weight:600;margin-top:4px;display:none;}
+.comprobante-send{width:100%;margin-top:8px;background:#1e3a8a;color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;display:none;}
+.comprobante-send:hover{background:#1e40af;}
+.comprobante-sent{background:#dcfce7;border:1.5px solid #86efac;border-radius:8px;padding:10px;text-align:center;font-size:13px;color:#166534;font-weight:600;display:none;margin-top:8px;}
+.comprobante-sending{opacity:.6;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<div class="app-wrap" id="app">
+
+<div id="v-customer" class="view active">
+  <div class="header">
+    <div class="header-inner">
+      <img class="logo-img" id="logo-img" alt="Logo" onerror="this.style.display='none'">
+      <div class="header-text">
+        <div class="header-title" id="hdr-title">Churros La Esquina</div>
+        <div class="header-sub" id="hdr-sub">Abierto · Envíos disponibles</div>
+      </div>
+      <button class="cart-pill" onclick="goTab('cart')" id="cart-pill">
+        🛒 <span id="cart-count">0</span>
+        <span class="badge" id="cart-badge">0</span>
+      </button>
+    </div>
+  </div>
+  <div id="closed-banner" style="display:none" class="closed-banner"></div>
+  <div class="tabs">
+    <div class="tab on" id="tab-menu" onclick="goTab('menu')">Menú</div>
+    <div class="tab" id="tab-cart" onclick="goTab('cart')">Mi pedido <span class="tab-badge" id="cart-tab-badge" style="display:none">0</span></div>
+  </div>
+  <div id="panel-menu">
+    <div class="hero">
+      <div class="hero-tagline" id="hero-tagline">Artesanales desde siempre</div>
+      <div class="hero-divider">✦ · · · ✦</div>
+    </div>
+    <div id="menu-container"></div>
+  </div>
+  <div id="panel-cart" style="display:none">
+    <div class="cart-wrap" id="cart-content"></div>
+  </div>
+</div>
+
+<div id="v-success" class="view">
+  <div class="header"><div class="header-inner"><img class="logo-img" id="logo-img2" alt="Logo" onerror="this.style.display='none'"><div class="header-text"><div class="header-title" id="hdr-title2">Churros La Esquina</div></div></div></div>
+  <div class="success">
+    <div class="si" id="suc-icon">✅</div>
+    <h2 id="suc-title">¡Pedido confirmado!</h2>
+    <p id="suc-msg"></p>
+    <div id="suc-mp-box" style="display:none;background:#fefce8;border:2px solid #fde047;border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
+      <div style="font-family:'Playfair Display',serif;font-size:13px;color:#713f12;font-weight:600;margin-bottom:6px;">💳 Monto a pagar</div>
+      <div id="suc-mp-amount" style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#92400e;margin-bottom:10px;"></div>
+      <div style="font-size:12px;color:#92400e;font-style:italic;margin-bottom:12px;">Si Mercado Pago no se abrió automáticamente, usá este botón:</div>
+      <button id="suc-mp-btn" style="background:#009ee3;color:#fff;border:none;border-radius:9px;padding:11px 24px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;width:100%;">Abrir Mercado Pago →</button>
+    </div>
+    <!-- COMPROBANTE TRANSFERENCIA -->
+    <div id="suc-comprobante-box" style="display:none;margin-bottom:20px;">
+      <div class="comprobante-box">
+        <div class="cb-title">📎 Adjuntá tu comprobante de transferencia</div>
+        <div class="comprobante-upload" id="comp-upload-area">
+          <input type="file" id="comp-file" accept="image/*,.pdf" onchange="handleComprobanteFile(event)">
+          <div class="cu-icon">📄</div>
+          <div class="cu-label">Tocá para adjuntar imagen o PDF del comprobante</div>
+          <div class="cu-name" id="comp-file-name"></div>
+        </div>
+        <div id="comp-send-wrap">
+          <button class="comprobante-send" id="comp-send-btn" onclick="enviarComprobante()">Enviar comprobante →</button>
+        </div>
+        <div class="comprobante-sent" id="comp-sent">✓ Comprobante enviado correctamente. ¡Gracias!</div>
+        <div id="comp-no-key" style="display:none;font-size:12px;color:#b45309;font-style:italic;margin-top:8px;text-align:center;">Para habilitar el envío por email, cargá tu clave Web3Forms en el panel de administración → Configuración.</div>
+      </div>
+    </div>
+    <button class="back-btn" onclick="resetApp()">Hacer otro pedido</button>
+  </div>
+</div>
+
+</div>
+<script>
+const LS={get(k,d=null){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
+function defProducts(){return[{id:1,img:'',name:'Churros clásicos',desc:'Porción de 6, con azúcar y canela',price:1200,cat:'Clásicos',stock:0,unlimited:true},{id:2,img:'',name:'Con chocolate',desc:'6 churros + taza de chocolate caliente',price:1800,cat:'Clásicos',stock:0,unlimited:true},{id:3,img:'',name:'Rellenos DDL',desc:'6 churros rellenos de dulce de leche',price:2000,cat:'Especiales',stock:0,unlimited:true},{id:4,img:'',name:'Combo café',desc:'3 churros con café con leche',price:1500,cat:'Clásicos',stock:0,unlimited:true},{id:5,img:'',name:'Con helado',desc:'4 churros con 2 bochas a elección',price:2200,cat:'Especiales',stock:0,unlimited:true},{id:6,img:'',name:'Combo familiar',desc:'12 churros + 2 chocolates calientes',price:3500,cat:'Combos',stock:0,unlimited:true}];}
+function defCfg(){return{name:'Churros La Esquina',open:true,envio:500,alias:'churros.laesquina',mp:'https://mpago.la/demo',logo:'',adminUser:'admin',adminPass:'admin123',whatsapp:'',web3formsKey:'',tagline:'Artesanales desde siempre',txtAbierto:'Abierto · Envíos disponibles',txtCerrado:'Cerrado por hoy',txtBannerCerrado:'🔒 El local está cerrado por hoy. Podés ver el menú pero no realizar pedidos.',txtCarritoVacio:'Tu carrito está vacío. ¡Elegí tus churros desde el menú!',txtSinStock:'Sin stock',txtStockBajo:'Últimas {n} unidades',txtConfirmarBtn:'Confirmar pedido',txtMsgEfectivo:'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',txtMsgTransferencia:'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',txtMsgMP:'Pedido #{id}{horario}',txtCerradoInline:'🔒 El local está cerrado. No se pueden hacer pedidos en este momento.'};}
+function defSlots(){return[{id:1,from:'09:00',to:'11:00',type:'both',active:true},{id:2,from:'11:00',to:'13:00',type:'both',active:true},{id:3,from:'16:00',to:'19:00',type:'both',active:true}];}
+
+let cfg=LS.get('churros_cfg',defCfg());
+// Backfill any missing text keys
+const dc=defCfg();Object.keys(dc).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc[k];});
+
+let cart={},delivery='pickup',payment='efectivo',geoLocation=null,selectedSlot='',activeTab='menu';
+let orderIdCounter=LS.get('churros_order_id',1);
+let triedSubmit=false;
+
+function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR')}
+function tpl(str,vars){return str.replace(/\{(\w+)\}/g,(m,k)=>vars[k]!==undefined?vars[k]:m);}
+
+// Init
+(function(){
+  if(cfg.logo){document.getElementById('logo-img').src=cfg.logo;document.getElementById('logo-img2').src=cfg.logo;}
+  const t=cfg.name||'Churros La Esquina';
+  document.getElementById('hdr-title').textContent=t;document.getElementById('hdr-title2').textContent=t;
+  document.getElementById('hero-tagline').textContent=cfg.tagline||dc.tagline;
+  document.getElementById('hdr-sub').textContent=cfg.open?(cfg.txtAbierto||dc.txtAbierto):(cfg.txtCerrado||dc.txtCerrado);
+  const banner=document.getElementById('closed-banner');
+  if(!cfg.open){banner.style.display='block';banner.textContent=cfg.txtBannerCerrado||dc.txtBannerCerrado;}
+})();
+
+function goTab(t){
+  activeTab=t;
+  document.getElementById('panel-menu').style.display=t==='menu'?'':'none';
+  document.getElementById('panel-cart').style.display=t==='cart'?'':'none';
+  document.getElementById('tab-menu').classList.toggle('on',t==='menu');
+  document.getElementById('tab-cart').classList.toggle('on',t==='cart');
+  if(t==='cart'){triedSubmit=false;renderCart();}
+}
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+function addItem(id){
+  const products=LS.get('churros_products',defProducts());
+  const p=products.find(x=>x.id===id);if(!p)return;
+  if(!p.unlimited&&p.stock<=0)return;
+  cart[id]=(cart[id]||0)+1;
+  if(!p.unlimited){p.stock=Math.max(0,p.stock-1);const all=LS.get('churros_products',defProducts());const idx=all.findIndex(x=>x.id===id);if(idx>=0){all[idx]=p;LS.set('churros_products',all);}}
+  updBadge();renderMenu();if(activeTab==='cart')renderCart();
+}
+function remItem(id){
+  if(cart[id]>0){
+    const products=LS.get('churros_products',defProducts());
+    const p=products.find(x=>x.id===id);
+    cart[id]--;
+    if(p&&!p.unlimited){p.stock++;const all=LS.get('churros_products',defProducts());const idx=all.findIndex(x=>x.id===id);if(idx>=0){all[idx]=p;LS.set('churros_products',all);}}
+    if(cart[id]===0)delete cart[id];
+  }
+  updBadge();renderMenu();if(activeTab==='cart')renderCart();
+}
+function updBadge(){
+  const t=Object.values(cart).reduce((a,b)=>a+b,0);
+  document.getElementById('cart-count').textContent=t;
+  document.getElementById('cart-badge').textContent=t;
+  document.getElementById('cart-badge').style.display=t>0?'flex':'none';
+  const tb=document.getElementById('cart-tab-badge');tb.textContent=t;tb.style.display=t>0?'':'none';
+}
+
+function renderMenu(){
+  cfg=LS.get('churros_cfg',defCfg());
+  const dc2=defCfg();Object.keys(dc2).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc2[k];});
+  const products=LS.get('churros_products',defProducts());
+  const bycat={};products.forEach(p=>{bycat[p.cat]=bycat[p.cat]||[];bycat[p.cat].push(p);});
+  let html='<div class="ornament">· · · ✦ · · ·</div>';
+  Object.entries(bycat).forEach(([cat,prods])=>{
+    html+=`<div class="sec-label">${cat}</div><div class="menu-grid">`;
+    prods.forEach(p=>{
+      const q=cart[p.id]||0;
+      const outOfStock=!p.unlimited&&p.stock<=0&&q===0;
+      const lowStock=!p.unlimited&&p.stock>0&&p.stock<=3;
+      const imgHtml=p.img?`<img src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:'<div class="no-img">📷 Sin foto</div>';
+      const sinStockTxt=cfg.txtSinStock||'Sin stock';
+      const lowTxt=(cfg.txtStockBajo||'Últimas {n} unidades').replace('{n}',p.stock);
+      html+=`<div class="pcard${outOfStock?' out-of-stock':''}">
+        <div class="pcard-img-wrap">${imgHtml}${outOfStock?`<div class="out-badge">${sinStockTxt}</div>`:''}</div>
+        <div class="pcard-body">
+          <div class="pcard-name">${p.name}</div>
+          <div class="pcard-desc">${p.desc}</div>
+          ${lowStock?`<div class="stock-tag">⚠ ${lowTxt}</div>`:''}
+          <div class="pcard-foot">
+            <span class="price">${fmt(p.price)}</span>
+            ${outOfStock?`<span style="font-size:11px;color:var(--red-warm);font-style:italic">${sinStockTxt}</span>`
+              :q===0?`<button class="addbtn" onclick="addItem(${p.id})">+</button>`
+              :`<div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${q}</span><button onclick="addItem(${p.id})">+</button></div>`}
+          </div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  html+='<div class="ornament">· · · ✦ · · ·</div>';
+  document.getElementById('menu-container').innerHTML=html;
+}
+
+function getAvailableSlots(deliveryType){
+  return LS.get('churros_slots',defSlots()).filter(s=>s.active&&(s.type==='both'||s.type===deliveryType));
+}
+
+// ── VALIDATION ──────────────────────────────
+function getFieldVal(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+
+function validateForm(){
+  const name=getFieldVal('f-name');
+  const phone=getFieldVal('f-phone');
+  const addr=delivery==='delivery'?getFieldVal('f-addr'):'ok';
+  const availSlots=getAvailableSlots(delivery);
+  const slotOk=availSlots.length===0||selectedSlot!=='';
+
+  // Mark fields
+  markField('f-name',!name,'Ingresá tu nombre completo');
+  markField('f-phone',!phone,'Ingresá tu teléfono');
+  if(delivery==='delivery')markField('f-addr',!addr,'Ingresá tu dirección de entrega');
+
+  // Slot
+  const slotErr=document.getElementById('slot-error');
+  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0);
+
+  const valid=!!(name&&phone&&addr.trim()&&slotOk);
+
+  // Error summary
+  const summary=document.getElementById('form-errors');
+  if(summary){
+    const errors=[];
+    if(!name)errors.push('Nombre completo');
+    if(!phone)errors.push('Teléfono');
+    if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
+    if(!slotOk&&availSlots.length>0)errors.push('Franja horaria');
+    if(triedSubmit&&!valid&&errors.length){
+      summary.classList.add('show');
+      summary.innerHTML=`<div class="fe-title">⚠ Completá los siguientes campos:</div>${errors.map(e=>`<p>• ${e}</p>`).join('')}`;
+    } else {
+      summary.classList.remove('show');
+    }
+  }
+
+  const btn=document.getElementById('cfm-btn');
+  if(btn)btn.disabled=!valid;
+  return valid;
+}
+
+function markField(id,hasError,msg){
+  const input=document.getElementById(id);
+  const errEl=document.getElementById(id+'-err');
+  if(input){input.classList.toggle('error',hasError&&triedSubmit);}
+  if(errEl){errEl.textContent=msg;errEl.classList.toggle('show',hasError&&triedSubmit);}
+}
+
+function checkForm(){validateForm();}
+function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
+function setPayment(p){payment=p;renderCart();}
+function selectSlot(id){selectedSlot=id+'';validateForm();}
+
+function getLocation(){
+  if(!navigator.geolocation){alert('Tu navegador no soporta geolocalización');return}
+  const btn=document.getElementById('loc-btn');if(btn){btn.textContent='📍 Obteniendo ubicación...';btn.disabled=true;}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      geoLocation={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      // Fill address field with coords if empty
+      const addrField=document.getElementById('f-addr');
+      if(addrField&&!addrField.value.trim())addrField.value='Ubicación GPS compartida';
+      const b=document.getElementById('loc-btn');
+      if(b){b.className='locbtn ok';b.disabled=false;b.textContent='✓ Ubicación obtenida ('+geoLocation.lat.toFixed(5)+', '+geoLocation.lng.toFixed(5)+')';}
+      validateForm();
+    },
+    (err)=>{
+      const b=document.getElementById('loc-btn');
+      if(b){b.disabled=false;b.textContent='📍 No se pudo obtener · Ingresá dirección manual';}
+      let msg='No se pudo obtener la ubicación.';
+      if(err.code===1)msg='Permiso denegado. Ingresá la dirección manualmente.';
+      else if(err.code===2)msg='Ubicación no disponible. Ingresá la dirección manualmente.';
+      else if(err.code===3)msg='Tiempo de espera agotado. Intentá de nuevo.';
+      alert(msg);
+    },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
+  );
+}
+
+function renderCart(){
+  cfg=LS.get('churros_cfg',defCfg());
+  const dc3=defCfg();Object.keys(dc3).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc3[k];});
+  const keys=Object.keys(cart).filter(k=>cart[k]>0);
+  const cont=document.getElementById('cart-content');if(!cont)return;
+  if(keys.length===0){
+    const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
+    const parts=msg.split('.');
+    cont.innerHTML=`<div class="empty"><div class="ei">🥐</div><p>${parts.join('.<br>')}</p></div>`;
+    return;
+  }
+  const products=LS.get('churros_products',defProducts());
+  let sub=0;
+  const items=keys.map(k=>{
+    const p=products.find(x=>x.id==k);if(!p)return'';
+    const tot=p.price*cart[k];sub+=tot;
+    const thumb=p.img?`<div class="ci-thumb"><img src="${p.img}" alt="${p.name}"></div>`:`<div class="ci-thumb" style="font-size:22px">🥐</div>`;
+    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div><div class="ci-sub">${cart[k]} × ${fmt(p.price)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
+  }).join('');
+
+  const ship=delivery==='delivery'?cfg.envio:0;
+  const total=sub+ship;
+  const availSlots=getAvailableSlots(delivery);
+  const slotsHtml=availSlots.length
+    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlots.map(s=>`<button class="slot-btn${selectedSlot===s.id+''?' on':''}" onclick="selectSlot('${s.id}')">⏰ ${s.from} – ${s.to}</button>`).join('')}</div><div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
+    :'';
+  const locHtml=delivery==='delivery'?`
+    <div style="height:8px"></div>
+    <label class="flabel">Tu dirección <span class="req">*</span></label>
+    <div class="field-wrap" style="margin-bottom:0">
+      <input class="finput" id="f-addr" placeholder="Calle, número, piso..." oninput="checkForm()">
+      <div class="field-error" id="f-addr-err">Ingresá tu dirección de entrega</div>
+    </div>
+    <button class="locbtn" id="loc-btn" onclick="getLocation()">📍 Compartir mi ubicación GPS (más exacto)</button>`:'';
+
+  let payExtra='';
+  if(payment==='efectivo')payExtra=`<div class="pay-efectivo"><div class="pt">💵 Pago en efectivo</div><div class="ps">Tené listos ${fmt(total)} al ${delivery==='delivery'?'recibir el pedido':'retirar'}.</div></div>`;
+  if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:600">${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(total)}</span></div></div>`;
+  if(payment==='mercadopago')payExtra=`<div class="pay-mp"><div class="pt">💳 Mercado Pago</div><div class="ps">Al confirmar, Mercado Pago se abrirá automáticamente para completar el pago.</div></div>`;
+
+  const isClosed=!cfg.open;
+  const confirmTxt=cfg.txtConfirmarBtn||'Confirmar pedido';
+
+  cont.innerHTML=`<div>
+    ${items}
+    <div class="totbox">
+      <div class="tot-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
+      <div class="tot-row"><span>Envío</span><span>${ship===0?'Gratis (retiro)':fmt(ship)}</span></div>
+      <div class="tot-row grand"><span>Total</span><span>${fmt(total)}</span></div>
+    </div>
+    <div class="sec-label">Entrega</div>
+    <div class="fbox" style="margin-bottom:10px">
+      <div class="opts2">
+        <div class="opt ${delivery==='pickup'?'on':''}" onclick="setDelivery('pickup')"><div class="oi">🏪</div><div class="ol">Retiro</div><div class="os">en el local</div></div>
+        <div class="opt ${delivery==='delivery'?'on':''}" onclick="setDelivery('delivery')"><div class="oi">🛵</div><div class="ol">Envío</div><div class="os">${fmt(cfg.envio)}</div></div>
+      </div>
+      ${locHtml}
+      ${slotsHtml}
+    </div>
+    <div class="sec-label">Forma de pago</div>
+    <div class="fbox" style="margin-bottom:10px">
+      <div class="opts3">
+        <div class="opt ${payment==='efectivo'?'on':''}" onclick="setPayment('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>
+        <div class="opt ${payment==='transferencia'?'on':''}" onclick="setPayment('transferencia')"><div class="oi">📲</div><div class="ol">Transfer.</div></div>
+        <div class="opt ${payment==='mercadopago'?'on':''}" onclick="setPayment('mercadopago')"><div class="oi">💳</div><div class="ol">Merc.Pago</div></div>
+      </div>
+      ${payExtra}
+    </div>
+    <div class="sec-label">Tus datos</div>
+    <div class="fbox">
+      <label class="flabel">Nombre completo <span class="req">*</span></label>
+      <div class="field-wrap">
+        <input class="finput" id="f-name" placeholder="Ej: María González" oninput="checkForm()">
+        <div class="field-error" id="f-name-err">Ingresá tu nombre completo</div>
+      </div>
+      <label class="flabel">Teléfono <span class="req">*</span></label>
+      <div class="field-wrap" style="margin-bottom:0">
+        <input class="finput" id="f-phone" type="tel" placeholder="Ej: 336 412-3456" oninput="checkForm()">
+        <div class="field-error" id="f-phone-err">Ingresá tu número de teléfono</div>
+      </div>
+    </div>
+    <div class="form-errors" id="form-errors"></div>
+    ${isClosed?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||dc3.txtCerradoInline}</div>`:''}
+    <button class="cfmbtn" id="cfm-btn" onclick="tryConfirm()" ${isClosed?'disabled style="display:none"':''}>${confirmTxt}</button>
+    <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
+  </div>`;
+  setTimeout(()=>validateForm(),0);
+}
+
+function tryConfirm(){
+  triedSubmit=true;
+  if(!validateForm()){
+    // Scroll to first error
+    const firstErr=document.querySelector('.finput.error,.slot-required.show');
+    if(firstErr)firstErr.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  confirmOrder();
+}
+
+function confirmOrder(){
+  cfg=LS.get('churros_cfg',defCfg());
+  const dc4=defCfg();Object.keys(dc4).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc4[k];});
+  if(!cfg.open){alert('El local está cerrado.');return;}
+  const name=getFieldVal('f-name');
+  const phone=getFieldVal('f-phone');
+  const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
+  const ship=delivery==='delivery'?cfg.envio:0;
+  const products=LS.get('churros_products',defProducts());
+  let sub=0;
+  const items=Object.keys(cart).filter(k=>cart[k]>0).map(k=>{
+    const p=products.find(x=>x.id==k);if(!p)return null;
+    sub+=p.price*cart[k];return{name:p.name,qty:cart[k],price:p.price};
+  }).filter(Boolean);
+  const total=sub+ship;
+  let slotLabel='';
+  if(selectedSlot){const slots=LS.get('churros_slots',defSlots());const s=slots.find(x=>x.id+''===selectedSlot+'');if(s)slotLabel=`${s.from} – ${s.to}`;}
+  const orderId=orderIdCounter++;
+  LS.set('churros_order_id',orderIdCounter);
+  const orders=LS.get('churros_orders',[]);
+  orders.push({id:orderId,customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',items,total,delivery,payment,slot:slotLabel,status:'new',ts:Date.now()});
+  LS.set('churros_orders',orders);
+
+  const momento=delivery==='delivery'?'recibir tu pedido':'retirar';
+  const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
+  const nombre=name.split(' ')[0];
+
+  if(payment==='mercadopago'){
+    const msg=tpl(cfg.txtMsgMP||'Pedido #{id}{horario}',{id:orderId,horario,nombre,total:fmt(total)});
+    document.getElementById('suc-icon').textContent='💳';
+    document.getElementById('suc-title').textContent='¡Redirigiendo a Mercado Pago!';
+    document.getElementById('suc-msg').textContent=msg;
+    document.getElementById('suc-mp-box').style.display='block';
+    document.getElementById('suc-mp-amount').textContent=fmt(total);
+    const mpUrl=cfg.mp||'https://www.mercadopago.com.ar';
+    document.getElementById('suc-mp-btn').onclick=()=>window.open(mpUrl,'_blank');
+    showView('v-success');
+    setTimeout(()=>window.open(mpUrl,'_blank'),400);
+    return;
+  }
+  let icon='✅',title='¡Pedido confirmado!',msg='';
+  if(payment==='transferencia'){
+    msg=tpl(cfg.txtMsgTransferencia||'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',{id:orderId,horario,nombre,total:fmt(total),alias:cfg.alias||'churros.local'});
+  } else {
+    msg=tpl(cfg.txtMsgEfectivo||'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',{id:orderId,horario,nombre,total:fmt(total),momento});
+  }
+  document.getElementById('suc-icon').textContent=icon;
+  document.getElementById('suc-title').textContent=title;
+  document.getElementById('suc-msg').textContent=msg;
+  document.getElementById('suc-mp-box').style.display='none';
+  // Show comprobante box for transferencia
+  const compBox=document.getElementById('suc-comprobante-box');
+  const noKey=document.getElementById('comp-no-key');
+  if(payment==='transferencia'&&compBox){
+    compBox.style.display='block';
+    // Store order info for email
+    window._pendingOrder={orderId,name,total,items,slot:slotLabel,delivery,phone,addr};
+    if(!cfg.web3formsKey){noKey.style.display='block';document.getElementById('comp-send-btn').style.display='none';}
+    else{noKey.style.display='none';document.getElementById('comp-send-btn').style.display='block';}
+  } else if(compBox){
+    compBox.style.display='none';
+  }
+  showView('v-success');
+}
+
+// ── COMPROBANTE ────────────────────────────
+let _comprobanteFile=null;
+function handleComprobanteFile(event){
+  const file=event.target.files[0];if(!file)return;
+  _comprobanteFile=file;
+  const nameEl=document.getElementById('comp-file-name');
+  nameEl.textContent=file.name;nameEl.style.display='block';
+  document.getElementById('comp-send-btn').style.display='block';
+}
+async function enviarComprobante(){
+  cfg=LS.get('churros_cfg',defCfg());
+  const key=cfg.web3formsKey;
+  if(!key){alert('Configurá la clave Web3Forms en el panel de administración.');return;}
+  if(!_comprobanteFile){alert('Seleccioná el archivo del comprobante primero.');return;}
+  const btn=document.getElementById('comp-send-btn');
+  btn.textContent='Enviando...';btn.classList.add('comprobante-sending');btn.disabled=true;
+  const o=window._pendingOrder||{};
+  const items=(o.items||[]).map(it=>`${it.qty}x ${it.name} - ${fmt(it.price)}`).join('\n');
+  // Convert file to base64
+  const toBase64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(f);});
+  const b64=await toBase64(_comprobanteFile);
+  const payload={
+    access_key:key,
+    subject:`🧾 Comprobante Pedido #${o.orderId} - ${o.name}`,
+    from_name:'Churros La Esquina - Web',
+    message:`COMPROBANTE DE TRANSFERENCIA\n\nPedido #${o.orderId}\nCliente: ${o.name}\nTeléfono: ${o.phone||'-'}\nEntrega: ${o.delivery==='delivery'?'Envío a domicilio: '+(o.addr||''):'Retiro en local'}${o.slot?' · '+o.slot:''}\n\nDetalle:\n${items}\n\nTotal: ${fmt(o.total)}`,
+    attachment:b64,
+    attachment_filename:_comprobanteFile.name,
+  };
+  try{
+    const res=await fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.success){
+      document.getElementById('comp-sent').style.display='block';
+      document.getElementById('comp-send-btn').style.display='none';
+      document.getElementById('comp-upload-area').style.display='none';
+    } else {
+      btn.textContent='Enviar comprobante →';btn.classList.remove('comprobante-sending');btn.disabled=false;
+      alert('Error al enviar. Verificá tu clave Web3Forms en configuración.');
+    }
+  }catch(e){
+    btn.textContent='Enviar comprobante →';btn.classList.remove('comprobante-sending');btn.disabled=false;
+    alert('Error de conexión. Intentá de nuevo.');
+  }
+}
+
+function resetApp(){cart={};delivery='pickup';payment='efectivo';geoLocation=null;selectedSlot='';triedSubmit=false;updBadge();goTab('menu');renderMenu();showView('v-customer');}
+renderMenu();
+</script>
+</body>
+</html>
