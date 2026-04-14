@@ -196,14 +196,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <div class="comprobante-upload" id="comp-upload-area">
           <input type="file" id="comp-file" accept="image/*,.pdf" onchange="handleComprobanteFile(event)">
           <div class="cu-icon">📄</div>
-          <div class="cu-label">Tocá para adjuntar imagen o PDF del comprobante</div>
+          <div class="cu-label">Tocá para adjuntar la foto o captura del comprobante</div>
           <div class="cu-name" id="comp-file-name"></div>
         </div>
-        <div id="comp-send-wrap">
-          <button class="comprobante-send" id="comp-send-btn" onclick="enviarComprobante()">Enviar comprobante →</button>
-        </div>
-        <div class="comprobante-sent" id="comp-sent">✓ Comprobante enviado correctamente. ¡Gracias!</div>
-        <div id="comp-no-key" style="display:none;font-size:12px;color:#b45309;font-style:italic;margin-top:8px;text-align:center;">Para habilitar el envío por email, cargá tu clave Web3Forms en el panel de administración → Configuración.</div>
+        <button class="comprobante-send" id="comp-send-btn" onclick="guardarComprobante()">Adjuntar comprobante al pedido →</button>
+        <div class="comprobante-sent" id="comp-sent">✓ Comprobante adjuntado. ¡Lo vamos a revisar pronto!</div>
       </div>
     </div>
     <button class="back-btn" onclick="resetApp()">Hacer otro pedido</button>
@@ -214,7 +211,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 <script>
 const LS={get(k,d=null){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
 function defProducts(){return[{id:1,img:'',name:'Churros clásicos',desc:'Porción de 6, con azúcar y canela',price:1200,cat:'Clásicos',stock:0,unlimited:true},{id:2,img:'',name:'Con chocolate',desc:'6 churros + taza de chocolate caliente',price:1800,cat:'Clásicos',stock:0,unlimited:true},{id:3,img:'',name:'Rellenos DDL',desc:'6 churros rellenos de dulce de leche',price:2000,cat:'Especiales',stock:0,unlimited:true},{id:4,img:'',name:'Combo café',desc:'3 churros con café con leche',price:1500,cat:'Clásicos',stock:0,unlimited:true},{id:5,img:'',name:'Con helado',desc:'4 churros con 2 bochas a elección',price:2200,cat:'Especiales',stock:0,unlimited:true},{id:6,img:'',name:'Combo familiar',desc:'12 churros + 2 chocolates calientes',price:3500,cat:'Combos',stock:0,unlimited:true}];}
-function defCfg(){return{name:'Churros La Esquina',open:true,envio:500,alias:'churros.laesquina',mp:'https://mpago.la/demo',logo:'',adminUser:'admin',adminPass:'admin123',whatsapp:'',web3formsKey:'',tagline:'Artesanales desde siempre',txtAbierto:'Abierto · Envíos disponibles',txtCerrado:'Cerrado por hoy',txtBannerCerrado:'🔒 El local está cerrado por hoy. Podés ver el menú pero no realizar pedidos.',txtCarritoVacio:'Tu carrito está vacío. ¡Elegí tus churros desde el menú!',txtSinStock:'Sin stock',txtStockBajo:'Últimas {n} unidades',txtConfirmarBtn:'Confirmar pedido',txtMsgEfectivo:'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',txtMsgTransferencia:'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',txtMsgMP:'Pedido #{id}{horario}',txtCerradoInline:'🔒 El local está cerrado. No se pueden hacer pedidos en este momento.'};}
+function defCfg(){return{name:'Churros La Esquina',open:true,envio:500,alias:'churros.laesquina',mp:'https://mpago.la/demo',logo:'',adminUser:'admin',adminPass:'admin123',whatsapp:'',tagline:'Artesanales desde siempre',txtAbierto:'Abierto · Envíos disponibles',txtCerrado:'Cerrado por hoy',txtBannerCerrado:'🔒 El local está cerrado por hoy. Podés ver el menú pero no realizar pedidos.',txtCarritoVacio:'Tu carrito está vacío. ¡Elegí tus churros desde el menú!',txtSinStock:'Sin stock',txtStockBajo:'Últimas {n} unidades',txtConfirmarBtn:'Confirmar pedido',txtMsgEfectivo:'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',txtMsgTransferencia:'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',txtMsgMP:'Pedido #{id}{horario}',txtCerradoInline:'🔒 El local está cerrado. No se pueden hacer pedidos en este momento.'};}
 function defSlots(){return[{id:1,from:'09:00',to:'11:00',type:'both',active:true},{id:2,from:'11:00',to:'13:00',type:'both',active:true},{id:3,from:'16:00',to:'19:00',type:'both',active:true}];}
 
 let cfg=LS.get('churros_cfg',defCfg());
@@ -547,13 +544,9 @@ function confirmOrder(){
   document.getElementById('suc-mp-box').style.display='none';
   // Show comprobante box for transferencia
   const compBox=document.getElementById('suc-comprobante-box');
-  const noKey=document.getElementById('comp-no-key');
   if(payment==='transferencia'&&compBox){
     compBox.style.display='block';
-    // Store order info for email
-    window._pendingOrder={orderId,name,total,items,slot:slotLabel,delivery,phone,addr};
-    if(!cfg.web3formsKey){noKey.style.display='block';document.getElementById('comp-send-btn').style.display='none';}
-    else{noKey.style.display='none';document.getElementById('comp-send-btn').style.display='block';}
+    window._pendingOrderId=orderId;
   } else if(compBox){
     compBox.style.display='none';
   }
@@ -564,46 +557,40 @@ function confirmOrder(){
 let _comprobanteFile=null;
 function handleComprobanteFile(event){
   const file=event.target.files[0];if(!file)return;
+  // Reject non-image/pdf (extra safety)
+  if(!file.type.startsWith('image/')&&file.type!=='application/pdf'){
+    alert('Solo se aceptan imágenes o PDF.');return;
+  }
   _comprobanteFile=file;
   const nameEl=document.getElementById('comp-file-name');
   nameEl.textContent=file.name;nameEl.style.display='block';
   document.getElementById('comp-send-btn').style.display='block';
 }
-async function enviarComprobante(){
-  cfg=LS.get('churros_cfg',defCfg());
-  const key=cfg.web3formsKey;
-  if(!key){alert('Configurá la clave Web3Forms en el panel de administración.');return;}
+function guardarComprobante(){
   if(!_comprobanteFile){alert('Seleccioná el archivo del comprobante primero.');return;}
   const btn=document.getElementById('comp-send-btn');
-  btn.textContent='Enviando...';btn.classList.add('comprobante-sending');btn.disabled=true;
-  const o=window._pendingOrder||{};
-  const items=(o.items||[]).map(it=>`${it.qty}x ${it.name} - ${fmt(it.price)}`).join('\n');
-  // Convert file to base64
-  const toBase64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(f);});
-  const b64=await toBase64(_comprobanteFile);
-  const payload={
-    access_key:key,
-    subject:`🧾 Comprobante Pedido #${o.orderId} - ${o.name}`,
-    from_name:'Churros La Esquina - Web',
-    message:`COMPROBANTE DE TRANSFERENCIA\n\nPedido #${o.orderId}\nCliente: ${o.name}\nTeléfono: ${o.phone||'-'}\nEntrega: ${o.delivery==='delivery'?'Envío a domicilio: '+(o.addr||''):'Retiro en local'}${o.slot?' · '+o.slot:''}\n\nDetalle:\n${items}\n\nTotal: ${fmt(o.total)}`,
-    attachment:b64,
-    attachment_filename:_comprobanteFile.name,
-  };
-  try{
-    const res=await fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const data=await res.json();
-    if(data.success){
-      document.getElementById('comp-sent').style.display='block';
-      document.getElementById('comp-send-btn').style.display='none';
-      document.getElementById('comp-upload-area').style.display='none';
-    } else {
-      btn.textContent='Enviar comprobante →';btn.classList.remove('comprobante-sending');btn.disabled=false;
-      alert('Error al enviar. Verificá tu clave Web3Forms en configuración.');
+  btn.textContent='Guardando...';btn.classList.add('comprobante-sending');btn.disabled=true;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const b64=e.target.result;
+    const orderId=window._pendingOrderId;
+    if(!orderId){btn.textContent='Adjuntar comprobante al pedido →';btn.classList.remove('comprobante-sending');btn.disabled=false;return;}
+    // Save comprobante attached to the order
+    const orders=LS.get('churros_orders',[]);
+    const o=orders.find(x=>x.id===orderId);
+    if(o){
+      o.comprobante={data:b64,name:_comprobanteFile.name,type:_comprobanteFile.type,ts:Date.now()};
+      LS.set('churros_orders',orders);
     }
-  }catch(e){
-    btn.textContent='Enviar comprobante →';btn.classList.remove('comprobante-sending');btn.disabled=false;
-    alert('Error de conexión. Intentá de nuevo.');
-  }
+    document.getElementById('comp-sent').style.display='block';
+    document.getElementById('comp-send-btn').style.display='none';
+    document.getElementById('comp-upload-area').style.display='none';
+  };
+  reader.onerror=function(){
+    btn.textContent='Adjuntar comprobante al pedido →';btn.classList.remove('comprobante-sending');btn.disabled=false;
+    alert('Error al leer el archivo. Intentá de nuevo.');
+  };
+  reader.readAsDataURL(_comprobanteFile);
 }
 
 function resetApp(){cart={};delivery='pickup';payment='efectivo';geoLocation=null;selectedSlot='';triedSubmit=false;updBadge();goTab('menu');renderMenu();showView('v-customer');}

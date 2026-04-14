@@ -117,6 +117,19 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .chart-fill{height:100%;background:var(--kraft-dark);border-radius:5px;transition:width .5s;}
 .ornament{text-align:center;padding:8px;color:var(--kraft);font-size:13px;letter-spacing:.2em;}
 .empty-state{text-align:center;padding:28px 20px;color:var(--brown-light);font-style:italic;font-size:14px;}
+.comp-badge{display:inline-flex;align-items:center;gap:5px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Crimson Text',serif;}
+.comp-badge:hover{background:#bfdbfe;}
+.comp-badge.pending{background:#fef9c3;border-color:#fde047;color:#713f12;}
+.comp-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
+.comp-modal.open{display:flex;}
+.comp-modal-box{background:#fff;border-radius:12px;padding:16px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;}
+.comp-modal-box img{width:100%;border-radius:8px;display:block;}
+.comp-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.comp-modal-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--brown);}
+.comp-modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--brown-light);}
+.comp-modal-actions{display:flex;gap:8px;margin-top:12px;}
+.comp-btn-dl{flex:1;background:var(--brown);color:var(--kraft);border:none;border-radius:8px;padding:9px;font-family:'Playfair Display',serif;font-size:13px;cursor:pointer;font-weight:700;}
+.comp-btn-ok{flex:1;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;padding:9px;font-family:'Playfair Display',serif;font-size:13px;cursor:pointer;font-weight:700;}
 .field-mb{margin-bottom:10px;}
 </style>
 </head>
@@ -258,8 +271,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <input class="finput field-mb" id="cfg-envio" type="number">
         <label class="flabel">Alias transferencia</label>
         <input class="finput field-mb" id="cfg-alias">
-        <label class="flabel">Clave Web3Forms <small>(para recibir comprobantes por email)</small></label>
-        <input class="finput field-mb" id="cfg-web3forms-key" placeholder="Tu access_key de web3forms.com">
+
         <label class="flabel">Link Mercado Pago</label>
         <input class="finput" id="cfg-mp">
       </div>
@@ -310,6 +322,21 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   </div>
 </div>
 
+<!-- COMPROBANTE MODAL -->
+<div class="comp-modal" id="comp-modal">
+  <div class="comp-modal-box">
+    <div class="comp-modal-header">
+      <div class="comp-modal-title" id="comp-modal-title">📎 Comprobante de transferencia</div>
+      <button class="comp-modal-close" onclick="closeCompModal()">✕</button>
+    </div>
+    <div id="comp-modal-content"></div>
+    <div class="comp-modal-actions">
+      <button class="comp-btn-dl" id="comp-btn-dl">⬇ Descargar</button>
+      <button class="comp-btn-ok" onclick="marcarComprobanteOk()">✓ Pago confirmado</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Add/Edit Product -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
@@ -350,7 +377,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 <script>
 const LS={get(k,d=null){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
 function defProducts(){return[{id:1,img:'',name:'Churros clásicos',desc:'Porción de 6, con azúcar y canela',price:1200,cat:'Clásicos',stock:0,unlimited:true},{id:2,img:'',name:'Con chocolate',desc:'6 churros + taza de chocolate caliente',price:1800,cat:'Clásicos',stock:0,unlimited:true},{id:3,img:'',name:'Rellenos DDL',desc:'6 churros rellenos de dulce de leche',price:2000,cat:'Especiales',stock:0,unlimited:true},{id:4,img:'',name:'Combo café',desc:'3 churros con café con leche',price:1500,cat:'Clásicos',stock:0,unlimited:true},{id:5,img:'',name:'Con helado',desc:'4 churros con 2 bochas a elección',price:2200,cat:'Especiales',stock:0,unlimited:true},{id:6,img:'',name:'Combo familiar',desc:'12 churros + 2 chocolates calientes',price:3500,cat:'Combos',stock:0,unlimited:true}];}
-function defCfg(){return{name:'Churros La Esquina',open:true,envio:500,alias:'churros.laesquina',mp:'https://mpago.la/demo',logo:'',adminUser:'admin',adminPass:'admin123',whatsapp:'',web3formsKey:'',tagline:'Artesanales desde siempre',txtAbierto:'Abierto · Envíos disponibles',txtCerrado:'Cerrado por hoy',txtBannerCerrado:'🔒 El local está cerrado por hoy. Podés ver el menú pero no realizar pedidos.',txtCarritoVacio:'Tu carrito está vacío. ¡Elegí tus churros desde el menú!',txtSinStock:'Sin stock',txtStockBajo:'Últimas {n} unidades',txtConfirmarBtn:'Confirmar pedido',txtMsgEfectivo:'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',txtMsgTransferencia:'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',txtMsgMP:'Pedido #{id}{horario}',txtCerradoInline:'🔒 El local está cerrado. No se pueden hacer pedidos en este momento.'};}
+function defCfg(){return{name:'Churros La Esquina',open:true,envio:500,alias:'churros.laesquina',mp:'https://mpago.la/demo',logo:'',adminUser:'admin',adminPass:'admin123',whatsapp:'',tagline:'Artesanales desde siempre',txtAbierto:'Abierto · Envíos disponibles',txtCerrado:'Cerrado por hoy',txtBannerCerrado:'🔒 El local está cerrado por hoy. Podés ver el menú pero no realizar pedidos.',txtCarritoVacio:'Tu carrito está vacío. ¡Elegí tus churros desde el menú!',txtSinStock:'Sin stock',txtStockBajo:'Últimas {n} unidades',txtConfirmarBtn:'Confirmar pedido',txtMsgEfectivo:'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',txtMsgTransferencia:'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',txtMsgMP:'Pedido #{id}{horario}',txtCerradoInline:'🔒 El local está cerrado. No se pueden hacer pedidos en este momento.'};}
 function defSlots(){return[{id:1,from:'09:00',to:'11:00',type:'both',active:true},{id:2,from:'11:00',to:'13:00',type:'both',active:true},{id:3,from:'16:00',to:'19:00',type:'both',active:true}];}
 function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR')}
 
@@ -448,6 +475,7 @@ function renderOrders(){
         ${o.status==='prep'?`<button class="btn-sm btn-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
         ${o.status==='ready'?`<button class="btn-sm btn-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
         <button class="btn-sm btn-del" onclick="deleteOrder(${o.id})">✕</button>
+        ${o.payment==='transferencia'?`<button class="comp-badge ${o.comprobante?'':'pending'}" onclick="verComprobante(${o.id})">${o.comprobante?'📎 Ver comprobante':'⏳ Sin comprobante'}</button>`:''}
       </div>
     </div>`;}).join(''):'<div class="empty-state">No hay pedidos con este filtro.</div>';
 }
@@ -516,7 +544,7 @@ function gv(id){const el=document.getElementById(id);return el?el.value:'';}
 function saveCfg(){
   const cfg=fullCfg();
   cfg.name=gv('cfg-name')||cfg.name;cfg.whatsapp=gv('cfg-whatsapp');cfg.envio=parseInt(gv('cfg-envio'))||500;
-  cfg.alias=gv('cfg-alias');cfg.mp=gv('cfg-mp');cfg.web3formsKey=gv('cfg-web3forms-key');
+  cfg.alias=gv('cfg-alias');cfg.mp=gv('cfg-mp');
   const nu=gv('cfg-admin-user').trim(),np=gv('cfg-admin-pass');
   if(nu)cfg.adminUser=nu;if(np)cfg.adminPass=np;
   cfg.tagline=gv('cfg-tagline');cfg.txtAbierto=gv('cfg-txt-abierto');cfg.txtCerrado=gv('cfg-txt-cerrado');
@@ -529,6 +557,44 @@ function saveCfg(){
   document.getElementById('cfg-admin-pass').value='';
   alert('Configuración guardada ✓');
 }
+
+// ── COMPROBANTE VIEWER ────────────────────
+let _compOrderId=null;
+function verComprobante(id){
+  const orders=LS.get('churros_orders',[]);
+  const o=orders.find(x=>x.id===id);
+  if(!o)return;
+  _compOrderId=id;
+  const modal=document.getElementById('comp-modal');
+  const content=document.getElementById('comp-modal-content');
+  const title=document.getElementById('comp-modal-title');
+  title.textContent=`📎 Comprobante · Pedido #${o.id} · ${o.customer}`;
+  if(!o.comprobante){
+    content.innerHTML='<div style="text-align:center;padding:30px;color:#b45309;font-style:italic;">⏳ El cliente todavía no subió el comprobante.</div>';
+    document.getElementById('comp-btn-dl').style.display='none';
+    document.getElementById('comp-modal-content').nextElementSibling.querySelector('.comp-btn-ok').style.display='none';
+  } else {
+    const c=o.comprobante;
+    if(c.type==='application/pdf'){
+      content.innerHTML=`<div style="text-align:center;padding:20px;"><div style="font-size:40px;margin-bottom:8px;">📄</div><div style="font-size:14px;color:var(--brown);">${c.name}</div><div style="font-size:11px;color:var(--brown-light);margin-top:4px;">${new Date(c.ts).toLocaleString('es-AR')}</div></div>`;
+    } else {
+      content.innerHTML=`<img src="${c.data}" alt="Comprobante"><div style="font-size:11px;color:var(--brown-light);margin-top:6px;text-align:center;">${c.name} · ${new Date(c.ts).toLocaleString('es-AR')}</div>`;
+    }
+    document.getElementById('comp-btn-dl').style.display='block';
+    document.getElementById('comp-btn-dl').onclick=()=>{
+      const a=document.createElement('a');a.href=c.data;a.download=c.name;a.click();
+    };
+    document.querySelector('.comp-btn-ok').style.display='block';
+  }
+  modal.classList.add('open');
+}
+function closeCompModal(){document.getElementById('comp-modal').classList.remove('open');_compOrderId=null;}
+function marcarComprobanteOk(){
+  if(!_compOrderId)return;
+  setOrderStatus(_compOrderId,'prep');
+  closeCompModal();
+}
+document.getElementById('comp-modal').addEventListener('click',function(e){if(e.target===this)closeCompModal();});
 </script>
 </body>
 </html>
