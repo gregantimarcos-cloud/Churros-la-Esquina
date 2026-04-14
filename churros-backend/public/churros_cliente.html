@@ -18,7 +18,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .header-title{font-family:'IM Fell English SC',serif;font-size:20px;color:#fff;letter-spacing:.04em;line-height:1.1;}
 .header-sub{font-size:12px;color:var(--kraft);font-style:italic;margin-top:1px;}
 .cart-pill{background:var(--kraft-dark);color:#fff;border:none;border-radius:20px;padding:7px 13px;font-family:'Crimson Text',serif;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;}
-.cart-pill:active{opacity:.85}
 .badge{background:var(--red-warm);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:600;display:none;align-items:center;justify-content:center;}
 .tabs{background:var(--cream-dark);border-bottom:2px solid var(--kraft);display:flex;max-width:700px;margin:0 auto;}
 .tab{flex:1;padding:11px;text-align:center;font-family:'Playfair Display',serif;font-size:13px;cursor:pointer;color:var(--brown-light);border-bottom:3px solid transparent;transition:all .2s;}
@@ -35,22 +34,20 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;padding:0 12px 12px;}
 @media(max-width:380px){.menu-grid{grid-template-columns:1fr 1fr}}
 @media(min-width:600px){.menu-grid{grid-template-columns:repeat(3,1fr)}}
-@media(min-width:900px){.menu-grid{grid-template-columns:repeat(4,1fr)}}
 .pcard{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;overflow:hidden;cursor:pointer;box-shadow:2px 3px 8px rgba(61,28,2,.12);transition:transform .15s;}
 .pcard:active{transform:scale(.98)}
 .pcard.out-of-stock{opacity:.55;pointer-events:none;}
 .pcard-img-wrap{height:120px;background:linear-gradient(160deg,var(--cream-dark),var(--paper));border-bottom:1px solid var(--kraft);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
 .pcard-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
-.pcard-img-wrap .no-img{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--brown-light);font-style:italic;}
-.out-badge{position:absolute;inset:0;background:rgba(61,28,2,.55);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:13px;color:#fff;font-weight:700;letter-spacing:.04em;}
+.no-img{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--brown-light);font-style:italic;}
+.out-badge{position:absolute;inset:0;background:rgba(61,28,2,.55);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:13px;color:#fff;font-weight:700;}
 .pcard-body{padding:8px 9px 7px}
 .pcard-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:600;color:var(--brown);margin-bottom:2px;line-height:1.2;}
 .pcard-desc{font-size:11px;color:var(--brown-light);margin-bottom:7px;line-height:1.35;font-style:italic}
 .pcard-foot{display:flex;align-items:center;justify-content:space-between}
 .price{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--red-warm);}
 .stock-tag{font-size:10px;color:#b45309;font-style:italic;}
-.addbtn{background:var(--brown);color:var(--kraft);border:none;border-radius:7px;width:26px;height:26px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
-.addbtn:active{opacity:.8}
+.addbtn{background:var(--brown);color:var(--kraft);border:none;border-radius:7px;width:26px;height:26px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .qctrl{display:flex;align-items:center;gap:4px}
 .qctrl button{background:var(--cream-dark);border:1px solid var(--kraft);border-radius:5px;width:22px;height:22px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--brown);}
 .qctrl span{font-size:12px;font-weight:600;min-width:14px;text-align:center;color:var(--brown)}
@@ -63,24 +60,19 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .ci-sub{font-size:11px;color:var(--brown-light);font-style:italic;margin-top:1px}
 .fbox{background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:13px;margin-bottom:10px;box-shadow:1px 2px 6px rgba(61,28,2,.08);}
 .fbox.has-error{border-color:#f87171;}
-/* FIELD VALIDATION */
 .field-wrap{margin-bottom:10px;}
 .flabel{font-family:'IM Fell English SC',serif;font-size:11px;letter-spacing:.07em;color:var(--brown-light);margin-bottom:5px;display:flex;align-items:center;gap:6px;}
-.flabel .req{color:var(--red-warm);font-size:13px;line-height:1;}
+.flabel .req{color:var(--red-warm);font-size:13px;}
 .finput{width:100%;background:var(--cream);border:1.5px solid var(--kraft);border-radius:7px;padding:9px 11px;font-family:'Crimson Text',serif;font-size:15px;color:var(--brown);outline:none;transition:border-color .15s;}
 .finput:focus{border-color:var(--brown);box-shadow:0 0 0 3px rgba(61,28,2,.08)}
-.finput::placeholder{color:var(--kraft-dark);opacity:.6;font-style:italic}
 .finput.error{border-color:#f87171;background:#fff5f5;}
 .field-error{font-size:11px;color:#b91c1c;font-style:italic;margin-top:4px;display:none;}
 .field-error.show{display:block;}
-/* SLOT */
 .slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
-.slot-btn:hover:not(.on){background:var(--cream-dark);}
 .slot-required{font-size:11px;color:#b91c1c;font-style:italic;margin-top:5px;display:none;}
 .slot-required.show{display:block;}
-/* OPTS */
 .opts2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .opts3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:5px}
 .opt{border:1.5px solid var(--kraft);border-radius:9px;padding:9px 6px;cursor:pointer;text-align:center;background:var(--cream);transition:all .15s;}
@@ -88,7 +80,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .opt .oi{font-size:17px;margin-bottom:3px;}
 .opt .ol{font-family:'Crimson Text',serif;font-size:12px;font-weight:600;color:var(--brown);}
 .opt .os{font-size:10px;color:var(--brown-light);font-style:italic;margin-top:1px}
-/* PAYMENT BOXES */
 .pay-efectivo,.pay-transferencia,.pay-mp{border-radius:9px;padding:11px;margin-top:6px;}
 .pay-efectivo{background:#f0fdf4;border:1.5px solid #86efac}
 .pay-efectivo .pt{font-family:'Playfair Display',serif;font-size:12px;color:#166534;font-weight:600}
@@ -96,27 +87,20 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .pay-transferencia{background:#eff6ff;border:1.5px solid #93c5fd}
 .pay-transferencia .pt{font-family:'Playfair Display',serif;font-size:12px;color:#1e3a8a;font-weight:600}
 .tf-row{display:flex;justify-content:space-between;font-size:12px;margin-top:4px;color:var(--brown)}
-.tf-alias{font-size:11px;color:#1d4ed8;font-style:italic;margin-top:6px;padding-top:6px;border-top:1px solid #bfdbfe;text-align:center;font-weight:600;}
 .pay-mp{background:#fefce8;border:1.5px solid #fde047}
 .pay-mp .pt{font-family:'Playfair Display',serif;font-size:12px;color:#713f12;font-weight:600}
 .pay-mp .ps{font-size:11px;color:#92400e;margin-top:3px;font-style:italic}
-/* TOTBOX */
 .totbox{background:var(--cream-dark);border:2px solid var(--brown);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
 .tot-row{display:flex;justify-content:space-between;font-size:13px;color:var(--brown-light);margin-bottom:4px;font-style:italic;}
 .tot-row.grand{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--brown);margin-top:8px;padding-top:8px;border-top:1.5px solid var(--kraft);margin-bottom:0;font-style:normal;}
-/* LOCATION */
 .locbtn{width:100%;background:var(--cream);border:1.5px dashed var(--kraft-dark);border-radius:9px;padding:10px;cursor:pointer;font-family:'Crimson Text',serif;font-size:13px;color:var(--brown-light);display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px;font-style:italic;}
 .locbtn.ok{background:#f0fdf4;border-color:#86efac;color:#166534;border-style:solid;}
-/* CONFIRM */
 .cfmbtn{width:100%;background:var(--brown);color:var(--kraft);border:none;border-radius:11px;padding:15px;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.04em;margin-top:4px;box-shadow:0 4px 12px rgba(61,28,2,.3);}
 .cfmbtn:disabled{background:var(--cream-dark);color:var(--kraft-dark);cursor:not-allowed;box-shadow:none;opacity:.6}
-.cfmbtn:not(:disabled):active{background:var(--brown-mid)}
-/* FORM ERROR SUMMARY */
 .form-errors{background:#fff5f5;border:1.5px solid #f87171;border-radius:9px;padding:11px 13px;margin-bottom:10px;display:none;}
 .form-errors.show{display:block;}
-.form-errors p{font-size:12px;color:#b91c1c;margin-bottom:2px;}
 .form-errors .fe-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:600;color:#b91c1c;margin-bottom:6px;}
-/* MISC */
+.form-errors p{font-size:12px;color:#b91c1c;margin-bottom:2px;}
 .empty{text-align:center;padding:40px 20px;color:var(--brown-light)}
 .empty .ei{font-size:44px;margin-bottom:12px}
 .empty p{font-style:italic;font-size:15px}
@@ -127,20 +111,20 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .success p{font-size:15px;color:var(--brown-light);line-height:1.6;margin-bottom:22px;font-style:italic}
 .back-btn{background:none;border:2px solid var(--brown);border-radius:9px;padding:10px 28px;cursor:pointer;font-family:'Playfair Display',serif;font-size:14px;color:var(--brown);font-weight:600;}
 .closed-banner{background:var(--red-warm);color:#fff;text-align:center;padding:10px;font-family:'Playfair Display',serif;font-size:13px;letter-spacing:.04em;}
-.view{display:none}.view.active{display:block}
-/* COMPROBANTE */
 .comprobante-box{background:#eff6ff;border:1.5px solid #93c5fd;border-radius:9px;padding:13px;margin-top:8px;}
 .comprobante-box .cb-title{font-family:'Playfair Display',serif;font-size:12px;color:#1e3a8a;font-weight:600;margin-bottom:8px;}
-.comprobante-upload{border:2px dashed #93c5fd;border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:var(--cream);position:relative;transition:border-color .2s;}
-.comprobante-upload:hover{border-color:#1e3a8a;}
+.comprobante-upload{border:2px dashed #93c5fd;border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:var(--cream);position:relative;}
 .comprobante-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.comprobante-upload .cu-icon{font-size:26px;margin-bottom:4px;}
-.comprobante-upload .cu-label{font-size:13px;color:var(--brown-light);font-style:italic;}
-.comprobante-upload .cu-name{font-size:12px;color:#1e3a8a;font-weight:600;margin-top:4px;display:none;}
+.cu-icon{font-size:26px;margin-bottom:4px;}
+.cu-label{font-size:13px;color:var(--brown-light);font-style:italic;}
+.cu-name{font-size:12px;color:#1e3a8a;font-weight:600;margin-top:4px;display:none;}
 .comprobante-send{width:100%;margin-top:8px;background:#1e3a8a;color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;display:none;}
-.comprobante-send:hover{background:#1e40af;}
 .comprobante-sent{background:#dcfce7;border:1.5px solid #86efac;border-radius:8px;padding:10px;text-align:center;font-size:13px;color:#166534;font-weight:600;display:none;margin-top:8px;}
-.comprobante-sending{opacity:.6;cursor:not-allowed;}
+/* Loading spinner */
+.loading{text-align:center;padding:40px 20px;color:var(--brown-light);font-style:italic;}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--kraft);border-top-color:var(--brown);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.view{display:none}.view.active{display:block}
 </style>
 </head>
 <body>
@@ -152,9 +136,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <img class="logo-img" id="logo-img" alt="Logo" onerror="this.style.display='none'">
       <div class="header-text">
         <div class="header-title" id="hdr-title">Churros La Esquina</div>
-        <div class="header-sub" id="hdr-sub">Abierto · Envíos disponibles</div>
+        <div class="header-sub" id="hdr-sub">Cargando...</div>
       </div>
-      <button class="cart-pill" onclick="goTab('cart')" id="cart-pill">
+      <button class="cart-pill" onclick="goTab('cart')">
         🛒 <span id="cart-count">0</span>
         <span class="badge" id="cart-badge">0</span>
       </button>
@@ -170,7 +154,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="hero-tagline" id="hero-tagline">Artesanales desde siempre</div>
       <div class="hero-divider">✦ · · · ✦</div>
     </div>
-    <div id="menu-container"></div>
+    <div id="menu-container"><div class="loading"><div class="spinner"></div><br>Cargando menú...</div></div>
   </div>
   <div id="panel-cart" style="display:none">
     <div class="cart-wrap" id="cart-content"></div>
@@ -189,7 +173,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div style="font-size:12px;color:#92400e;font-style:italic;margin-bottom:12px;">Si Mercado Pago no se abrió automáticamente, usá este botón:</div>
       <button id="suc-mp-btn" style="background:#009ee3;color:#fff;border:none;border-radius:9px;padding:11px 24px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;width:100%;">Abrir Mercado Pago →</button>
     </div>
-    <!-- COMPROBANTE TRANSFERENCIA -->
     <div id="suc-comprobante-box" style="display:none;margin-bottom:20px;">
       <div class="comprobante-box">
         <div class="cb-title">📎 Adjuntá tu comprobante de transferencia</div>
@@ -209,33 +192,71 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 </div>
 <script>
-const LS={get(k,d=null){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
-function defProducts(){return[{id:1,img:'',name:'Churros clásicos',desc:'Porción de 6, con azúcar y canela',price:1200,cat:'Clásicos',stock:0,unlimited:true},{id:2,img:'',name:'Con chocolate',desc:'6 churros + taza de chocolate caliente',price:1800,cat:'Clásicos',stock:0,unlimited:true},{id:3,img:'',name:'Rellenos DDL',desc:'6 churros rellenos de dulce de leche',price:2000,cat:'Especiales',stock:0,unlimited:true},{id:4,img:'',name:'Combo café',desc:'3 churros con café con leche',price:1500,cat:'Clásicos',stock:0,unlimited:true},{id:5,img:'',name:'Con helado',desc:'4 churros con 2 bochas a elección',price:2200,cat:'Especiales',stock:0,unlimited:true},{id:6,img:'',name:'Combo familiar',desc:'12 churros + 2 chocolates calientes',price:3500,cat:'Combos',stock:0,unlimited:true}];}
-function defCfg(){return{name:'Churros La Esquina',open:true,envio:500,alias:'churros.laesquina',mp:'https://mpago.la/demo',logo:'',adminUser:'admin',adminPass:'admin123',whatsapp:'',tagline:'Artesanales desde siempre',txtAbierto:'Abierto · Envíos disponibles',txtCerrado:'Cerrado por hoy',txtBannerCerrado:'🔒 El local está cerrado por hoy. Podés ver el menú pero no realizar pedidos.',txtCarritoVacio:'Tu carrito está vacío. ¡Elegí tus churros desde el menú!',txtSinStock:'Sin stock',txtStockBajo:'Últimas {n} unidades',txtConfirmarBtn:'Confirmar pedido',txtMsgEfectivo:'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',txtMsgTransferencia:'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',txtMsgMP:'Pedido #{id}{horario}',txtCerradoInline:'🔒 El local está cerrado. No se pueden hacer pedidos en este momento.'};}
-function defSlots(){return[{id:1,from:'09:00',to:'11:00',type:'both',active:true},{id:2,from:'11:00',to:'13:00',type:'both',active:true},{id:3,from:'16:00',to:'19:00',type:'both',active:true}];}
+// ── API BASE URL ───────────────────────────────────────────────────────
+// Auto-detect: if running on Railway use relative URLs, otherwise use full URL
+const API = '';  // relative — works on Railway and locally if served by server
 
-let cfg=LS.get('churros_cfg',defCfg());
-// Backfill any missing text keys
-const dc=defCfg();Object.keys(dc).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc[k];});
-
-let cart={},delivery='pickup',payment='efectivo',geoLocation=null,selectedSlot='',activeTab='menu';
-let orderIdCounter=LS.get('churros_order_id',1);
-let triedSubmit=false;
+// ── STATE ──────────────────────────────────────────────────────────────
+let cfg={}, products=[], slots=[];
+let cart={}, delivery='pickup', payment='efectivo', geoLocation=null, selectedSlot='', activeTab='menu';
+let triedSubmit=false, _comprobanteFile=null, _pendingOrderId=null;
 
 function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR')}
 function tpl(str,vars){return str.replace(/\{(\w+)\}/g,(m,k)=>vars[k]!==undefined?vars[k]:m);}
+function getFieldVal(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 
-// Init
-(function(){
-  if(cfg.logo){document.getElementById('logo-img').src=cfg.logo;document.getElementById('logo-img2').src=cfg.logo;}
-  const t=cfg.name||'Churros La Esquina';
-  document.getElementById('hdr-title').textContent=t;document.getElementById('hdr-title2').textContent=t;
-  document.getElementById('hero-tagline').textContent=cfg.tagline||dc.tagline;
-  document.getElementById('hdr-sub').textContent=cfg.open?(cfg.txtAbierto||dc.txtAbierto):(cfg.txtCerrado||dc.txtCerrado);
-  const banner=document.getElementById('closed-banner');
-  if(!cfg.open){banner.style.display='block';banner.textContent=cfg.txtBannerCerrado||dc.txtBannerCerrado;}
-})();
+// ── API CALLS ──────────────────────────────────────────────────────────
+async function apiFetch(path, opts={}){
+  try{
+    const res=await fetch(API+path, opts);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  } catch(e){
+    console.error('API error:', path, e);
+    return null;
+  }
+}
 
+// ── INIT ───────────────────────────────────────────────────────────────
+async function init(){
+  // Load config, products and slots in parallel
+  const [cfgData, productsData, slotsData] = await Promise.all([
+    apiFetch('/api/cfg'),
+    apiFetch('/api/products'),
+    apiFetch('/api/slots'),
+  ]);
+
+  cfg = cfgData || {};
+  products = productsData || [];
+  slots = slotsData || [];
+
+  // Apply config to UI
+  const defTxts={
+    tagline:'Artesanales desde siempre',
+    txtAbierto:'Abierto · Envíos disponibles',
+    txtCerrado:'Cerrado por hoy',
+    txtBannerCerrado:'🔒 El local está cerrado por hoy.',
+  };
+  const name=cfg.name||'Churros La Esquina';
+  document.getElementById('hdr-title').textContent=name;
+  document.getElementById('hdr-title2').textContent=name;
+  document.getElementById('hero-tagline').textContent=cfg.tagline||defTxts.tagline;
+  document.getElementById('hdr-sub').textContent=cfg.open?(cfg.txtAbierto||defTxts.txtAbierto):(cfg.txtCerrado||defTxts.txtCerrado);
+
+  if(cfg.logo){
+    document.getElementById('logo-img').src=cfg.logo;
+    document.getElementById('logo-img2').src=cfg.logo;
+  }
+  if(!cfg.open){
+    const b=document.getElementById('closed-banner');
+    b.style.display='block';
+    b.textContent=cfg.txtBannerCerrado||defTxts.txtBannerCerrado;
+  }
+
+  renderMenu();
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────
 function goTab(t){
   activeTab=t;
   document.getElementById('panel-menu').style.display=t==='menu'?'':'none';
@@ -246,22 +267,15 @@ function goTab(t){
 }
 function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
+// ── CART ───────────────────────────────────────────────────────────────
 function addItem(id){
-  const products=LS.get('churros_products',defProducts());
   const p=products.find(x=>x.id===id);if(!p)return;
-  if(!p.unlimited&&p.stock<=0)return;
+  if(!p.unlimited&&(p.stock||0)<=(cart[id]||0))return;
   cart[id]=(cart[id]||0)+1;
-  if(!p.unlimited){p.stock=Math.max(0,p.stock-1);const all=LS.get('churros_products',defProducts());const idx=all.findIndex(x=>x.id===id);if(idx>=0){all[idx]=p;LS.set('churros_products',all);}}
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
 function remItem(id){
-  if(cart[id]>0){
-    const products=LS.get('churros_products',defProducts());
-    const p=products.find(x=>x.id===id);
-    cart[id]--;
-    if(p&&!p.unlimited){p.stock++;const all=LS.get('churros_products',defProducts());const idx=all.findIndex(x=>x.id===id);if(idx>=0){all[idx]=p;LS.set('churros_products',all);}}
-    if(cart[id]===0)delete cart[id];
-  }
+  if(cart[id]>0){cart[id]--;if(cart[id]===0)delete cart[id];}
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
 function updBadge(){
@@ -272,26 +286,29 @@ function updBadge(){
   const tb=document.getElementById('cart-tab-badge');tb.textContent=t;tb.style.display=t>0?'':'none';
 }
 
+// ── MENU ───────────────────────────────────────────────────────────────
 function renderMenu(){
-  cfg=LS.get('churros_cfg',defCfg());
-  const dc2=defCfg();Object.keys(dc2).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc2[k];});
-  const products=LS.get('churros_products',defProducts());
-  const bycat={};products.forEach(p=>{bycat[p.cat]=bycat[p.cat]||[];bycat[p.cat].push(p);});
+  if(!products.length){
+    document.getElementById('menu-container').innerHTML='<div class="loading">Cargando menú...</div>';
+    return;
+  }
+  const bycat={};
+  products.forEach(p=>{bycat[p.cat]=bycat[p.cat]||[];bycat[p.cat].push(p);});
   let html='<div class="ornament">· · · ✦ · · ·</div>';
+  const sinStockTxt=cfg.txtSinStock||'Sin stock';
   Object.entries(bycat).forEach(([cat,prods])=>{
     html+=`<div class="sec-label">${cat}</div><div class="menu-grid">`;
     prods.forEach(p=>{
       const q=cart[p.id]||0;
-      const outOfStock=!p.unlimited&&p.stock<=0&&q===0;
-      const lowStock=!p.unlimited&&p.stock>0&&p.stock<=3;
-      const imgHtml=p.img?`<img src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:'<div class="no-img">📷 Sin foto</div>';
-      const sinStockTxt=cfg.txtSinStock||'Sin stock';
+      const outOfStock=!p.unlimited&&(p.stock||0)<=0&&q===0;
+      const lowStock=!p.unlimited&&(p.stock||0)>0&&(p.stock||0)<=3;
       const lowTxt=(cfg.txtStockBajo||'Últimas {n} unidades').replace('{n}',p.stock);
+      const imgHtml=p.img?`<img src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:`<div class="no-img">📷 Sin foto</div>`;
       html+=`<div class="pcard${outOfStock?' out-of-stock':''}">
         <div class="pcard-img-wrap">${imgHtml}${outOfStock?`<div class="out-badge">${sinStockTxt}</div>`:''}</div>
         <div class="pcard-body">
           <div class="pcard-name">${p.name}</div>
-          <div class="pcard-desc">${p.desc}</div>
+          <div class="pcard-desc">${p.desc||''}</div>
           ${lowStock?`<div class="stock-tag">⚠ ${lowTxt}</div>`:''}
           <div class="pcard-foot">
             <span class="price">${fmt(p.price)}</span>
@@ -308,102 +325,19 @@ function renderMenu(){
   document.getElementById('menu-container').innerHTML=html;
 }
 
+// ── CART RENDER ────────────────────────────────────────────────────────
 function getAvailableSlots(deliveryType){
-  return LS.get('churros_slots',defSlots()).filter(s=>s.active&&(s.type==='both'||s.type===deliveryType));
-}
-
-// ── VALIDATION ──────────────────────────────
-function getFieldVal(id){const el=document.getElementById(id);return el?el.value.trim():'';}
-
-function validateForm(){
-  const name=getFieldVal('f-name');
-  const phone=getFieldVal('f-phone');
-  const addr=delivery==='delivery'?getFieldVal('f-addr'):'ok';
-  const availSlots=getAvailableSlots(delivery);
-  const slotOk=availSlots.length===0||selectedSlot!=='';
-
-  // Mark fields
-  markField('f-name',!name,'Ingresá tu nombre completo');
-  markField('f-phone',!phone,'Ingresá tu teléfono');
-  if(delivery==='delivery')markField('f-addr',!addr,'Ingresá tu dirección de entrega');
-
-  // Slot
-  const slotErr=document.getElementById('slot-error');
-  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0);
-
-  const valid=!!(name&&phone&&addr.trim()&&slotOk);
-
-  // Error summary
-  const summary=document.getElementById('form-errors');
-  if(summary){
-    const errors=[];
-    if(!name)errors.push('Nombre completo');
-    if(!phone)errors.push('Teléfono');
-    if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
-    if(!slotOk&&availSlots.length>0)errors.push('Franja horaria');
-    if(triedSubmit&&!valid&&errors.length){
-      summary.classList.add('show');
-      summary.innerHTML=`<div class="fe-title">⚠ Completá los siguientes campos:</div>${errors.map(e=>`<p>• ${e}</p>`).join('')}`;
-    } else {
-      summary.classList.remove('show');
-    }
-  }
-
-  const btn=document.getElementById('cfm-btn');
-  if(btn)btn.disabled=!valid;
-  return valid;
-}
-
-function markField(id,hasError,msg){
-  const input=document.getElementById(id);
-  const errEl=document.getElementById(id+'-err');
-  if(input){input.classList.toggle('error',hasError&&triedSubmit);}
-  if(errEl){errEl.textContent=msg;errEl.classList.toggle('show',hasError&&triedSubmit);}
-}
-
-function checkForm(){validateForm();}
-function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
-function setPayment(p){payment=p;renderCart();}
-function selectSlot(id){selectedSlot=id+'';validateForm();}
-
-function getLocation(){
-  if(!navigator.geolocation){alert('Tu navegador no soporta geolocalización');return}
-  const btn=document.getElementById('loc-btn');if(btn){btn.textContent='📍 Obteniendo ubicación...';btn.disabled=true;}
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      geoLocation={lat:pos.coords.latitude,lng:pos.coords.longitude};
-      // Fill address field with coords if empty
-      const addrField=document.getElementById('f-addr');
-      if(addrField&&!addrField.value.trim())addrField.value='Ubicación GPS compartida';
-      const b=document.getElementById('loc-btn');
-      if(b){b.className='locbtn ok';b.disabled=false;b.textContent='✓ Ubicación obtenida ('+geoLocation.lat.toFixed(5)+', '+geoLocation.lng.toFixed(5)+')';}
-      validateForm();
-    },
-    (err)=>{
-      const b=document.getElementById('loc-btn');
-      if(b){b.disabled=false;b.textContent='📍 No se pudo obtener · Ingresá dirección manual';}
-      let msg='No se pudo obtener la ubicación.';
-      if(err.code===1)msg='Permiso denegado. Ingresá la dirección manualmente.';
-      else if(err.code===2)msg='Ubicación no disponible. Ingresá la dirección manualmente.';
-      else if(err.code===3)msg='Tiempo de espera agotado. Intentá de nuevo.';
-      alert(msg);
-    },
-    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
-  );
+  return slots.filter(s=>s.active&&(s.type==='both'||s.type===deliveryType));
 }
 
 function renderCart(){
-  cfg=LS.get('churros_cfg',defCfg());
-  const dc3=defCfg();Object.keys(dc3).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc3[k];});
   const keys=Object.keys(cart).filter(k=>cart[k]>0);
   const cont=document.getElementById('cart-content');if(!cont)return;
   if(keys.length===0){
     const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
-    const parts=msg.split('.');
-    cont.innerHTML=`<div class="empty"><div class="ei">🥐</div><p>${parts.join('.<br>')}</p></div>`;
+    cont.innerHTML=`<div class="empty"><div class="ei">🥐</div><p>${msg}</p></div>`;
     return;
   }
-  const products=LS.get('churros_products',defProducts());
   let sub=0;
   const items=keys.map(k=>{
     const p=products.find(x=>x.id==k);if(!p)return'';
@@ -412,11 +346,11 @@ function renderCart(){
     return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div><div class="ci-sub">${cart[k]} × ${fmt(p.price)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
   }).join('');
 
-  const ship=delivery==='delivery'?cfg.envio:0;
+  const ship=delivery==='delivery'?(cfg.envio||500):0;
   const total=sub+ship;
   const availSlots=getAvailableSlots(delivery);
   const slotsHtml=availSlots.length
-    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlots.map(s=>`<button class="slot-btn${selectedSlot===s.id+''?' on':''}" onclick="selectSlot('${s.id}')">⏰ ${s.from} – ${s.to}</button>`).join('')}</div><div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
+    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlots.map(s=>`<button class="slot-btn${selectedSlot===String(s.id)?' on':''}" onclick="selectSlot('${s.id}')">⏰ ${s.from} – ${s.to}</button>`).join('')}</div><div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
     :'';
   const locHtml=delivery==='delivery'?`
     <div style="height:8px"></div>
@@ -430,7 +364,7 @@ function renderCart(){
   let payExtra='';
   if(payment==='efectivo')payExtra=`<div class="pay-efectivo"><div class="pt">💵 Pago en efectivo</div><div class="ps">Tené listos ${fmt(total)} al ${delivery==='delivery'?'recibir el pedido':'retirar'}.</div></div>`;
   if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:600">${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(total)}</span></div></div>`;
-  if(payment==='mercadopago')payExtra=`<div class="pay-mp"><div class="pt">💳 Mercado Pago</div><div class="ps">Al confirmar, Mercado Pago se abrirá automáticamente para completar el pago.</div></div>`;
+  if(payment==='mercadopago')payExtra=`<div class="pay-mp"><div class="pt">💳 Mercado Pago</div><div class="ps">Al confirmar, Mercado Pago se abrirá automáticamente.</div></div>`;
 
   const isClosed=!cfg.open;
   const confirmTxt=cfg.txtConfirmarBtn||'Confirmar pedido';
@@ -446,7 +380,7 @@ function renderCart(){
     <div class="fbox" style="margin-bottom:10px">
       <div class="opts2">
         <div class="opt ${delivery==='pickup'?'on':''}" onclick="setDelivery('pickup')"><div class="oi">🏪</div><div class="ol">Retiro</div><div class="os">en el local</div></div>
-        <div class="opt ${delivery==='delivery'?'on':''}" onclick="setDelivery('delivery')"><div class="oi">🛵</div><div class="ol">Envío</div><div class="os">${fmt(cfg.envio)}</div></div>
+        <div class="opt ${delivery==='delivery'?'on':''}" onclick="setDelivery('delivery')"><div class="oi">🛵</div><div class="ol">Envío</div><div class="os">${fmt(cfg.envio||500)}</div></div>
       </div>
       ${locHtml}
       ${slotsHtml}
@@ -474,17 +408,68 @@ function renderCart(){
       </div>
     </div>
     <div class="form-errors" id="form-errors"></div>
-    ${isClosed?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||dc3.txtCerradoInline}</div>`:''}
+    ${isClosed?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||'🔒 El local está cerrado.'}</div>`:''}
     <button class="cfmbtn" id="cfm-btn" onclick="tryConfirm()" ${isClosed?'disabled style="display:none"':''}>${confirmTxt}</button>
     <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
   </div>`;
   setTimeout(()=>validateForm(),0);
 }
 
+// ── VALIDATION ─────────────────────────────────────────────────────────
+function validateForm(){
+  const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
+  const addr=delivery==='delivery'?getFieldVal('f-addr'):'ok';
+  const availSlots=getAvailableSlots(delivery);
+  const slotOk=availSlots.length===0||selectedSlot!=='';
+  markField('f-name',!name,'Ingresá tu nombre completo');
+  markField('f-phone',!phone,'Ingresá tu teléfono');
+  if(delivery==='delivery')markField('f-addr',!addr.trim(),'Ingresá tu dirección');
+  const slotErr=document.getElementById('slot-error');
+  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0);
+  const valid=!!(name&&phone&&addr.trim()&&slotOk);
+  const summary=document.getElementById('form-errors');
+  if(summary&&triedSubmit&&!valid){
+    const errors=[];
+    if(!name)errors.push('Nombre completo');
+    if(!phone)errors.push('Teléfono');
+    if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
+    if(!slotOk&&availSlots.length>0)errors.push('Franja horaria');
+    if(errors.length){summary.classList.add('show');summary.innerHTML=`<div class="fe-title">⚠ Completá los siguientes campos:</div>${errors.map(e=>`<p>• ${e}</p>`).join('')}`;}
+    else summary.classList.remove('show');
+  } else if(summary)summary.classList.remove('show');
+  const btn=document.getElementById('cfm-btn');if(btn)btn.disabled=!valid;
+  return valid;
+}
+function markField(id,hasError,msg){
+  const input=document.getElementById(id),errEl=document.getElementById(id+'-err');
+  if(input)input.classList.toggle('error',hasError&&triedSubmit);
+  if(errEl){errEl.textContent=msg;errEl.classList.toggle('show',hasError&&triedSubmit);}
+}
+function checkForm(){validateForm();}
+function selectSlot(id){selectedSlot=String(id);validateForm();}
+function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
+function setPayment(p){payment=p;renderCart();}
+
+function getLocation(){
+  if(!navigator.geolocation){alert('Tu navegador no soporta geolocalización');return}
+  const btn=document.getElementById('loc-btn');if(btn){btn.textContent='📍 Obteniendo...';btn.disabled=true;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    geoLocation={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    const addrField=document.getElementById('f-addr');
+    if(addrField&&!addrField.value.trim())addrField.value='Ubicación GPS compartida';
+    const b=document.getElementById('loc-btn');
+    if(b){b.className='locbtn ok';b.disabled=false;b.textContent='✓ Ubicación obtenida ('+geoLocation.lat.toFixed(5)+', '+geoLocation.lng.toFixed(5)+')';}
+    validateForm();
+  },err=>{
+    const b=document.getElementById('loc-btn');if(b){b.disabled=false;b.textContent='📍 No se pudo obtener · Ingresá dirección manual';}
+    if(err.code===1)alert('Permiso denegado. Ingresá la dirección manualmente.');
+  },{enableHighAccuracy:true,timeout:10000});
+}
+
+// ── ORDER ──────────────────────────────────────────────────────────────
 function tryConfirm(){
   triedSubmit=true;
   if(!validateForm()){
-    // Scroll to first error
     const firstErr=document.querySelector('.finput.error,.slot-required.show');
     if(firstErr)firstErr.scrollIntoView({behavior:'smooth',block:'center'});
     return;
@@ -492,109 +477,108 @@ function tryConfirm(){
   confirmOrder();
 }
 
-function confirmOrder(){
-  cfg=LS.get('churros_cfg',defCfg());
-  const dc4=defCfg();Object.keys(dc4).forEach(k=>{if(cfg[k]===undefined)cfg[k]=dc4[k];});
+async function confirmOrder(){
   if(!cfg.open){alert('El local está cerrado.');return;}
-  const name=getFieldVal('f-name');
-  const phone=getFieldVal('f-phone');
+  const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
-  const ship=delivery==='delivery'?cfg.envio:0;
-  const products=LS.get('churros_products',defProducts());
+  const ship=delivery==='delivery'?(cfg.envio||500):0;
   let sub=0;
   const items=Object.keys(cart).filter(k=>cart[k]>0).map(k=>{
     const p=products.find(x=>x.id==k);if(!p)return null;
-    sub+=p.price*cart[k];return{name:p.name,qty:cart[k],price:p.price};
+    sub+=p.price*cart[k];return{name:p.name,qty:cart[k],price:p.price,id:p.id};
   }).filter(Boolean);
   const total=sub+ship;
   let slotLabel='';
-  if(selectedSlot){const slots=LS.get('churros_slots',defSlots());const s=slots.find(x=>x.id+''===selectedSlot+'');if(s)slotLabel=`${s.from} – ${s.to}`;}
-  const orderId=orderIdCounter++;
-  LS.set('churros_order_id',orderIdCounter);
-  const orders=LS.get('churros_orders',[]);
-  orders.push({id:orderId,customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',items,total,delivery,payment,slot:slotLabel,status:'new',ts:Date.now()});
-  LS.set('churros_orders',orders);
+  if(selectedSlot){const s=slots.find(x=>String(x.id)===selectedSlot);if(s)slotLabel=`${s.from} – ${s.to}`;}
 
-  const momento=delivery==='delivery'?'recibir tu pedido':'retirar';
-  const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
-  const nombre=name.split(' ')[0];
+  const btn=document.getElementById('cfm-btn');
+  btn.disabled=true;btn.textContent='Confirmando...';
 
+  // Save order via API
+  const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',items,total,delivery,payment,slot:slotLabel};
+
+  let orderId=null;
+
+  // If MP, create preference first
   if(payment==='mercadopago'){
-    const msg=tpl(cfg.txtMsgMP||'Pedido #{id}{horario}',{id:orderId,horario,nombre,total:fmt(total)});
+    const prefData=await apiFetch('/api/mp/create-preference',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items,orderId:'pending',backUrl:window.location.origin}),
+    });
+    const orderRes=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+    orderId=orderRes?.id;
+    _pendingOrderId=orderId;
+    const mpUrl=prefData?.init_point||cfg.mp||'https://www.mercadopago.com.ar';
+    const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
+    const msg=tpl(cfg.txtMsgMP||'Pedido #{id}{horario}',{id:orderId,horario});
     document.getElementById('suc-icon').textContent='💳';
     document.getElementById('suc-title').textContent='¡Redirigiendo a Mercado Pago!';
     document.getElementById('suc-msg').textContent=msg;
     document.getElementById('suc-mp-box').style.display='block';
     document.getElementById('suc-mp-amount').textContent=fmt(total);
-    const mpUrl=cfg.mp||'https://www.mercadopago.com.ar';
     document.getElementById('suc-mp-btn').onclick=()=>window.open(mpUrl,'_blank');
+    document.getElementById('suc-comprobante-box').style.display='none';
     showView('v-success');
     setTimeout(()=>window.open(mpUrl,'_blank'),400);
     return;
   }
+
+  const orderRes=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+  orderId=orderRes?.id||'?';
+  _pendingOrderId=orderId;
+
+  const momento=delivery==='delivery'?'recibir tu pedido':'retirar';
+  const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
+  const nombre=name.split(' ')[0];
   let icon='✅',title='¡Pedido confirmado!',msg='';
   if(payment==='transferencia'){
-    msg=tpl(cfg.txtMsgTransferencia||'Enviá {total} al alias "{alias}" y mandanos el comprobante por WhatsApp. ¡Gracias, {nombre}! Pedido #{id}{horario}.',{id:orderId,horario,nombre,total:fmt(total),alias:cfg.alias||'churros.local'});
+    msg=tpl(cfg.txtMsgTransferencia||'¡Gracias, {nombre}! Pedido #{id}{horario}. Te avisamos cuando confirmemos el pago.',{id:orderId,horario,nombre,total:fmt(total),alias:cfg.alias||'churros.local'});
   } else {
-    msg=tpl(cfg.txtMsgEfectivo||'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}. Te avisamos cuando esté.',{id:orderId,horario,nombre,total:fmt(total),momento});
+    msg=tpl(cfg.txtMsgEfectivo||'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}.',{id:orderId,horario,nombre,total:fmt(total),momento});
   }
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
   document.getElementById('suc-msg').textContent=msg;
   document.getElementById('suc-mp-box').style.display='none';
-  // Show comprobante box for transferencia
   const compBox=document.getElementById('suc-comprobante-box');
-  if(payment==='transferencia'&&compBox){
-    compBox.style.display='block';
-    window._pendingOrderId=orderId;
-  } else if(compBox){
-    compBox.style.display='none';
-  }
+  compBox.style.display=payment==='transferencia'?'block':'none';
   showView('v-success');
 }
 
-// ── COMPROBANTE ────────────────────────────
-let _comprobanteFile=null;
+// ── COMPROBANTE ────────────────────────────────────────────────────────
 function handleComprobanteFile(event){
   const file=event.target.files[0];if(!file)return;
-  // Reject non-image/pdf (extra safety)
-  if(!file.type.startsWith('image/')&&file.type!=='application/pdf'){
-    alert('Solo se aceptan imágenes o PDF.');return;
-  }
   _comprobanteFile=file;
   const nameEl=document.getElementById('comp-file-name');
   nameEl.textContent=file.name;nameEl.style.display='block';
   document.getElementById('comp-send-btn').style.display='block';
 }
-function guardarComprobante(){
+async function guardarComprobante(){
   if(!_comprobanteFile){alert('Seleccioná el archivo del comprobante primero.');return;}
   const btn=document.getElementById('comp-send-btn');
-  btn.textContent='Guardando...';btn.classList.add('comprobante-sending');btn.disabled=true;
+  btn.textContent='Guardando...';btn.disabled=true;
   const reader=new FileReader();
-  reader.onload=function(e){
+  reader.onload=async function(e){
     const b64=e.target.result;
-    const orderId=window._pendingOrderId;
-    if(!orderId){btn.textContent='Adjuntar comprobante al pedido →';btn.classList.remove('comprobante-sending');btn.disabled=false;return;}
-    // Save comprobante attached to the order
-    const orders=LS.get('churros_orders',[]);
-    const o=orders.find(x=>x.id===orderId);
-    if(o){
-      o.comprobante={data:b64,name:_comprobanteFile.name,type:_comprobanteFile.type,ts:Date.now()};
-      LS.set('churros_orders',orders);
-    }
+    // Save comprobante via API
+    await apiFetch(`/api/orders/${_pendingOrderId}/comprobante`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({data:b64,name:_comprobanteFile.name,type:_comprobanteFile.type,ts:Date.now()}),
+    });
     document.getElementById('comp-sent').style.display='block';
     document.getElementById('comp-send-btn').style.display='none';
     document.getElementById('comp-upload-area').style.display='none';
   };
-  reader.onerror=function(){
-    btn.textContent='Adjuntar comprobante al pedido →';btn.classList.remove('comprobante-sending');btn.disabled=false;
-    alert('Error al leer el archivo. Intentá de nuevo.');
-  };
+  reader.onerror=function(){btn.textContent='Adjuntar comprobante al pedido →';btn.disabled=false;alert('Error al leer el archivo.');};
   reader.readAsDataURL(_comprobanteFile);
 }
 
-function resetApp(){cart={};delivery='pickup';payment='efectivo';geoLocation=null;selectedSlot='';triedSubmit=false;updBadge();goTab('menu');renderMenu();showView('v-customer');}
-renderMenu();
+function resetApp(){
+  cart={};delivery='pickup';payment='efectivo';geoLocation=null;selectedSlot='';triedSubmit=false;_comprobanteFile=null;_pendingOrderId=null;
+  updBadge();goTab('menu');renderMenu();showView('v-customer');
+}
+
+init();
 </script>
 </body>
 </html>

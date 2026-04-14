@@ -130,6 +130,16 @@ app.post('/api/orders', (req, res) => {
   res.json({ id: order.id });
 });
 
+// Attach comprobante to order (called by client, no admin auth needed)
+app.post('/api/orders/:id/comprobante', (req, res) => {
+  const db = readDB();
+  const o = db.orders.find(x => x.id == req.params.id);
+  if (!o) return res.status(404).json({ error: 'No encontrado' });
+  o.comprobante = req.body;
+  writeDB(db);
+  res.json({ ok: true });
+});
+
 app.put('/api/orders/:id/status', requireAdmin, (req, res) => {
   const db = readDB();
   const o = db.orders.find(x => x.id == req.params.id);
