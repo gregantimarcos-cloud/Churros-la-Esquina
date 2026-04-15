@@ -71,6 +71,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
+.slot-btn.full{opacity:.45;pointer-events:none;text-decoration:line-through;}
+.retiro-info{background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;padding:11px 13px;margin-top:8px;font-size:13px;color:#166534;line-height:1.6;}
+.retiro-info strong{font-family:'Playfair Display',serif;font-size:12px;display:block;margin-bottom:3px;}
 .slot-required{font-size:11px;color:#b91c1c;font-style:italic;margin-top:5px;display:none;}
 .slot-required.show{display:block;}
 .opts2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
@@ -236,6 +239,7 @@ async function init(){
     txtAbierto:'Abierto · Envíos disponibles',
     txtCerrado:'Cerrado por hoy',
     txtBannerCerrado:'🔒 El local está cerrado por hoy.',
+    txtRetiro:'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!',
   };
   const name=cfg.name||'Churros La Esquina';
   document.getElementById('hdr-title').textContent=name;
@@ -327,7 +331,17 @@ function renderMenu(){
 
 // ── CART RENDER ────────────────────────────────────────────────────────
 function getAvailableSlots(deliveryType){
-  return slots.filter(s=>s.active&&(s.type==='both'||s.type===deliveryType));
+  // Count existing orders per slot to enforce capacity limits
+  return slots.filter(s=>{
+    if(!s.active)return false;
+    if(s.type!=='both'&&s.type!==deliveryType)return false;
+    return true; // capacity check happens in renderCart
+  });
+}
+function slotIsFull(slotId){
+  // We don't have access to all orders client-side, so we just show limit info
+  // Full enforcement is on the server
+  return false;
 }
 
 function renderCart(){
@@ -350,8 +364,20 @@ function renderCart(){
   const total=sub+ship;
   const availSlots=getAvailableSlots(delivery);
   const slotsHtml=availSlots.length
-    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlots.map(s=>`<button class="slot-btn${selectedSlot===String(s.id)?' on':''}" onclick="selectSlot('${s.id}')">⏰ ${s.from} – ${s.to}</button>`).join('')}</div><div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
+    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlots.map(s=>{
+      const isFull=s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos;
+      const isOn=selectedSlot===String(s.id);
+      const label=s.maxPedidos>0?` (${Math.max(0,s.maxPedidos-(s.pedidosActuales||0))} disp.)`:'';
+      return `<button class="slot-btn${isOn?' on':''}${isFull?' full':''}" onclick="${isFull?'':'selectSlot('+s.id+')'}">⏰ ${s.from} – ${s.to}${isFull?' · Lleno':label}</button>`;
+    }).join('')}</div><div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
     :'';
+  const retiroInfoTxt=cfg.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!';
+  let retiroInfoHtml='';
+  if(delivery==='pickup'){
+    const slotSel=selectedSlot?slots.find(x=>String(x.id)===selectedSlot):null;
+    const horarioTxt=slotSel?`<br>⏰ Horario de retiro: <strong style="font-family:'Playfair Display',serif">${slotSel.from} – ${slotSel.to}</strong>`:'';
+    retiroInfoHtml=`<div class="retiro-info"><strong>🏪 Retiro en el local</strong>${retiroInfoTxt}${horarioTxt}</div>`;
+  }
   const locHtml=delivery==='delivery'?`
     <div style="height:8px"></div>
     <label class="flabel">Tu dirección <span class="req">*</span></label>
@@ -382,6 +408,7 @@ function renderCart(){
         <div class="opt ${delivery==='pickup'?'on':''}" onclick="setDelivery('pickup')"><div class="oi">🏪</div><div class="ol">Retiro</div><div class="os">en el local</div></div>
         <div class="opt ${delivery==='delivery'?'on':''}" onclick="setDelivery('delivery')"><div class="oi">🛵</div><div class="ol">Envío</div><div class="os">${fmt(cfg.envio||500)}</div></div>
       </div>
+      ${retiroInfoHtml}
       ${locHtml}
       ${slotsHtml}
     </div>
@@ -446,7 +473,7 @@ function markField(id,hasError,msg){
   if(errEl){errEl.textContent=msg;errEl.classList.toggle('show',hasError&&triedSubmit);}
 }
 function checkForm(){validateForm();}
-function selectSlot(id){selectedSlot=String(id);validateForm();}
+function selectSlot(id){selectedSlot=String(id);renderCart();}
 function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
 function setPayment(p){payment=p;renderCart();}
 
@@ -523,7 +550,14 @@ async function confirmOrder(){
     return;
   }
 
-  const orderRes=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+  const orderRaw=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+  if(orderRaw.status===409){
+    const errData=await orderRaw.json();
+    btn.disabled=false;btn.textContent=cfg.txtConfirmarBtn||'Confirmar pedido';
+    alert(errData.error||'La franja horaria está completa. Elegí otra.');
+    selectedSlot='';renderCart();return;
+  }
+  const orderRes=await orderRaw.json();
   orderId=orderRes?.id||'?';
   _pendingOrderId=orderId;
 
