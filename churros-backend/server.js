@@ -119,9 +119,31 @@ app.get('/api/orders', requireAdmin, (req, res) => {
 
 app.post('/api/orders', (req, res) => {
   const db = readDB();
+  const body = req.body;
+
+  // Check slot capacity if a slot was selected
+  if (body.slot && db.slots) {
+    const slotMatch = db.slots.find(s => {
+      const label = `${s.from} – ${s.to}`;
+      return label === body.slot && s.active;
+    });
+    if (slotMatch && slotMatch.maxPedidos > 0) {
+      const count = db.orders.filter(o =>
+        o.slot === body.slot &&
+        o.status !== 'done' &&
+        new Date(o.ts).toDateString() === new Date().toDateString()
+      ).length;
+      if (count >= slotMatch.maxPedidos) {
+        return res.status(409).json({ error: 'Esta franja horaria ya está completa. Por favor elegí otra.' });
+      }
+      // Increment counter on slot
+      slotMatch.pedidosActuales = (slotMatch.pedidosActuales || 0) + 1;
+    }
+  }
+
   const order = {
     id: (db.orders.length ? Math.max(...db.orders.map(o => o.id)) : 0) + 1,
-    ...req.body,
+    ...body,
     status: 'new',
     ts: Date.now(),
   };
