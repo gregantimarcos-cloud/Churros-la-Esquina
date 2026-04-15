@@ -130,6 +130,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--kraft);border-top-color:var(--brown);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .refresh-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 9px;font-family:'Crimson Text',serif;font-size:11px;cursor:pointer;margin-left:6px;}
+.calc-result{background:var(--paper);border:2px solid var(--brown);border-radius:12px;padding:16px;margin-top:12px;}
+.calc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--cream-dark);font-size:13px;}
+.calc-row:last-child{border-bottom:none;}
+.calc-row.total{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--red-warm);padding-top:10px;margin-top:4px;border-top:2px solid var(--kraft);}
+.calc-row .lbl{color:var(--brown-light);font-style:italic;}
+.calc-row .val{font-weight:600;color:var(--brown);}
+.calc-suggestion{background:var(--cream-dark);border-radius:9px;padding:11px;margin-top:8px;font-size:12px;color:var(--brown-light);font-style:italic;text-align:center;}
 </style>
 </head>
 <body>
@@ -162,6 +169,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="nav-tab" onclick="showPanel('products')" id="ntab-products">🥐 Productos</div>
       <div class="nav-tab" onclick="showPanel('slots')" id="ntab-slots">🕐 Horarios</div>
       <div class="nav-tab" onclick="showPanel('config')" id="ntab-config">⚙ Config</div>
+      <div class="nav-tab" onclick="showPanel('calc')" id="ntab-calc">🧮 Precios</div>
     </div>
   </div>
 
@@ -220,6 +228,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           <option value="pickup">Solo retiro</option>
           <option value="delivery">Solo envío</option>
         </select>
+        <label class="flabel">Límite de pedidos por franja <small>(0 = sin límite)</small></label>
+        <input class="finput" type="number" id="slot-max" placeholder="0" style="margin-bottom:8px" min="0">
         <button class="savebtn" style="margin-top:0" onclick="addSlot()">Agregar franja</button>
       </div>
       <div class="sec-label">Franjas configuradas</div>
@@ -260,7 +270,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <label class="flabel">Header · abierto</label><input class="finput field-mb" id="cfg-txt-abierto">
         <label class="flabel">Header · cerrado</label><input class="finput field-mb" id="cfg-txt-cerrado">
         <label class="flabel">Banner cerrado</label><textarea class="ftextarea field-mb" id="cfg-txt-banner-cerrado"></textarea>
-        <label class="flabel">Texto cerrado en el carrito</label><textarea class="ftextarea" id="cfg-txt-cerrado-inline"></textarea>
+        <label class="flabel">Texto cerrado en el carrito</label><textarea class="ftextarea field-mb" id="cfg-txt-cerrado-inline"></textarea>
+        <label class="flabel">Cartelito de retiro en el local <small>(aparece al elegir retiro)</small></label>
+        <textarea class="ftextarea" id="cfg-txt-retiro"></textarea>
       </div>
       <div class="fbox">
         <div class="sec-label" style="padding-top:0">Textos · Menú y Carrito</div>
@@ -280,6 +292,51 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="ornament" style="margin-top:16px">· · · ✦ · · ·</div>
     </div>
   </div>
+</div>
+
+  <!-- CALCULADORA -->
+  <div class="panel" id="panel-calc">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Calculadora de precio de venta</div>
+        <p style="font-size:12px;color:var(--brown-light);font-style:italic;margin-bottom:12px;">Calculá el precio ideal para cada producto teniendo en cuenta tus costos, ganancia y comisiones de Mercado Pago.</p>
+
+        <label class="flabel">Costo de producción ($) <small>ingredientes + tiempo + packaging</small></label>
+        <input class="finput field-mb" type="number" id="calc-costo" placeholder="Ej: 800" oninput="calcularPrecio()">
+
+        <label class="flabel">Costos fijos prorrateados ($) <small>alquiler, servicios, etc. dividido por unidades del mes</small></label>
+        <input class="finput field-mb" type="number" id="calc-fijos" placeholder="Ej: 150" oninput="calcularPrecio()">
+
+        <label class="flabel">Margen de ganancia deseado (%)</label>
+        <input class="finput field-mb" type="number" id="calc-margen" placeholder="Ej: 40" value="40" oninput="calcularPrecio()">
+
+        <label class="flabel">Método de pago principal</label>
+        <select class="finput field-mb" id="calc-metodo" onchange="calcularPrecio()">
+          <option value="0">Efectivo / Transferencia (sin comisión)</option>
+          <option value="4.99">Mercado Pago — Link de pago (4.99%)</option>
+          <option value="3.99">Mercado Pago — QR presencial (3.99%)</option>
+          <option value="2.99">Mercado Pago — POS (2.99%)</option>
+          <option value="6.49">Mercado Pago — Cuotas sin interés (6.49%)</option>
+        </select>
+
+        <label class="flabel">IVA incluido en la comisión (%)</label>
+        <input class="finput field-mb" type="number" id="calc-iva" placeholder="21" value="21" oninput="calcularPrecio()">
+      </div>
+
+      <div class="calc-result" id="calc-result" style="display:none">
+        <div class="sec-label" style="padding-top:0">Resultado</div>
+        <div class="calc-row"><span class="lbl">Costo total (prod. + fijos)</span><span class="val" id="cr-costo">–</span></div>
+        <div class="calc-row"><span class="lbl">Ganancia</span><span class="val" id="cr-ganancia">–</span></div>
+        <div class="calc-row"><span class="lbl">Comisión MP (con IVA)</span><span class="val" id="cr-comision">–</span></div>
+        <div class="calc-row total"><span>Precio de venta sugerido</span><span id="cr-precio">–</span></div>
+        <div class="calc-suggestion" id="cr-tip"></div>
+      </div>
+
+      <div class="ornament" style="margin-top:16px">· · · ✦ · · ·</div>
+    </div>
+  </div>
+
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
@@ -407,6 +464,7 @@ function fillConfigForm(c){
   fill('cfg-txt-carrito-vacio',c.txtCarritoVacio||d.txtCarritoVacio);fill('cfg-txt-sin-stock',c.txtSinStock||d.txtSinStock);
   fill('cfg-txt-stock-bajo',c.txtStockBajo||d.txtStockBajo);fill('cfg-txt-confirmar-btn',c.txtConfirmarBtn||d.txtConfirmarBtn);
   fill('cfg-txt-msg-efectivo',c.txtMsgEfectivo||d.txtMsgEfectivo);fill('cfg-txt-msg-transferencia',c.txtMsgTransferencia||d.txtMsgTransferencia);fill('cfg-txt-msg-mp',c.txtMsgMP||d.txtMsgMP);
+  fill('cfg-txt-retiro',c.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!');
   document.getElementById('cfg-open').classList.toggle('on',c.open!==false);
   document.getElementById('cfg-closed').classList.toggle('on',c.open===false);
 }
@@ -421,6 +479,7 @@ function showPanel(id){
   if(id==='orders')loadOrders();
   if(id==='products')loadProducts();
   if(id==='slots')loadSlots();
+  if(id==='calc')calcularPrecio();
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────
@@ -586,12 +645,17 @@ async function loadSlots(){
 }
 function renderSlots(){
   const tl={both:'Retiro y envío',pickup:'Solo retiro',delivery:'Solo envío'};
-  document.getElementById('slots-list').innerHTML=_slots.length?_slots.map(s=>`<div class="slot-item"><div><div class="slot-text">⏰ ${s.from} – ${s.to}</div><div class="slot-type-lbl">${tl[s.type]||s.type}</div></div><button class="slot-toggle ${s.active?'active':''}" onclick="toggleSlot(${s.id})">${s.active?'✓ Activo':'Inactivo'}</button><button class="slot-del" onclick="deleteSlot(${s.id})">✕</button></div>`).join(''):'<div class="empty-state">No hay franjas. Agregá una arriba.</div>';
+  document.getElementById('slots-list').innerHTML=_slots.length?_slots.map(s=>{
+    const limitLabel=s.maxPedidos>0?`<span style="font-size:10px;background:var(--cream-dark);border:1px solid var(--kraft);border-radius:10px;padding:2px 7px;margin-left:5px;">máx. ${s.maxPedidos} pedidos</span>`:'';
+    return`<div class="slot-item"><div><div class="slot-text">⏰ ${s.from} – ${s.to}${limitLabel}</div><div class="slot-type-lbl">${tl[s.type]||s.type}</div></div><button class="slot-toggle ${s.active?'active':''}" onclick="toggleSlot(${s.id})">${s.active?'✓ Activo':'Inactivo'}</button><button class="slot-del" onclick="deleteSlot(${s.id})">✕</button></div>`;
+  }).join(''):'<div class="empty-state">No hay franjas. Agregá una arriba.</div>';
 }
 async function addSlot(){
   const from=gv('slot-from'),to=gv('slot-to'),type=gv('slot-type');
+  const maxPedidos=parseInt(gv('slot-max'))||0;
   if(!from||!to){alert('Completá los horarios');return}
-  await apiFetch('/api/slots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to,type,active:true})});
+  await apiFetch('/api/slots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to,type,active:true,maxPedidos,pedidosActuales:0})});
+  document.getElementById('slot-max').value='';
   await loadSlots();
 }
 async function toggleSlot(id){
@@ -633,6 +697,7 @@ async function saveCfg(){
     txtCarritoVacio:gv('cfg-txt-carrito-vacio'),txtSinStock:gv('cfg-txt-sin-stock'),
     txtStockBajo:gv('cfg-txt-stock-bajo'),txtConfirmarBtn:gv('cfg-txt-confirmar-btn'),
     txtMsgEfectivo:gv('cfg-txt-msg-efectivo'),txtMsgTransferencia:gv('cfg-txt-msg-transferencia'),txtMsgMP:gv('cfg-txt-msg-mp'),
+    txtRetiro:gv('cfg-txt-retiro'),
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
@@ -644,6 +709,34 @@ async function saveCfg(){
   } else {
     alert('Error al guardar. Verificá tu sesión.');
   }
+}
+
+// ── CALCULADORA DE PRECIOS ─────────────────────────────────────────
+function calcularPrecio(){
+  const costo=parseFloat(document.getElementById('calc-costo').value)||0;
+  const fijos=parseFloat(document.getElementById('calc-fijos').value)||0;
+  const margen=parseFloat(document.getElementById('calc-margen').value)||0;
+  const comisionPct=parseFloat(document.getElementById('calc-metodo').value)||0;
+  const ivaPct=parseFloat(document.getElementById('calc-iva').value)||21;
+  const result=document.getElementById('calc-result');
+  if(!costo&&!fijos){result.style.display='none';return;}
+  result.style.display='block';
+  const costoTotal=costo+fijos;
+  const ganancia=costoTotal*(margen/100);
+  const baseAnteComision=costoTotal+ganancia;
+  // comision MP incluye IVA: comisionReal = pct * (1 + iva/100)
+  const comisionReal=comisionPct*(1+ivaPct/100)/100;
+  // precio = base / (1 - comisionReal)
+  const precio=comisionReal>0?baseAnteComision/(1-comisionReal):baseAnteComision;
+  const comisionMonto=precio-baseAnteComision;
+  document.getElementById('cr-costo').textContent=fmt(costoTotal);
+  document.getElementById('cr-ganancia').textContent=fmt(ganancia)+' ('+margen+'%)';
+  document.getElementById('cr-comision').textContent=comisionPct>0?fmt(comisionMonto)+' ('+comisionPct+'% + IVA)':'–';
+  document.getElementById('cr-precio').textContent=fmt(precio);
+  // Round suggestion
+  const redondeado=Math.ceil(precio/50)*50;
+  const diff=redondeado-precio;
+  document.getElementById('cr-tip').textContent=`Precio redondeado sugerido: ${fmt(redondeado)} (diferencia de ${fmt(diff)} con el precio exacto)`;
 }
 </script>
 </body>
