@@ -178,6 +178,21 @@ app.delete('/api/orders/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── API: Stock deduction ─────────────────────────────────────────────
+app.post('/api/stock/deduct', (req, res) => {
+  const db = readDB();
+  const { items } = req.body;
+  if (!items || !Array.isArray(items)) return res.json({ ok: true });
+  items.forEach(item => {
+    const p = db.products.find(x => x.id == item.id || x.name === item.name);
+    if (p && !p.unlimited && p.stock > 0) {
+      p.stock = Math.max(0, p.stock - (item.qty || 1));
+    }
+  });
+  writeDB(db);
+  res.json({ ok: true });
+});
+
 // ── API: Mercado Pago ─────────────────────────────────────────────────
 app.post('/api/mp/create-preference', async (req, res) => {
   try {

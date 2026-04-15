@@ -429,10 +429,12 @@ function renderCart(){
         <div class="field-error" id="f-name-err">Ingresá tu nombre completo</div>
       </div>
       <label class="flabel">Teléfono <span class="req">*</span></label>
-      <div class="field-wrap" style="margin-bottom:0">
+      <div class="field-wrap">
         <input class="finput" id="f-phone" type="tel" placeholder="Ej: 336 412-3456" oninput="checkForm()">
         <div class="field-error" id="f-phone-err">Ingresá tu número de teléfono</div>
       </div>
+      <label class="flabel">Observaciones <small style="font-family:'Crimson Text',serif;font-style:italic;letter-spacing:0">(opcional)</small></label>
+      <textarea class="finput" id="f-obs" rows="2" placeholder="Ej: casa roja con planta en frente, timbre no funciona..." style="resize:none;line-height:1.5;min-height:60px;margin-bottom:0"></textarea>
     </div>
     <div class="form-errors" id="form-errors"></div>
     ${isClosed?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||'🔒 El local está cerrado.'}</div>`:''}
@@ -522,7 +524,8 @@ async function confirmOrder(){
   btn.disabled=true;btn.textContent='Confirmando...';
 
   // Save order via API
-  const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',items,total,delivery,payment,slot:slotLabel};
+  const obs=getFieldVal('f-obs');
+  const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total,delivery,payment,slot:slotLabel};
 
   let orderId=null;
 
@@ -534,6 +537,8 @@ async function confirmOrder(){
     });
     const orderRes=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
     orderId=orderRes?.id;
+    await apiFetch('/api/stock/deduct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
+    const updProds=await apiFetch('/api/products');if(updProds)products=updProds;
     _pendingOrderId=orderId;
     const mpUrl=prefData?.init_point||cfg.mp||'https://www.mercadopago.com.ar';
     const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
@@ -559,6 +564,11 @@ async function confirmOrder(){
   }
   const orderRes=await orderRaw.json();
   orderId=orderRes?.id||'?';
+  // Deduct stock for sold items
+  await apiFetch('/api/stock/deduct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
+  // Refresh products to show updated stock
+  const updatedProducts=await apiFetch('/api/products');
+  if(updatedProducts)products=updatedProducts;
   _pendingOrderId=orderId;
 
   const momento=delivery==='delivery'?'recibir tu pedido':'retirar';
