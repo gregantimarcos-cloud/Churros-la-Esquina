@@ -225,6 +225,11 @@ window.addEventListener('load',function(){
       <div id="extra-stats"></div>
       <div class="sec-label">Franjas horarias más usadas</div>
       <div id="slots-chart"></div>
+      <div class="sec-label">Exportar datos</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button onclick="exportarPedidos()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:9px;padding:10px 16px;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;cursor:pointer;">📥 Exportar pedidos a Excel</button>
+        <button onclick="exportarProductos()" style="background:var(--cream-dark);color:var(--brown);border:1.5px solid var(--kraft);border-radius:9px;padding:10px 16px;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;cursor:pointer;">📦 Exportar productos</button>
+      </div>
       <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
     </div>
   </div>
@@ -835,6 +840,64 @@ function calcularPrecio(){
   const redondeado=Math.ceil(precio/50)*50;
   const diff=redondeado-precio;
   document.getElementById('cr-tip').textContent=`Precio redondeado sugerido: ${fmt(redondeado)} (diferencia de ${fmt(diff)} con el precio exacto)`;
+}
+
+// ── EXPORTAR A EXCEL (CSV compatible con Excel) ────────────────────
+function csvEscape(val){
+  if(val===null||val===undefined)return '';
+  const s=String(val).replace(/"/g,'""');
+  return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s}"`:s;
+}
+function downloadCSV(filename, rows){
+  const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+  const BOM='\uFEFF'; // BOM para que Excel lo abra bien en español
+  const blob=new Blob([BOM+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportarPedidos(){
+  const orders=_orders;
+  if(!orders.length){alert('No hay pedidos para exportar.');return;}
+  const header=['ID','Fecha','Hora','Cliente','Teléfono','Entrega','Dirección','GPS','Franja','Productos','Cantidad items','Total','Pago','Estado','Observaciones'];
+  const rows=[header];
+  orders.forEach(o=>{
+    const fecha=new Date(o.ts);
+    const fechaStr=fecha.toLocaleDateString('es-AR');
+    const horaStr=fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    const productos=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(' | ');
+    const cantItems=(o.items||[]).reduce((a,it)=>a+it.qty,0);
+    const entrega=o.delivery==='delivery'?'Envío':'Retiro';
+    const pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia':'Mercado Pago';
+    const estado={new:'Nuevo',prep:'Preparando',ready:'Listo',done:'Entregado'}[o.status]||o.status;
+    rows.push([
+      o.id, fechaStr, horaStr, o.customer, o.phone||'',
+      entrega, o.address||'', o.gps||'', o.slot||'',
+      productos, cantItems, o.total,
+      pago, estado, o.obs||''
+    ]);
+  });
+  const fecha=new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
+  downloadCSV(`churros-pedidos-${fecha}.csv`, rows);
+}
+
+function exportarProductos(){
+  const products=_products;
+  if(!products.length){alert('No hay productos para exportar.');return;}
+  const header=['ID','Nombre','Descripción','Categoría','Precio','Stock','Sin límite'];
+  const rows=[header];
+  products.forEach(p=>{
+    rows.push([
+      p.id, p.name, p.desc||'', p.cat,
+      p.price,
+      p.unlimited?'∞':p.stock,
+      p.unlimited?'Sí':'No'
+    ]);
+  });
+  const fecha=new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
+  downloadCSV(`churros-productos-${fecha}.csv`, rows);
 }
 </script>
 </body>
