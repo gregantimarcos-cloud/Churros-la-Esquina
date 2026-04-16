@@ -45,7 +45,9 @@ app.post('/api/cfg', (req, res) => {
   const { adminUser, adminPass } = db.cfg || {};
   const authUser = req.headers['x-admin-user'];
   const authPass = req.headers['x-admin-pass'];
-  if (authUser !== (adminUser || 'admin') || authPass !== (adminPass || 'admin123')) {
+  const defaultUser = process.env.ADMIN_USER || 'admin';
+  const defaultPass = process.env.ADMIN_PASS || 'admin123';
+  if (authUser !== (adminUser || defaultUser) || authPass !== (adminPass || defaultPass)) {
     return res.status(401).json({ error: 'No autorizado' });
   }
   // Merge new config
@@ -244,7 +246,9 @@ function requireAdmin(req, res, next) {
   const { adminUser, adminPass } = db.cfg || {};
   const authUser = req.headers['x-admin-user'];
   const authPass = req.headers['x-admin-pass'];
-  if (authUser !== (adminUser || 'admin') || authPass !== (adminPass || 'admin123')) {
+  const defaultUser = process.env.ADMIN_USER || 'admin';
+  const defaultPass = process.env.ADMIN_PASS || 'admin123';
+  if (authUser !== (adminUser || defaultUser) || authPass !== (adminPass || defaultPass)) {
     return res.status(401).json({ error: 'No autorizado' });
   }
   next();
