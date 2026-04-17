@@ -171,6 +171,33 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .combo-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:30px;}
 .combo-result{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px;margin-top:8px;display:none;}
 .combo-result .cr-precio{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#166534;}
+/* NOTIFICACIONES */
+.notif-dot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;background:var(--red-warm);border-radius:50%;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.7}}
+.audio-badge{background:#dcfce7;border:1px solid #86efac;color:#166534;border-radius:7px;padding:4px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;}
+/* CLIENTES */
+.cliente-card{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:12px;margin-bottom:10px;}
+.cliente-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.cliente-avatar{width:40px;height:40px;border-radius:50%;background:var(--brown);color:var(--kraft);font-family:'Playfair Display',serif;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cliente-nombre{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--brown);flex:1;}
+.cliente-badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;}
+.badge-vip{background:#fef9c3;color:#713f12;border:1px solid #fde047;}
+.badge-regular{background:#dbeafe;color:#1e3a8a;border:1px solid #93c5fd;}
+.cliente-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
+.cst{background:var(--cream-dark);border-radius:7px;padding:6px;text-align:center;}
+.cst-val{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--brown);}
+.cst-lbl{font-size:9px;color:var(--brown-light);font-style:italic;}
+.cliente-pedidos{font-size:11px;color:var(--brown-light);font-style:italic;}
+/* CUPONES */
+.cupon-item{background:var(--paper);border:2px dashed var(--kraft);border-radius:12px;padding:11px 13px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.cupon-code{font-family:'IM Fell English SC',serif;font-size:16px;letter-spacing:.1em;color:var(--brown);flex:1;}
+.cupon-info{font-size:11px;color:var(--brown-light);font-style:italic;margin-top:2px;}
+.cupon-badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;}
+.cupon-activo{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+.cupon-inactivo{background:var(--cream-dark);color:var(--brown-light);border:1px solid var(--kraft);}
+/* WA */
+.wa-btn{display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-family:'Crimson Text',serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;}
+.wa-btn:hover{background:#128c7e;}
 </style>
 </head>
 <body>
@@ -214,6 +241,7 @@ window.addEventListener('load',function(){
         <div class="admin-title">⚙ Administración</div>
         <div class="admin-sub" id="admin-sub-name">Churros La Esquina</div>
       </div>
+      <button id="notif-btn" onclick="toggleNotif()" title="Notificaciones" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;position:relative;">🔔<span id="notif-dot" style="display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:#ef4444;border-radius:50%;"></span></button>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
     <div class="nav-tabs">
@@ -223,6 +251,8 @@ window.addEventListener('load',function(){
       <div class="nav-tab" onclick="showPanel('slots')" id="ntab-slots">🕐 Horarios</div>
       <div class="nav-tab" onclick="showPanel('config')" id="ntab-config">⚙ Config</div>
       <div class="nav-tab" onclick="showPanel('calc')" id="ntab-calc">🧮 Precios</div>
+      <div class="nav-tab" onclick="showPanel('clientes')" id="ntab-clientes">👥 Clientes</div>
+      <div class="nav-tab" onclick="showPanel('cupones')" id="ntab-cupones">🎟 Cupones</div>
     </div>
   </div>
 
@@ -321,6 +351,10 @@ window.addEventListener('load',function(){
       <div class="fbox">
         <div class="sec-label" style="padding-top:0">Datos del local</div>
         <label class="flabel">Nombre del local</label><input class="finput field-mb" id="cfg-name">
+        <label class="flabel">WhatsApp del negocio <small>(con código país, ej: 5493364123456)</small></label>
+        <input class="finput field-mb" id="cfg-whatsapp" placeholder="5493364123456" type="tel">
+        <label class="flabel">Google Analytics ID <small>(ej: G-XXXXXXXXXX — dejá vacío si no lo tenés)</small></label>
+        <input class="finput field-mb" id="cfg-ga" placeholder="G-XXXXXXXXXX">
         <label class="flabel">Estado</label>
         <div class="opts2">
           <div class="opt on" id="cfg-open" onclick="setCfgStatus('open')"><div class="oi">🟢</div><div class="ol">Abierto</div></div>
@@ -472,6 +506,48 @@ window.addEventListener('load',function(){
 
 </div>
 
+  <!-- CLIENTES -->
+  <div class="panel" id="panel-clientes">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;color:var(--brown-light);font-style:italic;" id="clientes-count"></div>
+        <input class="finput" id="clientes-search" placeholder="Buscar cliente..." oninput="filtrarClientes()" style="max-width:200px;font-size:13px;padding:7px 10px;">
+      </div>
+      <div id="clientes-list"></div>
+      <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
+    </div>
+  </div>
+
+  <!-- CUPONES -->
+  <div class="panel" id="panel-cupones">
+    <div style="padding-top:8px">
+      <div class="ornament">· · · ✦ · · ·</div>
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Crear nuevo cupón</div>
+        <label class="flabel">Código del cupón <small>(mayúsculas, sin espacios)</small></label>
+        <input class="finput field-mb" id="cupon-codigo" placeholder="Ej: PROMO10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        <label class="flabel">Tipo de descuento</label>
+        <select class="finput field-mb" id="cupon-tipo">
+          <option value="pct">Porcentaje (%) del total</option>
+          <option value="fijo">Monto fijo ($)</option>
+        </select>
+        <label class="flabel">Valor del descuento</label>
+        <input class="finput field-mb" id="cupon-valor" type="number" placeholder="Ej: 10 para 10% o 500 para $500">
+        <label class="flabel">Usos máximos <small>(0 = ilimitado)</small></label>
+        <input class="finput field-mb" id="cupon-usos" type="number" placeholder="0" value="0">
+        <label class="flabel">Fecha de vencimiento <small>(opcional)</small></label>
+        <input class="finput field-mb" id="cupon-vence" type="date">
+        <button class="savebtn" style="margin-top:0" onclick="crearCupon()">Crear cupón</button>
+      </div>
+      <div class="sec-label">Cupones activos</div>
+      <div id="cupones-list"></div>
+      <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
+    </div>
+  </div>
+
+</div>
+
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
     <h3 id="modal-title">Nuevo producto</h3>
@@ -584,6 +660,8 @@ async function initAdmin(cfg){
   document.getElementById('admin-sub-name').textContent=_cfg.name||'Churros La Esquina';
   fillConfigForm(_cfg);
   await Promise.all([loadStats(),loadProducts(),loadSlots()]);
+  // Start notifications polling after login
+  _lastOrderCount=0;
 }
 
 function fillConfigForm(c){
@@ -598,6 +676,8 @@ function fillConfigForm(c){
   fill('cfg-txt-stock-bajo',c.txtStockBajo||d.txtStockBajo);fill('cfg-txt-confirmar-btn',c.txtConfirmarBtn||d.txtConfirmarBtn);
   fill('cfg-txt-msg-efectivo',c.txtMsgEfectivo||d.txtMsgEfectivo);fill('cfg-txt-msg-transferencia',c.txtMsgTransferencia||d.txtMsgTransferencia);fill('cfg-txt-msg-mp',c.txtMsgMP||d.txtMsgMP);
   fill('cfg-txt-retiro',c.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!');
+  fill('cfg-whatsapp',c.whatsapp||'');
+  fill('cfg-ga',c.gaId||'');
   document.getElementById('cfg-open').classList.toggle('on',c.open!==false);
   document.getElementById('cfg-closed').classList.toggle('on',c.open===false);
 }
@@ -613,6 +693,8 @@ function showPanel(id){
   if(id==='products')loadProducts();
   if(id==='slots')loadSlots();
   if(id==='calc')calcularPrecio();
+  if(id==='clientes')loadClientes();
+  if(id==='cupones')loadCupones();
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────
@@ -735,6 +817,7 @@ function renderOrders(){
         ${o.status==='ready'?`<button class="btn-sm btn-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
         <button class="btn-sm btn-del" onclick="deleteOrder(${o.id})">✕</button>
         ${o.payment==='transferencia'?`<button class="comp-badge ${o.comprobante?'':'pending'}" onclick="verComprobante(${o.id})">${o.comprobante?'📎 Ver comprobante':'⏳ Sin comprobante'}</button>`:''}
+        ${o.phone&&_cfg.whatsapp?`<a class="wa-btn" href="${waOrderLink(o)||'#'}" target="_blank">💬 Confirmar por WA</a>`:''}
       </div>
     </div>`;}).join(''):'<div class="empty-state">No hay pedidos con este filtro.</div>';
 }
@@ -887,6 +970,8 @@ async function saveCfg(){
     txtStockBajo:gv('cfg-txt-stock-bajo'),txtConfirmarBtn:gv('cfg-txt-confirmar-btn'),
     txtMsgEfectivo:gv('cfg-txt-msg-efectivo'),txtMsgTransferencia:gv('cfg-txt-msg-transferencia'),txtMsgMP:gv('cfg-txt-msg-mp'),
     txtRetiro:gv('cfg-txt-retiro'),
+    whatsapp:gv('cfg-whatsapp'),
+    gaId:gv('cfg-ga'),
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
@@ -1081,6 +1166,183 @@ function exportarProductos(){
   });
   const fecha=new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
   downloadCSV(`churros-productos-${fecha}.csv`, rows);
+}
+
+// ── NOTIFICACIONES ─────────────────────────────────────────────────
+let _notifEnabled=false;
+let _lastOrderCount=0;
+let _notifInterval=null;
+let _audioCtx=null;
+
+function playBeep(){
+  try{
+    if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=_audioCtx.createOscillator();
+    const gain=_audioCtx.createGain();
+    osc.connect(gain);gain.connect(_audioCtx.destination);
+    osc.frequency.value=880;osc.type='sine';
+    gain.gain.setValueAtTime(0.4,_audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01,_audioCtx.currentTime+0.5);
+    osc.start();osc.stop(_audioCtx.currentTime+0.5);
+  }catch(e){}
+}
+
+async function toggleNotif(){
+  if(!_notifEnabled){
+    // Request push permission
+    if('Notification' in window){
+      const perm=await Notification.requestPermission();
+      if(perm==='granted'){
+        new Notification('🥐 Churros La Esquina',{body:'Notificaciones de pedidos activadas',icon:'/icon-192.png'});
+      }
+    }
+    _notifEnabled=true;
+    document.getElementById('notif-btn').style.background='rgba(134,239,172,.2)';
+    document.getElementById('notif-dot').style.display='none';
+    // Start polling every 30 seconds
+    _lastOrderCount=_orders.length;
+    _notifInterval=setInterval(checkNewOrders,30000);
+    alert('✓ Notificaciones activadas. Te avisamos cuando llegue un pedido nuevo.');
+  } else {
+    _notifEnabled=false;
+    clearInterval(_notifInterval);
+    document.getElementById('notif-btn').style.background='rgba(255,255,255,.12)';
+    alert('Notificaciones desactivadas.');
+  }
+}
+
+async function checkNewOrders(){
+  if(!_notifEnabled)return;
+  const orders=await apiFetch('/api/orders')||[];
+  const newCount=orders.filter(o=>o.status==='new').length;
+  const prevNew=_orders.filter(o=>o.status==='new').length;
+  _orders=orders;
+  if(newCount>prevNew){
+    const diff=newCount-prevNew;
+    playBeep();
+    document.getElementById('notif-dot').style.display='block';
+    if('Notification' in window&&Notification.permission==='granted'){
+      new Notification('🥐 Pedido nuevo!',{body:`Llegó${diff>1?' '+diff:''} pedido nuevo en Churros La Esquina`,icon:'/icon-192.png'});
+    }
+    // Auto refresh orders panel if it's active
+    if(document.getElementById('panel-orders').classList.contains('active'))renderOrders();
+  }
+}
+
+// ── HISTORIAL DE CLIENTES ──────────────────────────────────────────
+let _allClientes=[];
+
+function loadClientes(){
+  const orders=_orders.length?_orders:[];
+  // Build client map
+  const map={};
+  orders.forEach(o=>{
+    const k=o.customer+(o.phone||'');
+    if(!map[k])map[k]={nombre:o.customer,telefono:o.phone||'',pedidos:[],totalGastado:0,ultimoPedido:0};
+    map[k].pedidos.push(o);
+    if(o.status==='done')map[k].totalGastado+=o.total;
+    if(o.ts>map[k].ultimoPedido)map[k].ultimoPedido=o.ts;
+  });
+  _allClientes=Object.values(map).sort((a,b)=>b.totalGastado-a.totalGastado);
+  document.getElementById('clientes-count').textContent=`${_allClientes.length} clientes registrados`;
+  renderClientes(_allClientes);
+}
+
+function filtrarClientes(){
+  const q=gv('clientes-search').toLowerCase();
+  const filtered=_allClientes.filter(c=>c.nombre.toLowerCase().includes(q)||c.telefono.includes(q));
+  renderClientes(filtered);
+}
+
+function renderClientes(lista){
+  if(!lista.length){document.getElementById('clientes-list').innerHTML='<div class="empty-state">No se encontraron clientes.</div>';return;}
+  document.getElementById('clientes-list').innerHTML=lista.map(c=>{
+    const inicial=c.nombre.charAt(0).toUpperCase();
+    const totalPedidos=c.pedidos.length;
+    const completados=c.pedidos.filter(p=>p.status==='done').length;
+    const esVip=c.totalGastado>10000||totalPedidos>=3;
+    const ultimaFecha=c.ultimoPedido?new Date(c.ultimoPedido).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'–';
+    const pedidosTxt=c.pedidos.slice(-3).map(p=>`#${p.id} ${fmt(p.total)}`).join(' · ');
+    const waLink=c.telefono?`https://wa.me/${c.telefono.replace(/\D/g,'')}`:'';
+    return`<div class="cliente-card">
+      <div class="cliente-header">
+        <div class="cliente-avatar">${inicial}</div>
+        <div style="flex:1">
+          <div class="cliente-nombre">${c.nombre}</div>
+          ${c.telefono?`<div style="font-size:11px;color:var(--brown-light)">📱 ${c.telefono}</div>`:''}
+        </div>
+        <span class="cliente-badge ${esVip?'badge-vip':'badge-regular'}">${esVip?'⭐ VIP':'Regular'}</span>
+        ${waLink?`<a class="wa-btn" href="${waLink}" target="_blank">💬 WA</a>`:''}
+      </div>
+      <div class="cliente-stats">
+        <div class="cst"><div class="cst-val">${totalPedidos}</div><div class="cst-lbl">Pedidos</div></div>
+        <div class="cst"><div class="cst-val">${fmt(c.totalGastado)}</div><div class="cst-lbl">Total gastado</div></div>
+        <div class="cst"><div class="cst-val">${ultimaFecha}</div><div class="cst-lbl">Último pedido</div></div>
+      </div>
+      <div class="cliente-pedidos">Últimos: ${pedidosTxt||'–'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── CUPONES ────────────────────────────────────────────────────────
+function getCupones(){return JSON.parse(localStorage.getItem('churros_cupones')||'[]');}
+function saveCupones(c){localStorage.setItem('churros_cupones',JSON.stringify(c));}
+
+function crearCupon(){
+  const codigo=gv('cupon-codigo').trim().toUpperCase();
+  const tipo=gv('cupon-tipo');
+  const valor=parseFloat(gv('cupon-valor'))||0;
+  const usos=parseInt(gv('cupon-usos'))||0;
+  const vence=gv('cupon-vence');
+  if(!codigo||!valor){alert('Completá el código y el valor del descuento.');return;}
+  const cupones=getCupones();
+  if(cupones.find(c=>c.codigo===codigo)){alert('Ya existe un cupón con ese código.');return;}
+  cupones.push({id:Date.now(),codigo,tipo,valor,usos,usosUsados:0,vence,activo:true});
+  saveCupones(cupones);
+  document.getElementById('cupon-codigo').value='';
+  document.getElementById('cupon-valor').value='';
+  document.getElementById('cupon-usos').value='0';
+  document.getElementById('cupon-vence').value='';
+  loadCupones();
+}
+
+function loadCupones(){
+  const cupones=getCupones();
+  if(!cupones.length){document.getElementById('cupones-list').innerHTML='<div class="empty-state">No hay cupones creados.</div>';return;}
+  const hoy=new Date().toISOString().split('T')[0];
+  document.getElementById('cupones-list').innerHTML=cupones.map(c=>{
+    const vencido=c.vence&&c.vence<hoy;
+    const agotado=c.usos>0&&c.usosUsados>=c.usos;
+    const estado=!c.activo||vencido||agotado?'inactivo':'activo';
+    const descTxt=c.tipo==='pct'?c.valor+'% de descuento':'$'+Math.round(c.valor).toLocaleString('es-AR')+' de descuento';
+    const usosTxt=c.usos>0?`${c.usosUsados}/${c.usos} usos`:'Ilimitado';
+    const venceTxt=c.vence?'Vence: '+c.vence:'Sin vencimiento';
+    return`<div class="cupon-item">
+      <div style="flex:1">
+        <div class="cupon-code">${c.codigo}</div>
+        <div class="cupon-info">${descTxt} · ${usosTxt} · ${venceTxt}</div>
+      </div>
+      <span class="cupon-badge cupon-${estado}">${estado==='activo'?'✓ Activo':'Inactivo'}</span>
+      <button onclick="toggleCupon(${c.id})" class="edit-btn" style="font-size:11px">${c.activo?'Desact.':'Activar'}</button>
+      <button onclick="eliminarCupon(${c.id})" class="slot-del">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleCupon(id){const cupones=getCupones();const c=cupones.find(x=>x.id===id);if(c)c.activo=!c.activo;saveCupones(cupones);loadCupones();}
+function eliminarCupon(id){if(!confirm('¿Eliminar este cupón?'))return;saveCupones(getCupones().filter(c=>c.id!==id));loadCupones();}
+
+// ── WHATSAPP LINK HELPER (for orders) ─────────────────────────────
+function waOrderLink(o){
+  const cfg=_cfg;
+  const wa=cfg.whatsapp||'';
+  if(!wa)return null;
+  const items=(o.items||[]).map(it=>`  • ${it.qty}x ${it.name} — ${fmt(it.price*it.qty)}`).join('%0A');
+  const entrega=o.delivery==='delivery'?'Envío a domicilio'+(o.address?' a '+o.address:''):'Retiro en local';
+  const pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia':'Mercado Pago';
+  const slot=o.slot?'%0A⏰ Horario: '+o.slot:'';
+  const msg=`Hola ${o.customer.split(' ')[0]}! 🥐 Tu pedido en Churros La Esquina está confirmado:%0A%0A${items}%0A%0A📦 Pedido #${o.id}%0A🚚 ${entrega}${slot}%0A💳 ${pago}%0A💰 Total: ${fmt(o.total)}%0A%0A¡Gracias por tu compra!`;
+  return`https://wa.me/${o.phone?o.phone.replace(/\D/g,''):wa}?text=${msg}`;
 }
 </script>
 </body>
