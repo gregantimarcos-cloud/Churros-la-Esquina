@@ -152,6 +152,25 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .calc-row .lbl{color:var(--brown-light);font-style:italic;}
 .calc-row .val{font-weight:600;color:var(--brown);}
 .calc-suggestion{background:var(--cream-dark);border-radius:9px;padding:11px;margin-top:8px;font-size:12px;color:var(--brown-light);font-style:italic;text-align:center;}
+.precio-unitario{background:var(--brown);color:var(--kraft);border-radius:12px;padding:16px;text-align:center;margin-top:12px;}
+.precio-unitario .pu-val{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#fff;display:block;margin-bottom:4px;}
+.precio-unitario .pu-lbl{font-size:12px;color:rgba(212,169,106,.8);font-style:italic;}
+.pres-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+@media(min-width:500px){.pres-grid{grid-template-columns:repeat(3,1fr);}}
+.pres-card{background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:10px 8px;text-align:center;}
+.pres-card.promo{border-color:var(--brown);background:var(--cream-dark);}
+.pres-nombre{font-family:'Playfair Display',serif;font-size:12px;font-weight:600;color:var(--brown);margin-bottom:4px;}
+.pres-precio{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--red-warm);}
+.pres-detalle{font-size:10px;color:var(--brown-light);font-style:italic;margin-top:2px;}
+.pres-usar{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Crimson Text',serif;font-weight:600;margin-top:6px;width:100%;}
+.pres-usar:hover{background:var(--brown-mid);}
+.combo-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+.combo-row select,.combo-row input{flex:1;min-width:60px;}
+.combo-tag{display:inline-flex;align-items:center;gap:5px;background:var(--cream-dark);border:1px solid var(--kraft);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--brown);}
+.combo-tag button{background:none;border:none;cursor:pointer;color:var(--red-warm);font-size:14px;line-height:1;padding:0 2px;}
+.combo-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:30px;}
+.combo-result{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px;margin-top:8px;display:none;}
+.combo-result .cr-precio{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#166534;}
 </style>
 </head>
 <body>
@@ -345,39 +364,106 @@ window.addEventListener('load',function(){
   <div class="panel" id="panel-calc">
     <div style="padding-top:8px">
       <div class="ornament">· · · ✦ · · ·</div>
+
+      <!-- PASO 1: COSTO BASE -->
       <div class="fbox">
-        <div class="sec-label" style="padding-top:0">Calculadora de precio de venta</div>
-        <p style="font-size:12px;color:var(--brown-light);font-style:italic;margin-bottom:12px;">Calculá el precio ideal para cada producto teniendo en cuenta tus costos, ganancia y comisiones de Mercado Pago.</p>
+        <div class="sec-label" style="padding-top:0">Paso 1 · Costo por churro</div>
+        <p style="font-size:12px;color:var(--brown-light);font-style:italic;margin-bottom:12px;">Ingresá el costo de producir un solo churro. El sistema calcula el resto automáticamente.</p>
 
-        <label class="flabel">Costo de producción ($) <small>ingredientes + tiempo + packaging</small></label>
-        <input class="finput field-mb" type="number" id="calc-costo" placeholder="Ej: 800" oninput="calcularPrecio()">
+        <label class="flabel">Materia prima por churro ($) <small>harina, aceite, azúcar, etc.</small></label>
+        <input class="finput field-mb" type="number" id="calc-mp" placeholder="Ej: 80" oninput="calcularPrecio()">
 
-        <label class="flabel">Costos fijos prorrateados ($) <small>alquiler, servicios, etc. dividido por unidades del mes</small></label>
-        <input class="finput field-mb" type="number" id="calc-fijos" placeholder="Ej: 150" oninput="calcularPrecio()">
+        <label class="flabel">Costos fijos por churro ($) <small>gas, luz, alquiler ÷ churros que hacés por mes</small></label>
+        <input class="finput field-mb" type="number" id="calc-fijos" placeholder="Ej: 40" oninput="calcularPrecio()">
+
+        <label class="flabel">Tu tiempo por churro ($) <small>valor de tu hora ÷ churros que producís por hora</small></label>
+        <input class="finput field-mb" type="number" id="calc-tiempo" placeholder="Ej: 60" oninput="calcularPrecio()">
+
+        <label class="flabel">Packaging por churro ($) <small>bolsa, servilleta, etc.</small></label>
+        <input class="finput field-mb" type="number" id="calc-pkg" placeholder="Ej: 20" oninput="calcularPrecio()">
+      </div>
+
+      <!-- PASO 2: GANANCIA Y COMISIÓN -->
+      <div class="fbox">
+        <div class="sec-label" style="padding-top:0">Paso 2 · Ganancia y comisiones</div>
 
         <label class="flabel">Margen de ganancia deseado (%)</label>
-        <input class="finput field-mb" type="number" id="calc-margen" placeholder="Ej: 40" value="40" oninput="calcularPrecio()">
+        <input class="finput field-mb" type="number" id="calc-margen" placeholder="Ej: 50" value="50" oninput="calcularPrecio()">
 
-        <label class="flabel">Método de pago principal</label>
+        <label class="flabel">Comisión de Mercado Pago</label>
         <select class="finput field-mb" id="calc-metodo" onchange="calcularPrecio()">
-          <option value="0">Efectivo / Transferencia (sin comisión)</option>
-          <option value="4.99">Mercado Pago — Link de pago (4.99%)</option>
-          <option value="3.99">Mercado Pago — QR presencial (3.99%)</option>
-          <option value="2.99">Mercado Pago — POS (2.99%)</option>
-          <option value="6.49">Mercado Pago — Cuotas sin interés (6.49%)</option>
+          <option value="0">No uso MP / Efectivo y transferencia</option>
+          <option value="6.49" selected>MP — Acreditación inmediata (6.49%) ← la tuya</option>
+          <option value="4.99">MP — Link de pago estándar (4.99%)</option>
+          <option value="3.99">MP — QR presencial (3.99%)</option>
+          <option value="2.99">MP — POS datáfono (2.99%)</option>
         </select>
+        <p style="font-size:11px;color:#b45309;font-style:italic;margin-bottom:10px;">💡 Con acreditación inmediata MP descuenta 6.49% + IVA = ~7.85% real sobre el cobro.</p>
 
-        <label class="flabel">IVA incluido en la comisión (%)</label>
+        <label class="flabel">IVA sobre la comisión (%)</label>
         <input class="finput field-mb" type="number" id="calc-iva" placeholder="21" value="21" oninput="calcularPrecio()">
       </div>
 
-      <div class="calc-result" id="calc-result" style="display:none">
-        <div class="sec-label" style="padding-top:0">Resultado</div>
-        <div class="calc-row"><span class="lbl">Costo total (prod. + fijos)</span><span class="val" id="cr-costo">–</span></div>
-        <div class="calc-row"><span class="lbl">Ganancia</span><span class="val" id="cr-ganancia">–</span></div>
-        <div class="calc-row"><span class="lbl">Comisión MP (con IVA)</span><span class="val" id="cr-comision">–</span></div>
-        <div class="calc-row total"><span>Precio de venta sugerido</span><span id="cr-precio">–</span></div>
-        <div class="calc-suggestion" id="cr-tip"></div>
+      <!-- RESULTADO: PRECIO POR CHURRO -->
+      <div id="calc-result" style="display:none">
+        <div class="calc-row" style="background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;"><span class="lbl">Costo total por churro</span><span class="val" id="cr-costo">–</span></div>
+        <div class="calc-row" style="background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;"><span class="lbl">Ganancia por churro</span><span class="val" id="cr-ganancia">–</span></div>
+        <div class="calc-row" style="background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;"><span class="lbl">Comisión MP por churro</span><span class="val" id="cr-comision">–</span></div>
+        <div class="precio-unitario">
+          <span class="pu-lbl">Precio de venta por churro</span>
+          <span class="pu-val" id="cr-precio-unit">–</span>
+          <span class="pu-lbl" id="cr-tip"></span>
+        </div>
+      </div>
+
+      <!-- PASO 3: PRESENTACIONES -->
+      <div id="calc-presentaciones" style="display:none;margin-top:12px;">
+        <div class="sec-label">Paso 3 · Precios por presentación</div>
+        <p style="font-size:12px;color:var(--brown-light);font-style:italic;margin-bottom:10px;">Ajustá el precio de cada presentación. El sistema sugiere el precio exacto pero podés redondearlo.</p>
+        <div class="pres-grid" id="pres-grid"></div>
+      </div>
+
+      <!-- PASO 4: ARMADOR DE COMBOS -->
+      <div id="calc-combos" style="display:none;margin-top:14px;">
+        <div class="sec-label">Paso 4 · Armador de combos y promociones</div>
+        <p style="font-size:12px;color:var(--brown-light);font-style:italic;margin-bottom:10px;">Armá combos mezclando tipos de churros. El sistema calcula el precio del combo automáticamente.</p>
+        <div class="fbox">
+          <label class="flabel">Nombre del combo</label>
+          <input class="finput field-mb" id="combo-nombre" placeholder="Ej: Combo mixto · 6 rellenos + 6 bañados">
+
+          <label class="flabel">Agregar churros al combo</label>
+          <div class="combo-row">
+            <select class="finput" id="combo-tipo" style="flex:2">
+              <option value="clasico">Churro clásico</option>
+              <option value="relleno_ddl">Relleno dulce de leche</option>
+              <option value="relleno_choc">Relleno chocolate</option>
+              <option value="banado">Bañado en chocolate</option>
+              <option value="especial">Especial / Premium</option>
+            </select>
+            <input class="finput" id="combo-cant" type="number" min="1" max="24" value="6" placeholder="Cant." style="flex:1;max-width:70px">
+            <input class="finput" id="combo-extra" type="number" placeholder="Extra $" style="flex:1;max-width:80px" title="Costo adicional por unidad de este tipo (ej: relleno)">
+            <button onclick="agregarAlCombo()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:9px 12px;cursor:pointer;font-family:'Crimson Text',serif;font-size:13px;font-weight:600;flex-shrink:0">+ Agregar</button>
+          </div>
+          <p style="font-size:10px;color:var(--brown-light);font-style:italic;margin-bottom:8px;">El campo "Extra $" es el costo adicional por unidad de ese tipo (ej: $30 por el relleno).</p>
+          <div class="combo-tags" id="combo-tags"></div>
+          <label class="flabel">Descuento del combo (%)</label>
+          <input class="finput field-mb" id="combo-descuento" type="number" placeholder="Ej: 10" value="0" oninput="calcularCombo()">
+
+          <div class="combo-result" id="combo-result">
+            <div style="font-size:12px;color:var(--brown-light);margin-bottom:6px;font-style:italic" id="combo-detalle"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <div>
+                <div style="font-size:11px;color:var(--brown-light);font-style:italic">Precio sugerido del combo</div>
+                <div class="cr-precio" id="combo-precio-sugerido">–</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--brown-light);font-style:italic">Redondeado</div>
+                <div class="cr-precio" id="combo-precio-redondeado">–</div>
+              </div>
+              <button onclick="usarPrecioCombo()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:8px;padding:8px 14px;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;cursor:pointer;">Crear producto con este precio →</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="ornament" style="margin-top:16px">· · · ✦ · · ·</div>
@@ -815,31 +901,128 @@ async function saveCfg(){
 }
 
 // ── CALCULADORA DE PRECIOS ─────────────────────────────────────────
+let _precioPorChurro=0;
+let _comboParts=[];
+
 function calcularPrecio(){
-  const costo=parseFloat(document.getElementById('calc-costo').value)||0;
+  const mp=parseFloat(document.getElementById('calc-mp').value)||0;
   const fijos=parseFloat(document.getElementById('calc-fijos').value)||0;
+  const tiempo=parseFloat(document.getElementById('calc-tiempo').value)||0;
+  const pkg=parseFloat(document.getElementById('calc-pkg').value)||0;
   const margen=parseFloat(document.getElementById('calc-margen').value)||0;
   const comisionPct=parseFloat(document.getElementById('calc-metodo').value)||0;
   const ivaPct=parseFloat(document.getElementById('calc-iva').value)||21;
-  const result=document.getElementById('calc-result');
-  if(!costo&&!fijos){result.style.display='none';return;}
-  result.style.display='block';
-  const costoTotal=costo+fijos;
+
+  const costoTotal=mp+fijos+tiempo+pkg;
+  if(!costoTotal){
+    document.getElementById('calc-result').style.display='none';
+    document.getElementById('calc-presentaciones').style.display='none';
+    document.getElementById('calc-combos').style.display='none';
+    return;
+  }
+
   const ganancia=costoTotal*(margen/100);
   const baseAnteComision=costoTotal+ganancia;
-  // comision MP incluye IVA: comisionReal = pct * (1 + iva/100)
   const comisionReal=comisionPct*(1+ivaPct/100)/100;
-  // precio = base / (1 - comisionReal)
-  const precio=comisionReal>0?baseAnteComision/(1-comisionReal):baseAnteComision;
-  const comisionMonto=precio-baseAnteComision;
-  document.getElementById('cr-costo').textContent=fmt(costoTotal);
+  const precioPorChurro=comisionReal>0?baseAnteComision/(1-comisionReal):baseAnteComision;
+  const comisionMonto=precioPorChurro-baseAnteComision;
+  _precioPorChurro=precioPorChurro;
+
+  document.getElementById('calc-result').style.display='block';
+  document.getElementById('cr-costo').textContent=fmt(costoTotal)+' por churro';
   document.getElementById('cr-ganancia').textContent=fmt(ganancia)+' ('+margen+'%)';
-  document.getElementById('cr-comision').textContent=comisionPct>0?fmt(comisionMonto)+' ('+comisionPct+'% + IVA)':'–';
-  document.getElementById('cr-precio').textContent=fmt(precio);
-  // Round suggestion
-  const redondeado=Math.ceil(precio/50)*50;
-  const diff=redondeado-precio;
-  document.getElementById('cr-tip').textContent=`Precio redondeado sugerido: ${fmt(redondeado)} (diferencia de ${fmt(diff)} con el precio exacto)`;
+  document.getElementById('cr-comision').textContent=comisionPct>0?fmt(comisionMonto)+' por churro ('+comisionPct+'%+IVA)':'–';
+  document.getElementById('cr-precio-unit').textContent=fmt(precioPorChurro);
+  const red50=Math.ceil(precioPorChurro/50)*50;
+  document.getElementById('cr-tip').textContent='Redondeado a $50 más cercano: '+fmt(red50);
+
+  // Render presentaciones
+  renderPresentaciones(precioPorChurro);
+  document.getElementById('calc-presentaciones').style.display='block';
+  document.getElementById('calc-combos').style.display='block';
+  calcularCombo();
+}
+
+function precioConMargen(n, pxChurro){
+  // precio exacto para n churros, ya incluye todo
+  return pxChurro * n;
+}
+
+function renderPresentaciones(pxChurro){
+  const presentaciones=[
+    {nombre:'1 churro', n:1, emoji:'🥐'},
+    {nombre:'Media docena', n:6, emoji:'🥐×6'},
+    {nombre:'Docena', n:12, emoji:'🥐×12'},
+    {nombre:'Docena y media', n:18, emoji:'🥐×18'},
+    {nombre:'2 docenas', n:24, emoji:'🥐×24'},
+  ];
+  document.getElementById('pres-grid').innerHTML=presentaciones.map(p=>{
+    const precioExacto=pxChurro*p.n;
+    const redondeado=Math.ceil(precioExacto/50)*50;
+    return`<div class="pres-card">
+      <div class="pres-nombre">${p.emoji} ${p.nombre}</div>
+      <div class="pres-precio">${fmt(redondeado)}</div>
+      <div class="pres-detalle">Exacto: ${fmt(precioExacto)}</div>
+      <button class="pres-usar" onclick="usarPrecio(${redondeado}, '${p.nombre}')">Usar este precio →</button>
+    </div>`;
+  }).join('');
+}
+
+function usarPrecio(precio, nombre){
+  // Switch to products tab and pre-fill price
+  showPanel('products');
+  openModal(null);
+  setTimeout(()=>{
+    document.getElementById('m-price').value=precio;
+    document.getElementById('m-name').value=nombre;
+    document.getElementById('modal-title').textContent='Nuevo producto · $'+Math.round(precio).toLocaleString('es-AR');
+  },100);
+}
+
+// ── ARMADOR DE COMBOS ──────────────────────────────────────────────
+function agregarAlCombo(){
+  const tipo=document.getElementById('combo-tipo').value;
+  const cant=parseInt(document.getElementById('combo-cant').value)||1;
+  const extra=parseFloat(document.getElementById('combo-extra').value)||0;
+  const labels={clasico:'Clásico',relleno_ddl:'Relleno DDL',relleno_choc:'Relleno choc.',banado:'Bañado',especial:'Especial'};
+  _comboParts.push({tipo,cant,extra,label:labels[tipo]});
+  renderComboTags();
+  calcularCombo();
+}
+function quitarDelCombo(i){_comboParts.splice(i,1);renderComboTags();calcularCombo();}
+function renderComboTags(){
+  document.getElementById('combo-tags').innerHTML=_comboParts.map((p,i)=>
+    `<span class="combo-tag">${p.cant}× ${p.label}${p.extra>0?' (+$'+p.extra+')':''}<button onclick="quitarDelCombo(${i})">✕</button></span>`
+  ).join('');
+}
+function calcularCombo(){
+  if(!_precioPorChurro||!_comboParts.length){document.getElementById('combo-result').style.display='none';return;}
+  const descPct=parseFloat(document.getElementById('combo-descuento').value)||0;
+  let totalChurros=0,costoExtra=0;
+  _comboParts.forEach(p=>{totalChurros+=p.cant;costoExtra+=p.extra*p.cant;});
+  // precio base = precio por churro * total + extras
+  const baseCombo=_precioPorChurro*totalChurros+costoExtra;
+  const descuento=baseCombo*(descPct/100);
+  const precioFinal=baseCombo-descuento;
+  const redondeado=Math.ceil(precioFinal/50)*50;
+  const detalle=_comboParts.map(p=>`${p.cant}× ${p.label}`).join(' + ');
+  document.getElementById('combo-detalle').textContent=detalle+' · '+totalChurros+' churros'+( descPct>0?' · '+descPct+'% descuento':'');
+  document.getElementById('combo-precio-sugerido').textContent=fmt(precioFinal);
+  document.getElementById('combo-precio-redondeado').textContent=fmt(redondeado);
+  document.getElementById('combo-result').style.display='block';
+}
+function usarPrecioCombo(){
+  const nombre=document.getElementById('combo-nombre').value||'Combo especial';
+  const redondeado=Math.ceil(parseFloat(document.getElementById('combo-precio-redondeado').textContent.replace(/[$.]/g,'').replace(',','.'))||0/50)*50;
+  const precioNum=parseFloat(document.getElementById('combo-precio-sugerido').textContent.replace('$','').replace(/\./g,'').replace(',','.'))||0;
+  const precio=Math.ceil(precioNum/50)*50;
+  showPanel('products');
+  openModal(null);
+  setTimeout(()=>{
+    document.getElementById('m-price').value=precio;
+    document.getElementById('m-name').value=nombre;
+    document.getElementById('m-cat').value='Combos';
+  },100);
 }
 
 // ── EXPORTAR A EXCEL (CSV compatible con Excel) ────────────────────
