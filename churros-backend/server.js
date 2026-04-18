@@ -1,201 +1,254 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Mercado Pago setup ──────────────────────────────────────────────
+// ── PostgreSQL ──────────────────────────────────────────────────────
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+});
+
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS config (
+      key TEXT PRIMARY KEY,
+      value JSONB NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS products (
+      id BIGINT PRIMARY KEY,
+      data JSONB NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS slots (
+      id BIGINT PRIMARY KEY,
+      data JSONB NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  console.log('✅ Database tables ready');
+}
+
+async function getCfg() {
+  const r = await pool.query("SELECT value FROM config WHERE key='main'");
+  return r.rows[0]?.value || {};
+}
+async function setCfg(cfg) {
+  await pool.query(
+    "INSERT INTO config(key,value) VALUES('main',$1) ON CONFLICT(key) DO UPDATE SET value=$1",
+    [JSON.stringify(cfg)]
+  );
+}
+async function getProducts() {
+  const r = await pool.query('SELECT data FROM products ORDER BY id');
+  return r.rows.map(r => r.data);
+}
+async function getSlots() {
+  const r = await pool.query('SELECT data FROM slots ORDER BY id');
+  return r.rows.map(r => r.data);
+}
+async function getOrders() {
+  const r = await pool.query('SELECT id, data FROM orders ORDER BY id DESC');
+  return r.rows.map(r => ({ id: r.id, ...r.data }));
+}
+
+// ── Mercado Pago ────────────────────────────────────────────────────
 const mpClient = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN || 'TEST-tu-access-token-aqui',
 });
-
-// ── Simple JSON "database" (archivo en disco) ─────────────────────
-// En Railway esto persiste mientras el server esté corriendo.
-// Para producción real reemplazá con Railway PostgreSQL.
-const DB_FILE = path.join(__dirname, 'data.json');
-function readDB() {
-  try {
-    if (!fs.existsSync(DB_FILE)) return { products: [], orders: [], cfg: {}, slots: [] };
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-  } catch { return { products: [], orders: [], cfg: {}, slots: [] }; }
-}
-function writeDB(data) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
 
 // ── Middleware ──────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── API: Config ─────────────────────────────────────────────────────
-app.get('/api/cfg', (req, res) => {
-  const db = readDB();
-  // Never send admin password to client
-  const { adminPass, ...safeCfg } = db.cfg || {};
-  res.json(safeCfg);
-});
-
-app.post('/api/cfg', (req, res) => {
-  // Requires admin auth header
-  const db = readDB();
-  const { adminUser, adminPass } = db.cfg || {};
+// ── Auth ────────────────────────────────────────────────────────────
+async function requireAdmin(req, res, next) {
+  const cfg = await getCfg();
   const authUser = req.headers['x-admin-user'];
   const authPass = req.headers['x-admin-pass'];
   const defaultUser = process.env.ADMIN_USER || 'admin';
   const defaultPass = process.env.ADMIN_PASS || 'admin123';
-  if (authUser !== (adminUser || defaultUser) || authPass !== (adminPass || defaultPass)) {
+  if (authUser !== (cfg.adminUser || defaultUser) || authPass !== (cfg.adminPass || defaultPass)) {
     return res.status(401).json({ error: 'No autorizado' });
   }
-  // Merge new config
-  db.cfg = { ...db.cfg, ...req.body };
-  writeDB(db);
-  res.json({ ok: true });
+  next();
+}
+
+// ── Config ──────────────────────────────────────────────────────────
+app.get('/api/cfg', async (req, res) => {
+  try {
+    const cfg = await getCfg();
+    const { adminPass, ...safeCfg } = cfg;
+    res.json(safeCfg);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── API: Products ────────────────────────────────────────────────────
-app.get('/api/products', (req, res) => {
-  res.json(readDB().products);
+app.post('/api/cfg', async (req, res) => {
+  try {
+    const cfg = await getCfg();
+    const authUser = req.headers['x-admin-user'];
+    const authPass = req.headers['x-admin-pass'];
+    const defaultUser = process.env.ADMIN_USER || 'admin';
+    const defaultPass = process.env.ADMIN_PASS || 'admin123';
+    if (authUser !== (cfg.adminUser || defaultUser) || authPass !== (cfg.adminPass || defaultPass)) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+    await setCfg({ ...cfg, ...req.body });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/products', requireAdmin, (req, res) => {
-  const db = readDB();
-  const p = { id: Date.now(), ...req.body };
-  db.products.push(p);
-  writeDB(db);
-  res.json(p);
+// ── Products ────────────────────────────────────────────────────────
+app.get('/api/products', async (req, res) => {
+  try { res.json(await getProducts()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/products/:id', requireAdmin, (req, res) => {
-  const db = readDB();
-  const idx = db.products.findIndex(p => p.id == req.params.id);
-  if (idx < 0) return res.status(404).json({ error: 'No encontrado' });
-  db.products[idx] = { ...db.products[idx], ...req.body };
-  writeDB(db);
-  res.json(db.products[idx]);
+app.post('/api/products', requireAdmin, async (req, res) => {
+  try {
+    const id = Date.now();
+    const p = { id, ...req.body };
+    await pool.query('INSERT INTO products(id,data) VALUES($1,$2)', [id, JSON.stringify(p)]);
+    res.json(p);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/products/:id', requireAdmin, (req, res) => {
-  const db = readDB();
-  db.products = db.products.filter(p => p.id != req.params.id);
-  writeDB(db);
-  res.json({ ok: true });
+app.put('/api/products/:id', requireAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data FROM products WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
+    const updated = { ...r.rows[0].data, ...req.body };
+    await pool.query('UPDATE products SET data=$1 WHERE id=$2', [JSON.stringify(updated), req.params.id]);
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── API: Slots ────────────────────────────────────────────────────────
-app.get('/api/slots', (req, res) => {
-  res.json(readDB().slots);
+app.delete('/api/products/:id', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM products WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/slots', requireAdmin, (req, res) => {
-  const db = readDB();
-  const s = { id: Date.now(), ...req.body };
-  db.slots.push(s);
-  writeDB(db);
-  res.json(s);
+// ── Slots ───────────────────────────────────────────────────────────
+app.get('/api/slots', async (req, res) => {
+  try { res.json(await getSlots()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/slots/:id', requireAdmin, (req, res) => {
-  const db = readDB();
-  const idx = db.slots.findIndex(s => s.id == req.params.id);
-  if (idx < 0) return res.status(404).json({ error: 'No encontrado' });
-  db.slots[idx] = { ...db.slots[idx], ...req.body };
-  writeDB(db);
-  res.json(db.slots[idx]);
+app.post('/api/slots', requireAdmin, async (req, res) => {
+  try {
+    const id = Date.now();
+    const s = { id, ...req.body };
+    await pool.query('INSERT INTO slots(id,data) VALUES($1,$2)', [id, JSON.stringify(s)]);
+    res.json(s);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/slots/:id', requireAdmin, (req, res) => {
-  const db = readDB();
-  db.slots = db.slots.filter(s => s.id != req.params.id);
-  writeDB(db);
-  res.json({ ok: true });
+app.put('/api/slots/:id', requireAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data FROM slots WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
+    const updated = { ...r.rows[0].data, ...req.body };
+    await pool.query('UPDATE slots SET data=$1 WHERE id=$2', [JSON.stringify(updated), req.params.id]);
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── API: Orders ────────────────────────────────────────────────────────
-app.get('/api/orders', requireAdmin, (req, res) => {
-  res.json(readDB().orders);
+app.delete('/api/slots/:id', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM slots WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/orders', (req, res) => {
-  const db = readDB();
-  const body = req.body;
+// ── Orders ──────────────────────────────────────────────────────────
+app.get('/api/orders', requireAdmin, async (req, res) => {
+  try { res.json(await getOrders()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
 
-  // Check slot capacity if a slot was selected
-  if (body.slot && db.slots) {
-    const slotMatch = db.slots.find(s => {
-      const label = `${s.from} – ${s.to}`;
-      return label === body.slot && s.active;
-    });
-    if (slotMatch && slotMatch.maxPedidos > 0) {
-      const count = db.orders.filter(o =>
-        o.slot === body.slot &&
-        o.status !== 'done' &&
-        new Date(o.ts).toDateString() === new Date().toDateString()
-      ).length;
-      if (count >= slotMatch.maxPedidos) {
-        return res.status(409).json({ error: 'Esta franja horaria ya está completa. Por favor elegí otra.' });
+app.post('/api/orders', async (req, res) => {
+  try {
+    const body = req.body;
+    if (body.slot) {
+      const slots = await getSlots();
+      const slotMatch = slots.find(s => `${s.from} – ${s.to}` === body.slot && s.active);
+      if (slotMatch && slotMatch.maxPedidos > 0) {
+        const today = new Date().toDateString();
+        const orders = await getOrders();
+        const count = orders.filter(o =>
+          o.slot === body.slot && o.status !== 'done' &&
+          new Date(o.ts || 0).toDateString() === today
+        ).length;
+        if (count >= slotMatch.maxPedidos) {
+          return res.status(409).json({ error: 'Esta franja horaria ya está completa. Por favor elegí otra.' });
+        }
+        const updated = { ...slotMatch, pedidosActuales: (slotMatch.pedidosActuales || 0) + 1 };
+        await pool.query('UPDATE slots SET data=$1 WHERE id=$2', [JSON.stringify(updated), slotMatch.id]);
       }
-      // Increment counter on slot
-      slotMatch.pedidosActuales = (slotMatch.pedidosActuales || 0) + 1;
     }
-  }
-
-  const order = {
-    id: (db.orders.length ? Math.max(...db.orders.map(o => o.id)) : 0) + 1,
-    ...body,
-    status: 'new',
-    ts: Date.now(),
-  };
-  db.orders.push(order);
-  writeDB(db);
-  res.json({ id: order.id });
+    const orderData = { ...body, status: 'new', ts: Date.now() };
+    const r = await pool.query('INSERT INTO orders(data) VALUES($1) RETURNING id', [JSON.stringify(orderData)]);
+    res.json({ id: r.rows[0].id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Attach comprobante to order (called by client, no admin auth needed)
-app.post('/api/orders/:id/comprobante', (req, res) => {
-  const db = readDB();
-  const o = db.orders.find(x => x.id == req.params.id);
-  if (!o) return res.status(404).json({ error: 'No encontrado' });
-  o.comprobante = req.body;
-  writeDB(db);
-  res.json({ ok: true });
+app.post('/api/orders/:id/comprobante', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data FROM orders WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
+    const updated = { ...r.rows[0].data, comprobante: req.body };
+    await pool.query('UPDATE orders SET data=$1 WHERE id=$2', [JSON.stringify(updated), req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/orders/:id/status', requireAdmin, (req, res) => {
-  const db = readDB();
-  const o = db.orders.find(x => x.id == req.params.id);
-  if (!o) return res.status(404).json({ error: 'No encontrado' });
-  o.status = req.body.status;
-  writeDB(db);
-  res.json({ ok: true });
+app.put('/api/orders/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data FROM orders WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
+    const updated = { ...r.rows[0].data, status: req.body.status };
+    await pool.query('UPDATE orders SET data=$1 WHERE id=$2', [JSON.stringify(updated), req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/orders/:id', requireAdmin, (req, res) => {
-  const db = readDB();
-  db.orders = db.orders.filter(o => o.id != req.params.id);
-  writeDB(db);
-  res.json({ ok: true });
+app.delete('/api/orders/:id', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM orders WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── API: Stock deduction ─────────────────────────────────────────────
-app.post('/api/stock/deduct', (req, res) => {
-  const db = readDB();
-  const { items } = req.body;
-  if (!items || !Array.isArray(items)) return res.json({ ok: true });
-  items.forEach(item => {
-    const p = db.products.find(x => x.id == item.id || x.name === item.name);
-    if (p && !p.unlimited && p.stock > 0) {
-      p.stock = Math.max(0, p.stock - (item.qty || 1));
+// ── Stock deduction ─────────────────────────────────────────────────
+app.post('/api/stock/deduct', async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) return res.json({ ok: true });
+    for (const item of items) {
+      const r = await pool.query('SELECT id,data FROM products WHERE id=$1', [item.id]);
+      if (r.rows.length) {
+        const p = r.rows[0].data;
+        if (!p.unlimited && p.stock > 0) {
+          p.stock = Math.max(0, p.stock - (item.qty || 1));
+          await pool.query('UPDATE products SET data=$1 WHERE id=$2', [JSON.stringify(p), r.rows[0].id]);
+        }
+      }
     }
-  });
-  writeDB(db);
-  res.json({ ok: true });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── API: Mercado Pago ─────────────────────────────────────────────────
+// ── Mercado Pago ────────────────────────────────────────────────────
 app.post('/api/mp/create-preference', async (req, res) => {
   try {
     const { items, orderId, backUrl } = req.body;
@@ -203,11 +256,8 @@ app.post('/api/mp/create-preference', async (req, res) => {
     const result = await preference.create({
       body: {
         items: items.map(it => ({
-          id: String(it.id || 0),
-          title: it.name,
-          quantity: it.qty,
-          unit_price: Number(it.price),
-          currency_id: 'ARS',
+          id: String(it.id || 0), title: it.name,
+          quantity: it.qty, unit_price: Number(it.price), currency_id: 'ARS',
         })),
         external_reference: String(orderId),
         back_urls: {
@@ -226,39 +276,27 @@ app.post('/api/mp/create-preference', async (req, res) => {
   }
 });
 
-// Mercado Pago webhook — marca el pedido como pagado automáticamente
 app.post('/api/mp/webhook', async (req, res) => {
-  res.sendStatus(200); // Always respond 200 first
+  res.sendStatus(200);
   try {
     const { type, data } = req.body;
     if (type === 'payment' && data?.id) {
-      // Optionally fetch payment details and update order
-      const db = readDB();
-      // You can match via external_reference if needed
-      writeDB(db);
+      console.log('MP webhook payment:', data.id);
     }
   } catch (e) { console.error('Webhook error:', e); }
 });
 
-// ── Middleware helpers ────────────────────────────────────────────────
-function requireAdmin(req, res, next) {
-  const db = readDB();
-  const { adminUser, adminPass } = db.cfg || {};
-  const authUser = req.headers['x-admin-user'];
-  const authPass = req.headers['x-admin-pass'];
-  const defaultUser = process.env.ADMIN_USER || 'admin';
-  const defaultPass = process.env.ADMIN_PASS || 'admin123';
-  if (authUser !== (adminUser || defaultUser) || authPass !== (adminPass || defaultPass)) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-  next();
-}
-
-// ── Catch-all: serve index ────────────────────────────────────────────
+// ── Catch-all ───────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'churros_cliente.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Churros La Esquina server running on port ${PORT}`);
+// ── Start ───────────────────────────────────────────────────────────
+initDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`✅ Churros La Esquina server running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('❌ DB init error:', err.message);
+  process.exit(1);
 });
