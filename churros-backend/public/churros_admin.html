@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--kraft:#d4a96a;--kraft-dark:#b8832a;--brown:#3d1c02;--brown-mid:#6b3a1f;--brown-light:#8b5a2b;--cream:#fdf6e3;--cream-dark:#f5e8c8;--red-warm:#8b1a1a;--gold:#c9922a;--paper:#f7edd8;}
+:root{--kraft:#c4944a;--kraft-dark:#9a6518;--brown:#2d1200;--brown-mid:#5a2d0e;--brown-light:#7a4820;--cream:#fdf3e0;--cream-dark:#f0ddb0;--red-warm:#8b0000;--gold:#b8820a;--paper:#f7e8c8;}
 html{scroll-behavior:smooth}
 body{font-family:'Crimson Text',Georgia,serif;background:var(--cream);color:var(--brown);min-height:100vh;overflow-x:hidden;}
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.6;}
@@ -43,11 +43,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .panel{display:none;padding:12px;}.panel.active{display:block;}
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
 @media(min-width:560px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
-.stat-card{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:14px 12px;text-align:center;}
+.stat-card{background:#fff;border:2px solid var(--kraft-dark);border-radius:12px;padding:14px 12px;text-align:center;box-shadow:2px 3px 8px rgba(45,18,0,.1);}
 .stat-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--brown);}
 .stat-lbl{font-size:11px;color:var(--brown-light);font-style:italic;margin-top:3px;}
 .stat-icon{font-size:20px;margin-bottom:4px;}
-.order-card{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:13px;margin-bottom:10px;}
+.order-card{background:#fff;border:2px solid var(--kraft);border-radius:12px;padding:13px;margin-bottom:10px;box-shadow:1px 2px 8px rgba(45,18,0,.08);}
 .order-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
 .order-id{font-family:'IM Fell English SC',serif;font-size:11px;color:var(--brown-light);letter-spacing:.05em;}
 .order-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--brown);flex:1;}
@@ -84,12 +84,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .slot-toggle{background:var(--cream-dark);border:1px solid var(--kraft);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Crimson Text',serif;}
 .slot-toggle.active{background:#dcfce7;border-color:#86efac;color:#166534;}
 .slot-del{background:none;border:none;color:#b91c1c;font-size:16px;cursor:pointer;padding:2px 6px;}
-.flabel{font-family:'IM Fell English SC',serif;font-size:11px;letter-spacing:.07em;color:var(--brown-light);margin-bottom:5px;display:block;}
+.flabel{font-family:'IM Fell English SC',serif;font-size:12px;letter-spacing:.06em;color:var(--brown-mid);margin-bottom:5px;display:block;font-weight:600;}
 .flabel small{font-family:'Crimson Text',serif;font-style:italic;letter-spacing:0;font-size:10px;color:var(--kraft-dark);}
-.finput{width:100%;background:var(--cream);border:1.5px solid var(--kraft);border-radius:7px;padding:9px 11px;font-family:'Crimson Text',serif;font-size:14px;color:var(--brown);outline:none;}
-.finput:focus{border-color:var(--brown);}
+.finput{width:100%;background:#fff;border:2px solid var(--kraft);border-radius:7px;padding:9px 11px;font-family:'Crimson Text',serif;font-size:15px;color:var(--brown);outline:none;}
+.finput:focus{border-color:var(--brown);box-shadow:0 0 0 3px rgba(45,18,0,.12);}
 .ftextarea{width:100%;background:var(--cream);border:1.5px solid var(--kraft);border-radius:7px;padding:9px 11px;font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);outline:none;resize:vertical;min-height:60px;line-height:1.5;}
-.fbox{background:var(--paper);border:1.5px solid var(--kraft);border-radius:10px;padding:13px;margin-bottom:12px;box-shadow:1px 2px 6px rgba(61,28,2,.08);}
+.fbox{background:#fff;border:2px solid var(--kraft);border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:2px 3px 10px rgba(45,18,0,.12);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .img-upload-area{border:2px dashed var(--kraft-dark);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--cream-dark);margin-bottom:10px;position:relative;}
 .img-upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
@@ -407,12 +407,29 @@ window.addEventListener('load',function(){
 
       <!-- PASO 1: COSTO BASE -->
       <div class="fbox">
-        <div class="sec-label" style="padding-top:0">Paso 1 · Costo por churro</div>
-        <p style="font-size:12px;color:var(--brown-light);font-style:italic;margin-bottom:12px;">Ingresá el costo de producir un solo churro. El sistema calcula el resto automáticamente.</p>
+        <div class="sec-label" style="padding-top:0">Paso 1 · Insumos y receta</div>
+        <p style="font-size:12px;color:var(--brown-light);font-style:italic;margin-bottom:12px;">Ingresá tus insumos con el precio por unidad de compra (kg, litro, etc.) y cuánto usás para hacer <strong id="calc-lote-lbl">100 churros</strong>. El sistema calcula el costo por churro automáticamente.</p>
 
-        <label class="flabel">Materia prima por churro ($) <small>harina, aceite, azúcar, etc.</small></label>
-        <input class="finput field-mb" type="number" id="calc-mp" placeholder="Ej: 80" oninput="calcularPrecio()">
+        <label class="flabel">¿Cuántos churros hacés por tanda? <small>(tu lote de producción)</small></label>
+        <input class="finput field-mb" type="number" id="calc-lote" placeholder="Ej: 100" value="100" oninput="recalcInsumos()">
 
+        <div class="sec-label" style="padding:8px 0 6px">Insumos</div>
+        <div id="insumos-lista"></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <input class="finput" id="ins-nombre" placeholder="Insumo (ej: Harina)" style="flex:2;min-width:100px">
+          <input class="finput" id="ins-precio-total" type="number" placeholder="Precio total ($)" style="flex:1;min-width:80px" title="Precio del paquete completo (ej: $2400 por bolsa de 25kg)">
+          <input class="finput" id="ins-unidad-total" type="number" placeholder="Cant. total" style="flex:1;min-width:70px" title="Cantidad en la unidad de compra (ej: 25 para 25kg)">
+          <input class="finput" id="ins-unidad-nombre" placeholder="Unidad" style="flex:1;min-width:60px;max-width:80px" title="kg, litros, unidades, etc." value="kg">
+          <input class="finput" id="ins-uso" type="number" placeholder="Uso en receta" style="flex:1;min-width:70px" title="Cuánto usás de este insumo para hacer tu lote completo de churros">
+          <button onclick="agregarInsumo()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:9px 14px;cursor:pointer;font-family:'Crimson Text',serif;font-size:13px;font-weight:600;flex-shrink:0">+ Agregar</button>
+        </div>
+        <div style="background:var(--cream-dark);border-radius:9px;padding:10px 12px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:var(--brown-light);font-style:italic;">Costo materia prima por churro</span>
+          <span style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--brown);" id="calc-mp-result">$0</span>
+        </div>
+        <input type="hidden" id="calc-mp" value="0">
+
+        <div class="sec-label" style="padding:10px 0 6px">Otros costos por churro</div>
         <label class="flabel">Costos fijos por churro ($) <small>gas, luz, alquiler ÷ churros que hacés por mes</small></label>
         <input class="finput field-mb" type="number" id="calc-fijos" placeholder="Ej: 40" oninput="calcularPrecio()">
 
@@ -706,7 +723,7 @@ function showPanel(id){
   if(id==='orders')loadOrders();
   if(id==='products')loadProducts();
   if(id==='slots')loadSlots();
-  if(id==='calc')calcularPrecio();
+  if(id==='calc'){renderInsumos();calcularPrecio();}
   if(id==='clientes')loadClientes();
   if(id==='cupones')loadCupones();
 }
@@ -1030,6 +1047,58 @@ async function saveCfg(){
 // ── CALCULADORA DE PRECIOS ─────────────────────────────────────────
 let _precioPorChurro=0;
 let _comboParts=[];
+let _insumos=JSON.parse(localStorage.getItem('churros_insumos')||'[]');
+
+function saveInsumos(){localStorage.setItem('churros_insumos',JSON.stringify(_insumos));}
+
+function renderInsumos(){
+  const lote=parseFloat(document.getElementById('calc-lote')?.value)||100;
+  document.getElementById('calc-lote-lbl').textContent=lote+' churros';
+  const lista=document.getElementById('insumos-lista');
+  if(!lista)return;
+  if(!_insumos.length){lista.innerHTML='<div class="empty-state" style="padding:12px">Agregá tus insumos arriba.</div>';
+    document.getElementById('calc-mp').value=0;
+    document.getElementById('calc-mp-result').textContent='$0';
+    return;
+  }
+  let totalPorChurro=0;
+  lista.innerHTML=_insumos.map((ins,i)=>{
+    const precioPorUnidad=ins.precioTotal/ins.unidadTotal;
+    const costoPorLote=precioPorUnidad*ins.uso;
+    const costoPorChurro=costoPorLote/lote;
+    totalPorChurro+=costoPorChurro;
+    return`<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--cream-dark);border-radius:8px;padding:8px 10px;margin-bottom:6px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:100px">
+        <div style="font-size:13px;font-weight:600;color:var(--brown)">${ins.nombre}</div>
+        <div style="font-size:11px;color:var(--brown-light);font-style:italic">${fmt(ins.precioTotal)} / ${ins.unidadTotal} ${ins.unidadNombre} · Uso: ${ins.uso} ${ins.unidadNombre} por ${lote} churros</div>
+      </div>
+      <div style="font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--brown-mid)">${fmt(costoPorChurro)}<span style="font-size:10px;font-weight:400;color:var(--brown-light)">/churro</span></div>
+      <button onclick="quitarInsumo(${i})" style="background:none;border:none;color:#b91c1c;font-size:16px;cursor:pointer;padding:2px 6px;">✕</button>
+    </div>`;
+  }).join('');
+  document.getElementById('calc-mp').value=totalPorChurro.toFixed(2);
+  document.getElementById('calc-mp-result').textContent=fmt(totalPorChurro);
+  calcularPrecio();
+}
+
+function agregarInsumo(){
+  const nombre=document.getElementById('ins-nombre').value.trim();
+  const precioTotal=parseFloat(document.getElementById('ins-precio-total').value)||0;
+  const unidadTotal=parseFloat(document.getElementById('ins-unidad-total').value)||0;
+  const unidadNombre=document.getElementById('ins-unidad-nombre').value.trim()||'kg';
+  const uso=parseFloat(document.getElementById('ins-uso').value)||0;
+  if(!nombre||!precioTotal||!unidadTotal||!uso){alert('Completá todos los campos del insumo.');return;}
+  _insumos.push({nombre,precioTotal,unidadTotal,unidadNombre,uso});
+  saveInsumos();
+  document.getElementById('ins-nombre').value='';
+  document.getElementById('ins-precio-total').value='';
+  document.getElementById('ins-unidad-total').value='';
+  document.getElementById('ins-uso').value='';
+  renderInsumos();
+}
+
+function quitarInsumo(i){_insumos.splice(i,1);saveInsumos();renderInsumos();}
+function recalcInsumos(){renderInsumos();}
 
 function calcularPrecio(){
   const mp=parseFloat(document.getElementById('calc-mp').value)||0;
