@@ -76,10 +76,16 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .field-error{font-size:11px;color:#b91c1c;font-style:italic;margin-top:4px;display:none;}
 .field-error.show{display:block;}
 .slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
-.pcard-vars{display:flex;flex-direction:column;gap:4px;padding:4px 0 2px;}
-.pvar-btn{width:100%;background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:6px 8px;font-family:'Crimson Text',serif;font-size:12px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;}
-.pvar-btn:active{opacity:.8;}
-.pvar-price{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--kraft);}
+.pcard-vars{display:flex;flex-direction:column;gap:5px;padding:6px 0 2px;}
+.pvar-row{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:6px 8px;}
+.pvar-row.active{border-color:var(--brown);background:var(--cream);}
+.pvar-info{display:flex;flex-direction:column;}
+.pvar-nom{font-family:'Crimson Text',serif;font-size:12px;font-weight:600;color:var(--brown);}
+.pvar-price{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--red-warm);}
+.pvar-ctrl{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.pvar-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:5px;width:22px;height:22px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;}
+.pvar-ctrl span{font-size:12px;font-weight:600;min-width:16px;text-align:center;color:var(--brown);}
+.pvar-add{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'Crimson Text',serif;font-weight:600;}
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
 .slot-btn.full{opacity:.45;pointer-events:none;text-decoration:line-through;}
@@ -434,10 +440,21 @@ function renderMenu(){
           <div class="pcard-name">${p.name}</div>
           <div class="pcard-desc">${p.desc||''}</div>
           ${lowStock?`<div class="stock-tag">⚠ ${lowTxt}</div>`:''}
-          ${(p.variantes&&p.variantes.length&&q===0&&!outOfStock)?
-            `<div class="pcard-vars">${p.variantes.map(v=>`<button class="pvar-btn" onclick="addItem('${p.id}','${v.nombre}')">${v.nombre}<br><span class="pvar-price">${fmt(v.precio)}</span></button>`).join('')}</div>`
+          ${(p.variantes&&p.variantes.length&&!outOfStock)?
+            `<div class="pcard-vars">${p.variantes.map(v=>{
+              const vkey=String(p.id)+'__'+v.nombre.replace(/\s/g,'_');
+              const vq=cart[vkey]||0;
+              return `<div class="pvar-row${vq>0?' active':''}">
+                <div class="pvar-info"><span class="pvar-nom">${v.nombre}</span><span class="pvar-price">${fmt(v.precio)}</span></div>
+                <div class="pvar-ctrl">
+                  ${vq>0
+                    ?`<button onclick="remVar('${p.id}','${v.nombre}')">−</button><span>${vq}</span><button onclick="addVar('${p.id}','${v.nombre}',${v.precio})">+</button>`
+                    :`<button class="pvar-add" onclick="addVar('${p.id}','${v.nombre}',${v.precio})">+ Agregar</button>`}
+                </div>
+              </div>`;
+            }).join('')}</div>`
             :`<div class="pcard-foot">
-            <span class="price">${fmt(q>0&&cart[String(p.id)+'_var']?(p.variantes?.find(v=>v.nombre===cart[String(p.id)+'_var'])?.precio||p.price):p.price)}</span>
+            <span class="price">${fmt(p.price)}</span>
             ${outOfStock?`<span style="font-size:11px;color:var(--red-warm);font-style:italic">${sinStockTxt}</span>`
               :q===0?`<button class="addbtn" onclick="addItem('${p.id}')">+</button>`
               :`<div class="qctrl"><button onclick="remItem('${p.id}')">−</button><span>${q}</span><button onclick="addItem('${p.id}')">+</button></div>`}
@@ -476,7 +493,7 @@ function slotStatus(s){
 }
 
 function renderCart(){
-  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&Number(k)>0&&cart[k]>0);
+  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('_price')&&!k.endsWith('_nom')&&cart[k]>0);
   const cont=document.getElementById('cart-content');if(!cont)return;
   if(keys.length===0){
     const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
@@ -485,15 +502,29 @@ function renderCart(){
   }
   let sub=0;
   const items=keys.filter(k=>!k.endsWith('_var')).map(k=>{
-    const p=products.find(x=>String(x.id)===k);if(!p)return'';
-    // Use variant price if selected
-    const varNombre=cart[k+'_var'];
-    const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
-    const unitPrice=varObj?Number(varObj.precio):Number(p.price);
+    // Check if this is a variant key (pid__VarName) or a plain product key
+    const isVarKey=k.includes('__');
+    let p,unitPrice,displayName,remFn,addFn;
+    if(isVarKey){
+      const [pid,vnom_raw]=k.split('__');
+      const vnom=cart[k+'_nom']||vnom_raw.replace(/_/g,' ');
+      p=products.find(x=>String(x.id)===pid);if(!p)return'';
+      unitPrice=Number(cart[k+'_price']||p.price);
+      displayName=p.name;
+      remFn=`remVar('${pid}','${vnom}')`;
+      addFn=`addVar('${pid}','${vnom}',${unitPrice})`;
+    } else {
+      p=products.find(x=>String(x.id)===k);if(!p)return'';
+      unitPrice=Number(p.price);
+      displayName=p.name;
+      remFn=`remItem('${p.id}')`;
+      addFn=`addItem('${p.id}')`;
+    }
+    const varNombre=isVarKey?(cart[k+'_nom']||k.split('__')[1].replace(/_/g,' ')):null;
     const tot=unitPrice*(cart[k]||0);sub+=tot;
-    const thumb=p.img?`<div class="ci-thumb"><img src="${p.img}" alt="${p.name}"></div>`:`<div class="ci-thumb" style="font-size:22px">🥐</div>`;
+    const thumb=p.img?`<div class="ci-thumb"><img src="${p.img}" alt="${displayName}"></div>`:`<div class="ci-thumb" style="font-size:22px">🥐</div>`;
     const varSel=varNombre?`<div style="font-size:10px;color:var(--brown-light);font-style:italic;margin-top:2px">📦 ${varNombre}</div>`:'';
-    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(unitPrice)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem('${p.id}')">−</button><span>${cart[k]}</span><button onclick="addItem('${p.id}')">+</button></div></div>`;
+    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${displayName}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(unitPrice)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="${remFn}">−</button><span>${cart[k]}</span><button onclick="${addFn}">+</button></div></div>`;
   }).join('');
 
   const ship=delivery==='delivery'?(cfg.envio||500):0;
@@ -819,6 +850,26 @@ function aplicarCupon(){
   const descTxt=c.tipo==='pct'?c.valor+'% de descuento':'$'+Math.round(c.valor).toLocaleString('es-AR')+' de descuento';
   okEl.textContent='✓ Cupón aplicado: '+descTxt;okEl.style.display='block';
   renderCart();
+}
+
+// ── VARIANT CART FUNCTIONS ─────────────────────────────────────────
+function varKey(pid, vnom){ return String(pid)+'__'+vnom.replace(/\s/g,'_'); }
+
+function addVar(pid, vnom, vprecio){
+  const vk=varKey(pid,vnom);
+  cart[vk]=(cart[vk]||0)+1;
+  cart[vk+'_price']=vprecio; // store price for checkout
+  cart[vk+'_nom']=vnom;
+  updBadge();renderMenu();if(activeTab==='cart')renderCart();
+  showAddedToast();
+}
+function remVar(pid, vnom){
+  const vk=varKey(pid,vnom);
+  if(cart[vk]>0){
+    cart[vk]--;
+    if(cart[vk]===0){delete cart[vk];delete cart[vk+'_price'];delete cart[vk+'_nom'];}
+  }
+  updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
 
 let _toastTimer=null;
