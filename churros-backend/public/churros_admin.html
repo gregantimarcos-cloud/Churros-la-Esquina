@@ -956,16 +956,25 @@ function renderProductList(){
   });
 }
 
-function saveProductOrder(){
-  // Save order to localStorage so it persists
+async function saveProductOrder(){
+  // Save order via API so client can read it
   const order=_products.map(p=>String(p.id));
-  localStorage.setItem('churros_product_order',JSON.stringify(order));
+  await apiFetch('/api/cfg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({..._cfg,productOrder:order})});
+  _cfg.productOrder=order;
+  showToast('Orden guardado ✓');
+}
+
+function showToast(msg){
+  let t=document.getElementById('admin-toast');
+  if(!t){t=document.createElement('div');t.id='admin-toast';t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--brown);color:var(--kraft);border-radius:20px;padding:8px 18px;font-family:Playfair Display,serif;font-size:13px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.3);';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._timer);t._timer=setTimeout(()=>t.style.opacity='0',2000);
 }
 
 async function loadProducts(){
   const raw=await apiFetch('/api/products')||[];
-  // Apply saved order if exists
-  const savedOrder=JSON.parse(localStorage.getItem('churros_product_order')||'[]');
+  // Apply saved order from cfg
+  const savedOrder=(_cfg&&_cfg.productOrder)?_cfg.productOrder:[];
   if(savedOrder.length){
     const map={};raw.forEach(p=>{map[String(p.id)]=p;});
     const ordered=savedOrder.map(id=>map[id]).filter(Boolean);
@@ -1519,11 +1528,32 @@ function waOrderLink(o){
   const cfg=_cfg;
   const wa=cfg.whatsapp||'';
   if(!wa)return null;
-  const items=(o.items||[]).map(it=>`  • ${it.qty}x ${it.name} — ${fmt(it.price*it.qty)}`).join('%0A');
-  const entrega=o.delivery==='delivery'?'Envío a domicilio'+(o.address?' a '+o.address:''):'Retiro en local';
-  const pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia':'Mercado Pago';
-  const slot=o.slot?'%0A⏰ Horario: '+o.slot:'';
-  const msg=`Hola ${o.customer.split(' ')[0]}! 🥐 Tu pedido en Churros La Esquina está confirmado:%0A%0A${items}%0A%0A📦 Pedido #${o.id}%0A🚚 ${entrega}${slot}%0A💳 ${pago}%0A💰 Total: ${fmt(o.total)}%0A%0A¡Gracias por tu compra!`;
+
+  const nombre=o.customer.split(' ')[0];
+  const items=(o.items||[]).map(it=>{
+    const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name);
+    const desc=prod&&prod.desc?' ('+prod.desc+')':'';
+    return`  • ${it.qty}x ${it.name}${desc} — ${fmt(it.price*it.qty)}`;
+  }).join('%0A');
+
+  const entrega=o.delivery==='delivery'
+    ?'🛵 *Envío a domicilio*'+(o.address?'%0A   📌 '+encodeURIComponent(o.address):'')+(o.gps?'%0A   📍 https://maps.google.com/?q='+o.gps:'')
+    :'🏪 *Retiro en el local*';
+
+  const slot=o.slot?'%0A⏰ *Horario:* '+encodeURIComponent(o.slot):'';
+  const pago=o.payment==='efectivo'?'💵 Efectivo':o.payment==='transferencia'?'📲 Transferencia bancaria (alias: '+(cfg.alias||'')+')':'💳 Mercado Pago';
+  const obs=o.obs?'%0A📝 *Observaciones:* '+encodeURIComponent(o.obs):'';
+  const estado={new:'✅ Confirmado',prep:'👨‍🍳 En preparación',ready:'🎉 Listo para '+( o.delivery==='delivery'?'enviar':'retirar'),done:'✓ Entregado'}[o.status]||'Confirmado';
+
+  const msg=
+    `Hola ${nombre}! 🥐%0A%0A`+
+    `*${estado}* — Churros La Esquina%0A%0A`+
+    `*Tu pedido #${o.id}:*%0A${items}%0A%0A`+
+    `${entrega}${slot}%0A`+
+    `💰 *Total: ${fmt(o.total)}*%0A`+
+    `${pago}${obs}%0A%0A`+
+    `¡Gracias por elegirnos! 🥐✨`;
+
   return`https://wa.me/${o.phone?o.phone.replace(/\D/g,''):wa}?text=${msg}`;
 }
 </script>

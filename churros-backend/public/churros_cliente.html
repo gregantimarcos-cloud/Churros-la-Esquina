@@ -295,9 +295,9 @@ async function init(){
 
   cfg = cfgData || {};
   slots = slotsData || [];
-  // Apply saved display order from admin
+  // Apply saved display order from cfg (saved by admin via API)
   const rawProducts = productsData || [];
-  const savedOrder = JSON.parse(localStorage.getItem('churros_product_order') || '[]');
+  const savedOrder = (cfgData && cfgData.productOrder) ? cfgData.productOrder : [];
   if(savedOrder.length){
     const map={};rawProducts.forEach(p=>{map[String(p.id)]=p;});
     const ordered=savedOrder.map(id=>map[id]).filter(Boolean);
@@ -562,14 +562,14 @@ function renderCart(){
     const horarioTxt=slotSel?`<br>⏰ Horario de retiro: <strong style="font-family:'Playfair Display',serif">${slotSel.from} – ${slotSel.to}</strong>`:'';
     retiroInfoHtml=`<div class="retiro-info"><strong>🏪 Retiro en el local</strong>${retiroInfoTxt}${horarioTxt}</div>`;
   }
-  const locHtml=delivery==='delivery'?`
+  const locHtml=delivery!=='delivery'?'':(`
     <div style="height:8px"></div>
-    <label class="flabel">Tu dirección <span class="req">*</span></label>
+    <label class="flabel">Tu dirección de entrega <span class="req">*</span></label>
     <div class="field-wrap" style="margin-bottom:0">
       <input class="finput" id="f-addr" placeholder="Calle, número, piso..." oninput="checkForm()">
       <div class="field-error" id="f-addr-err">Ingresá tu dirección de entrega</div>
     </div>
-    <button class="locbtn" id="loc-btn" onclick="getLocation()">📍 Compartir mi ubicación GPS (más exacto)</button>`:'';
+    <button class="locbtn" id="loc-btn" onclick="getLocation()">📍 Compartir mi ubicación GPS (más exacto)</button>`);
 
   // Apply coupon FIRST so totalFinal is available for payExtra
   let descuento=0;
@@ -680,17 +680,30 @@ function markField(id,hasError,msg){
 function checkForm(){validateForm();}
 function selectSlot(id){selectedSlot=String(id);renderCart();}
 function selectSlotFromSelect(val){
+  // Save current address and GPS before any re-render
+  const addrEl=document.getElementById('f-addr');
+  const savedAddr=addrEl?addrEl.value:'';
+  const savedGeo=geoLocation;
   selectedSlot=val?String(val):'';
-  // Don't re-render full cart, just validate
-  validateForm();
-  // Update retiro info if visible
+  // Only update retiro box without full re-render
   const retBox=document.getElementById('retiro-info-box');
   if(retBox&&delivery==='pickup'){
     const s=val?slots.find(x=>String(x.id)===String(val)):null;
-    const horarioTxt=s?`<br>⏰ Horario de retiro: <strong style="font-family:'Playfair Display',serif">${s.from} – ${s.to}</strong>`:'';
+    const horarioTxt=s?`<br>⏰ Horario: <strong style="font-family:'Playfair Display',serif">${s.from} – ${s.to}</strong>`:'';
     const retiroInfoTxt=cfg.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!';
-    retBox.innerHTML=`<strong>🏪 Retiro en el local</strong>${retiroInfoTxt}${horarioTxt}`;
+    retBox.innerHTML=`<strong>🏪 Retiro en el local</strong> ${retiroInfoTxt}${horarioTxt}`;
   }
+  // If delivery, restore address and GPS state without full re-render
+  if(delivery==='delivery'){
+    const addrEl2=document.getElementById('f-addr');
+    if(addrEl2&&savedAddr)addrEl2.value=savedAddr;
+    if(savedGeo){
+      geoLocation=savedGeo;
+      const btn=document.getElementById('loc-btn');
+      if(btn){btn.className='locbtn ok';btn.textContent='✓ Ubicación GPS obtenida';}
+    }
+  }
+  checkForm();
 }
 function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
 function setPayment(p){payment=p;renderCart();}
