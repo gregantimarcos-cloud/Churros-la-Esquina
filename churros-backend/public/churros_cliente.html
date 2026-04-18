@@ -146,6 +146,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--kraft);border-top-color:var(--brown);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .view{display:none}.view.active{display:block}
+.add-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--brown);color:var(--kraft);border-radius:25px;padding:10px 20px;font-family:'Playfair Display',serif;font-size:13px;font-weight:600;z-index:400;white-space:nowrap;box-shadow:0 4px 16px rgba(45,18,0,.4);opacity:0;transition:opacity .25s;pointer-events:none;}
+.add-toast.show{opacity:1;pointer-events:auto;}
+.add-toast button{background:none;border:none;color:var(--kraft);font-family:'Playfair Display',serif;font-size:13px;font-weight:700;cursor:pointer;margin-left:10px;text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -168,6 +171,7 @@ window.addEventListener('load',function(){
   },800);
 });
 </script>
+<div class="add-toast" id="add-toast">🛒 Agregado al pedido <button onclick="goTab('cart')">Ver pedido →</button></div>
 <div class="app-wrap" id="app">
 
 <div id="v-customer" class="view active">
@@ -333,6 +337,7 @@ function addItem(id, varNombre){
   cart[id]=(cart[id]||0)+1;
   if(varNombre)cart[id+'_var']=varNombre;
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
+  showAddedToast();
 }
 
 function showVariantPicker(p){
@@ -356,11 +361,14 @@ function elegirVariante(id, varNombre, varPrecio){
   addItem(id, varNombre);
 }
 function remItem(id){
-  if(cart[id]>0){cart[id]--;if(cart[id]===0)delete cart[id];}
+  if(cart[id]>0){
+    cart[id]--;
+    if(cart[id]===0){delete cart[id];delete cart[id+'_var'];}
+  }
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
 function updBadge(){
-  const t=Object.values(cart).reduce((a,b)=>a+b,0);
+  const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
   document.getElementById('cart-count').textContent=t;
   document.getElementById('cart-badge').textContent=t;
   document.getElementById('cart-badge').style.display=t>0?'flex':'none';
@@ -432,7 +440,7 @@ function slotStatus(s){
 }
 
 function renderCart(){
-  const keys=Object.keys(cart).filter(k=>cart[k]>0);
+  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0);
   const cont=document.getElementById('cart-content');if(!cont)return;
   if(keys.length===0){
     const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
@@ -440,12 +448,16 @@ function renderCart(){
     return;
   }
   let sub=0;
-  const items=keys.map(k=>{
+  const items=keys.filter(k=>!k.endsWith('_var')).map(k=>{
     const p=products.find(x=>x.id==k);if(!p)return'';
-    const tot=p.price*cart[k];sub+=tot;
+    // Use variant price if selected
+    const varNombre=cart[k+'_var'];
+    const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
+    const unitPrice=varObj?varObj.precio:p.price;
+    const tot=unitPrice*cart[k];sub+=tot;
     const thumb=p.img?`<div class="ci-thumb"><img src="${p.img}" alt="${p.name}"></div>`:`<div class="ci-thumb" style="font-size:22px">🥐</div>`;
-    const varSel=p.variantes&&p.variantes.length?`<div style="font-size:10px;color:var(--brown-light);margin-top:2px">${cart[k+'_var']||p.variantes[0]?.nombre||''}</div>`:'';
-    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(p.variantes&&cart[k+'_var']?(p.variantes.find(v=>v.nombre===cart[k+'_var'])?.precio||p.price):p.price)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
+    const varSel=varNombre?`<div style="font-size:10px;color:var(--brown-light);font-style:italic;margin-top:2px">📦 ${varNombre}</div>`:'';
+    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(unitPrice)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
   }).join('');
 
   const ship=delivery==='delivery'?(cfg.envio||500):0;
@@ -622,9 +634,13 @@ async function confirmOrder(){
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
   const ship=delivery==='delivery'?(cfg.envio||500):0;
   let sub=0;
-  const items=Object.keys(cart).filter(k=>cart[k]>0).map(k=>{
+  const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).map(k=>{
     const p=products.find(x=>x.id==k);if(!p)return null;
-    sub+=p.price*cart[k];return{name:p.name,qty:cart[k],price:p.price,id:p.id};
+    const varNombre=cart[k+'_var'];
+    const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
+    const unitPrice=varObj?varObj.precio:p.price;
+    const itemName=varNombre?`${p.name} (${varNombre})`:p.name;
+    sub+=unitPrice*cart[k];return{name:itemName,qty:cart[k],price:unitPrice,id:p.id};
   }).filter(Boolean);
   const total=sub+ship;
   let slotLabel='';
@@ -750,6 +766,15 @@ function aplicarCupon(){
   const descTxt=c.tipo==='pct'?c.valor+'% de descuento':'$'+Math.round(c.valor).toLocaleString('es-AR')+' de descuento';
   okEl.textContent='✓ Cupón aplicado: '+descTxt;okEl.style.display='block';
   renderCart();
+}
+
+let _toastTimer=null;
+function showAddedToast(){
+  const t=document.getElementById('add-toast');
+  if(!t)return;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
 function resetApp(){
