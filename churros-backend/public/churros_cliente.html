@@ -76,6 +76,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .field-error{font-size:11px;color:#b91c1c;font-style:italic;margin-top:4px;display:none;}
 .field-error.show{display:block;}
 .slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
+.pcard-vars{display:flex;flex-direction:column;gap:4px;padding:4px 0 2px;}
+.pvar-btn{width:100%;background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:6px 8px;font-family:'Crimson Text',serif;font-size:12px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;}
+.pvar-btn:active{opacity:.8;}
+.pvar-price{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--kraft);}
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
 .slot-btn.full{opacity:.45;pointer-events:none;text-decoration:line-through;}
@@ -430,13 +434,14 @@ function renderMenu(){
           <div class="pcard-name">${p.name}</div>
           <div class="pcard-desc">${p.desc||''}</div>
           ${lowStock?`<div class="stock-tag">⚠ ${lowTxt}</div>`:''}
-          <div class="pcard-foot">
-            <span class="price">${fmt(p.price)}</span>
+          ${(p.variantes&&p.variantes.length&&q===0&&!outOfStock)?
+            `<div class="pcard-vars">${p.variantes.map(v=>`<button class="pvar-btn" onclick="addItem('${p.id}','${v.nombre}')">${v.nombre}<br><span class="pvar-price">${fmt(v.precio)}</span></button>`).join('')}</div>`
+            :`<div class="pcard-foot">
+            <span class="price">${fmt(q>0&&cart[String(p.id)+'_var']?(p.variantes?.find(v=>v.nombre===cart[String(p.id)+'_var'])?.precio||p.price):p.price)}</span>
             ${outOfStock?`<span style="font-size:11px;color:var(--red-warm);font-style:italic">${sinStockTxt}</span>`
               :q===0?`<button class="addbtn" onclick="addItem('${p.id}')">+</button>`
               :`<div class="qctrl"><button onclick="remItem('${p.id}')">−</button><span>${q}</span><button onclick="addItem('${p.id}')">+</button></div>`}
-          ${p.variantes&&p.variantes.length&&q===0?`<div style="font-size:9px;color:var(--brown-light);font-style:italic;margin-top:3px;">${p.variantes.map(v=>v.nombre).join(' / ')}</div>`:''}
-          </div>
+          </div>`}
         </div>
       </div>`;
     });
@@ -496,14 +501,18 @@ function renderCart(){
   const availSlots=getAvailableSlots(delivery);
   const availSlotsFiltered=availSlots.filter(s=>slotStatus(s)!=='pasado');
   const slotsHtml=availSlotsFiltered.length
-    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlotsFiltered.map(s=>{
-      const st=slotStatus(s);
-      const isOn=selectedSlot===String(s.id);
-      const blocked=st==='full'||st==='pronto';
-      const label=s.maxPedidos>0&&st==='ok'?` (${Math.max(0,s.maxPedidos-(s.pedidosActuales||0))} disp.)`:'';
-      const tag=st==='full'?' · Lleno':st==='pronto'?' · Cerrando pronto':'';
-      return `<button class="slot-btn${isOn?' on':''} ${st}" onclick="${blocked||st==='pronto'?'':'selectSlot('+s.id+')'}">⏰ ${s.from} – ${s.to}${tag}${label}</button>`;
-    }).join('')}</div><div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
+    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label>
+      <select class="finput" id="slot-select" onchange="selectSlotFromSelect(this.value)" style="margin-top:4px">
+        <option value="">⏰ Elegí un horario...</option>
+        ${availSlotsFiltered.map(s=>{
+          const st=slotStatus(s);
+          const blocked=st==='full'||st==='pronto';
+          const label=s.maxPedidos>0&&st==='ok'?` (${Math.max(0,s.maxPedidos-(s.pedidosActuales||0))} disp.)`:st==='full'?' — LLENO':st==='pronto'?' — Cerrando':'';
+          const sel=selectedSlot===String(s.id)?'selected':'';
+          return `<option value="${blocked?'':''+s.id}" ${sel} ${blocked?'disabled':''}>⏰ ${s.from} – ${s.to}${label}</option>`;
+        }).join('')}
+      </select>
+      <div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
     :(availSlots.length?`<div style="font-size:12px;color:var(--brown-light);font-style:italic;margin-top:8px">⏰ No hay franjas disponibles por el momento.</div>`:'');
   const retiroInfoTxt=cfg.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!';
   let retiroInfoHtml='';
@@ -629,6 +638,19 @@ function markField(id,hasError,msg){
 }
 function checkForm(){validateForm();}
 function selectSlot(id){selectedSlot=String(id);renderCart();}
+function selectSlotFromSelect(val){
+  selectedSlot=val?String(val):'';
+  // Don't re-render full cart, just validate
+  validateForm();
+  // Update retiro info if visible
+  const retBox=document.getElementById('retiro-info-box');
+  if(retBox&&delivery==='pickup'){
+    const s=val?slots.find(x=>String(x.id)===String(val)):null;
+    const horarioTxt=s?`<br>⏰ Horario de retiro: <strong style="font-family:'Playfair Display',serif">${s.from} – ${s.to}</strong>`:'';
+    const retiroInfoTxt=cfg.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!';
+    retBox.innerHTML=`<strong>🏪 Retiro en el local</strong>${retiroInfoTxt}${horarioTxt}`;
+  }
+}
 function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
 function setPayment(p){payment=p;renderCart();}
 
