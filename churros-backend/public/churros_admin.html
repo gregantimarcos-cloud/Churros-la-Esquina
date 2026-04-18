@@ -1507,43 +1507,25 @@ function eliminarCupon(id){if(!confirm('¿Eliminar este cupón?'))return;saveCup
 
 // ── WHATSAPP LINK HELPER (for orders) ─────────────────────────────
 function waOrderLink(o){
-  const cfg=_cfg;
-  const wa=cfg.whatsapp||'';
+  var cfg=_cfg;
+  var wa=cfg.whatsapp||'';
   if(!wa)return null;
-
-  const nombre=o.customer.split(' ')[0];
-  const items=(o.items||[]).map(it=>{
-    const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name);
-    const desc=prod&&prod.desc?' - '+prod.desc:'';
+  var nombre=o.customer.split(' ')[0];
+  var itemLines=(o.items||[]).map(function(it){
+    var prod=_products.find(function(p){return String(p.id)===String(it.id)||p.name===it.name;});
+    var desc=prod&&prod.desc?' - '+prod.desc:'';
     return it.qty+'x '+it.name+desc+' ('+fmt(it.price*it.qty)+')';
-  }).join('
-');
-
-  const entrega=o.delivery==='delivery'
-    ?'Envio a domicilio'+(o.address?'\nDireccion: '+o.address:'')+(o.gps?'\nUbicacion: https://maps.google.com/?q='+o.gps:'')
+  }).join(String.fromCharCode(10));
+  var entrega=o.delivery==='delivery'
+    ?'Envio a domicilio'+(o.address?String.fromCharCode(10)+'Direccion: '+o.address:'')+(o.gps?String.fromCharCode(10)+'Ubicacion: https://maps.google.com/?q='+o.gps:'')
     :'Retiro en local - Malvinas Argentinas 297';
-
-  const slot=o.slot?'\nHorario: '+o.slot:'';
-  const pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia (alias: '+(cfg.alias||'churros.local')+')':'Mercado Pago';
-  const obs='';
-  const estado={new:'Confirmado',prep:'En preparacion',ready:'Listo para '+(o.delivery==='delivery'?'enviar':'retirar'),done:'Entregado'}[o.status]||'Confirmado';
-
-  const lines=[
-    'Hola '+nombre+'! Churros La Esquina',
-    '',
-    'Estado: '+estado,
-    'Pedido #'+o.id+':',
-    items,
-    '',
-    entrega+slot,
-    'Pago: '+pago,
-    'Total: '+fmt(o.total),
-
-    '',
-    'Gracias por elegirnos!'
-  ].join('\n');
-
-  return 'https://wa.me/'+(o.phone?o.phone.replace(/\D/g,''):wa)+'?text='+encodeURIComponent(lines);
+  var slot=o.slot?String.fromCharCode(10)+'Horario: '+o.slot:'';
+  var pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia (alias: '+(cfg.alias||'churros.local')+')':'Mercado Pago';
+  var estado={new:'Confirmado',prep:'En preparacion',ready:'Listo para '+(o.delivery==='delivery'?'enviar':'retirar'),done:'Entregado'}[o.status]||'Confirmado';
+  var nl=String.fromCharCode(10);
+  var msg='Hola '+nombre+'! Churros La Esquina'+nl+nl+'Estado: '+estado+nl+'Pedido #'+o.id+':'+nl+itemLines+nl+nl+entrega+slot+nl+'Pago: '+pago+nl+'Total: '+fmt(o.total)+nl+nl+'Gracias por elegirnos!';
+  var phone=o.phone?o.phone.replace(/[^0-9]/g,''):wa;
+  return 'https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
 }
 </script>
 </body>
