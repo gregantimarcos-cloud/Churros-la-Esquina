@@ -285,6 +285,17 @@ async function apiFetch(path, opts={}){
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────
+function applyProductOrder(raw, cfgData){
+  const savedOrder = (cfgData && cfgData.productOrder && cfgData.productOrder.length)
+    ? cfgData.productOrder : [];
+  if(!savedOrder.length) return raw;
+  const map={};
+  raw.forEach(p=>{ map[String(p.id)]=p; });
+  const ordered = savedOrder.map(id=>map[id]).filter(Boolean);
+  const rest = raw.filter(p=>!savedOrder.includes(String(p.id)));
+  return [...ordered, ...rest];
+}
+
 async function init(){
   // Load config, products and slots in parallel
   const [cfgData, productsData, slotsData] = await Promise.all([
@@ -297,15 +308,7 @@ async function init(){
   slots = slotsData || [];
   // Apply saved display order from cfg (saved by admin via API)
   const rawProducts = productsData || [];
-  const savedOrder = (cfgData && cfgData.productOrder) ? cfgData.productOrder : [];
-  if(savedOrder.length){
-    const map={};rawProducts.forEach(p=>{map[String(p.id)]=p;});
-    const ordered=savedOrder.map(id=>map[id]).filter(Boolean);
-    const rest=rawProducts.filter(p=>!savedOrder.includes(String(p.id)));
-    products=[...ordered,...rest];
-  } else {
-    products=rawProducts;
-  }
+  products = applyProductOrder(rawProducts, cfgData);
 
   // Apply config to UI
   const defTxts={
