@@ -1532,29 +1532,40 @@ function waOrderLink(o){
   const nombre=o.customer.split(' ')[0];
   const items=(o.items||[]).map(it=>{
     const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name);
-    const desc=prod&&prod.desc?' ('+prod.desc+')':'';
-    return`  • ${it.qty}x ${it.name}${desc} — ${fmt(it.price*it.qty)}`;
-  }).join('%0A');
+    const desc=prod&&prod.desc?' - '+prod.desc:'';
+    return it.qty+'x '+it.name+desc+' ('+fmt(it.price*it.qty)+')';
+  }).join('
+');
 
   const entrega=o.delivery==='delivery'
-    ?'🛵 *Envío a domicilio*'+(o.address?'%0A   📌 '+encodeURIComponent(o.address):'')+(o.gps?'%0A   📍 https://maps.google.com/?q='+o.gps:'')
-    :'🏪 *Retiro en el local*';
+    ?'Envio a domicilio'+(o.address?'
+Direccion: '+o.address:'')+(o.gps?'
+Ubicacion: https://maps.google.com/?q='+o.gps:'')
+    :'Retiro en local - Malvinas Argentinas 297';
 
-  const slot=o.slot?'%0A⏰ *Horario:* '+encodeURIComponent(o.slot):'';
-  const pago=o.payment==='efectivo'?'💵 Efectivo':o.payment==='transferencia'?'📲 Transferencia bancaria (alias: '+(cfg.alias||'')+')':'💳 Mercado Pago';
-  const obs=o.obs?'%0A📝 *Observaciones:* '+encodeURIComponent(o.obs):'';
-  const estado={new:'✅ Confirmado',prep:'👨‍🍳 En preparación',ready:'🎉 Listo para '+( o.delivery==='delivery'?'enviar':'retirar'),done:'✓ Entregado'}[o.status]||'Confirmado';
+  const slot=o.slot?'
+Horario: '+o.slot:'';
+  const pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia (alias: '+(cfg.alias||'churros.local')+')':'Mercado Pago';
+  const obs='';
+  const estado={new:'Confirmado',prep:'En preparacion',ready:'Listo para '+(o.delivery==='delivery'?'enviar':'retirar'),done:'Entregado'}[o.status]||'Confirmado';
 
-  const msg=
-    `Hola ${nombre}! 🥐%0A%0A`+
-    `*${estado}* — Churros La Esquina%0A%0A`+
-    `*Tu pedido #${o.id}:*%0A${items}%0A%0A`+
-    `${entrega}${slot}%0A`+
-    `💰 *Total: ${fmt(o.total)}*%0A`+
-    `${pago}${obs}%0A%0A`+
-    `¡Gracias por elegirnos! 🥐✨`;
+  const lines=[
+    'Hola '+nombre+'! Churros La Esquina',
+    '',
+    'Estado: '+estado,
+    'Pedido #'+o.id+':',
+    items,
+    '',
+    entrega+slot,
+    'Pago: '+pago,
+    'Total: '+fmt(o.total),
 
-  return`https://wa.me/${o.phone?o.phone.replace(/\D/g,''):wa}?text=${msg}`;
+    '',
+    'Gracias por elegirnos!'
+  ].join('
+');
+
+  return 'https://wa.me/'+(o.phone?o.phone.replace(/\D/g,''):wa)+'?text='+encodeURIComponent(lines);
 }
 </script>
 </body>
