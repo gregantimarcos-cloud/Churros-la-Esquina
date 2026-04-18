@@ -815,15 +815,26 @@ async function confirmOrder(){
   if(updatedProducts)products=updatedProducts;
   _pendingOrderId=orderId;
 
-  const momento=delivery==='delivery'?'recibir tu pedido':'retirar';
-  const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
   const nombre=name.split(' ')[0];
-  let icon='✅',title='¡Pedido confirmado!',msg='';
-  if(payment==='transferencia'){
-    msg=tpl(cfg.txtMsgTransferencia||'¡Gracias, {nombre}! Pedido #{id}{horario}. Te avisamos cuando confirmemos el pago.',{id:orderId,horario,nombre,total:fmt(total),alias:cfg.alias||'churros.local'});
-  } else {
-    msg=tpl(cfg.txtMsgEfectivo||'¡Gracias, {nombre}! Pedido #{id}. Tené listos {total} en efectivo al {momento}.',{id:orderId,horario,nombre,total:fmt(total),momento});
-  }
+  const totalChurros=items.reduce((a,it)=>a+it.qty,0);
+  const detallePedido=items.map(it=>`${it.qty}x ${it.name}`).join(', ');
+  const horarioTxt=slotLabel?`en el horario ${slotLabel}`:'a la brevedad';
+  const direccionTxt=delivery==='delivery'
+    ?(addr&&addr!=='ok'?`en ${addr}`:'en tu domicilio')
+    :'en Malvinas Argentinas 297';
+  const entregaTxt=delivery==='delivery'
+    ?`Lo recibís ${direccionTxt} ${horarioTxt}.`
+    :`Lo podés retirar ${direccionTxt} ${horarioTxt}.`;
+
+  let icon='✅', title='¡Pedido confirmado!', msg='';
+
+  const pagoTxt=payment==='transferencia'
+    ?`El pago es por transferencia bancaria al alias ${cfg.alias||'churros.local'} por ${fmt(totalFinal)}. Aguardamos tu comprobante para comenzar a prepararlo.`
+    :payment==='mercadopago'
+    ?`El pago fue realizado por Mercado Pago por ${fmt(totalFinal)}.`
+    :`El pago es en efectivo por ${fmt(totalFinal)} al momento del ${delivery==='delivery'?'envío':'retiro'}.`;
+
+  msg=`¡Muchas gracias, ${nombre}! Tu pedido de ${detallePedido} por el importe de ${fmt(totalFinal)} fue ingresado correctamente. ${entregaTxt} ${pagoTxt} ¡Muchas gracias por confiar en nosotros, esperamos que los disfrutes!`;
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
   document.getElementById('suc-msg').textContent=msg;
