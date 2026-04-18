@@ -328,13 +328,12 @@ function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.
 
 // ── CART ───────────────────────────────────────────────────────────────
 function addItem(id, varNombre){
-  const p=products.find(x=>x.id===id);if(!p)return;
-  if(!p.unlimited&&(p.stock||0)<=(cart[id]||0))return;
-  // If product has variants and none selected yet, show variant picker
-  if(p.variantes&&p.variantes.length&&!varNombre&&!cart[String(id)]){
+  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+  const sid=String(p.id);
+  if(!p.unlimited&&(p.stock||0)<=(cart[sid]||0))return;
+  if(p.variantes&&p.variantes.length&&!varNombre&&!cart[sid]){
     showVariantPicker(p);return;
   }
-  const sid=String(id);
   cart[sid]=(cart[sid]||0)+1;
   if(varNombre)cart[sid+'_var']=varNombre;
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
@@ -388,10 +387,11 @@ function showVariantPicker(p){
 
 function elegirVariante(id, varNombre, varPrecio){
   document.getElementById('var-picker')?.remove();
-  addItem(id, varNombre);
+  addItem(String(id), varNombre);
 }
 function remItem(id){
-  const sid=String(id);
+  const p=products.find(x=>String(x.id)===String(id));
+  const sid=p?String(p.id):String(id);
   if(cart[sid]>0){
     cart[sid]--;
     if(cart[sid]===0){delete cart[sid];delete cart[sid+'_var'];}
@@ -419,7 +419,7 @@ function renderMenu(){
   Object.entries(bycat).forEach(([cat,prods])=>{
     html+=`<div class="sec-label">${cat}</div><div class="menu-grid">`;
     prods.forEach(p=>{
-      const q=cart[String(p.id)]||0;
+      const sid_p=String(p.id); const q=cart[sid_p]||0;
       const outOfStock=!p.unlimited&&(p.stock||0)<=0&&q===0;
       const lowStock=!p.unlimited&&(p.stock||0)>0&&(p.stock||0)<=3;
       const lowTxt=(cfg.txtStockBajo||'Últimas {n} unidades').replace('{n}',p.stock);
@@ -433,8 +433,8 @@ function renderMenu(){
           <div class="pcard-foot">
             <span class="price">${fmt(p.price)}</span>
             ${outOfStock?`<span style="font-size:11px;color:var(--red-warm);font-style:italic">${sinStockTxt}</span>`
-              :q===0?`<button class="addbtn" onclick="addItem(${p.id})">+</button>`
-              :`<div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${q}</span><button onclick="addItem(${p.id})">+</button></div>`}
+              :q===0?`<button class="addbtn" onclick="addItem('${p.id}')">+</button>`
+              :`<div class="qctrl"><button onclick="remItem('${p.id}')">−</button><span>${q}</span><button onclick="addItem('${p.id}')">+</button></div>`}
           ${p.variantes&&p.variantes.length&&q===0?`<div style="font-size:9px;color:var(--brown-light);font-style:italic;margin-top:3px;">${p.variantes.map(v=>v.nombre).join(' / ')}</div>`:''}
           </div>
         </div>
@@ -480,7 +480,7 @@ function renderCart(){
   }
   let sub=0;
   const items=keys.filter(k=>!k.endsWith('_var')).map(k=>{
-    const p=products.find(x=>x.id==k);if(!p)return'';
+    const p=products.find(x=>String(x.id)===k);if(!p)return'';
     // Use variant price if selected
     const varNombre=cart[k+'_var'];
     const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
@@ -488,7 +488,7 @@ function renderCart(){
     const tot=unitPrice*(cart[k]||0);sub+=tot;
     const thumb=p.img?`<div class="ci-thumb"><img src="${p.img}" alt="${p.name}"></div>`:`<div class="ci-thumb" style="font-size:22px">🥐</div>`;
     const varSel=varNombre?`<div style="font-size:10px;color:var(--brown-light);font-style:italic;margin-top:2px">📦 ${varNombre}</div>`:'';
-    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(unitPrice)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
+    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(unitPrice)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem('${p.id}')">−</button><span>${cart[k]}</span><button onclick="addItem('${p.id}')">+</button></div></div>`;
   }).join('');
 
   const ship=delivery==='delivery'?(cfg.envio||500):0;
@@ -521,6 +521,14 @@ function renderCart(){
     </div>
     <button class="locbtn" id="loc-btn" onclick="getLocation()">📍 Compartir mi ubicación GPS (más exacto)</button>`:'';
 
+  // Apply coupon FIRST so totalFinal is available for payExtra
+  let descuento=0;
+  if(_cuponAplicado){
+    if(_cuponAplicado.tipo==='pct') descuento=(sub+ship)*(_cuponAplicado.valor/100);
+    else descuento=Math.min(_cuponAplicado.valor, sub+ship);
+  }
+  const totalFinal=Math.max(0,total-descuento);
+
   let payExtra='';
   if(payment==='efectivo')payExtra=`<div class="pay-efectivo"><div class="pt">💵 Pago en efectivo</div><div class="ps">Tené listos ${fmt(totalFinal)} al ${delivery==='delivery'?'recibir el pedido':'retirar'}.</div></div>`;
   if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:600">${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(totalFinal)}</span></div></div>`;
@@ -528,14 +536,6 @@ function renderCart(){
 
   const isClosed=!cfg.open;
   const confirmTxt=cfg.txtConfirmarBtn||'Confirmar pedido';
-
-  // Apply coupon
-  let descuento=0;
-  if(_cuponAplicado){
-    if(_cuponAplicado.tipo==='pct') descuento=(sub+ship)*(_cuponAplicado.valor/100);
-    else descuento=Math.min(_cuponAplicado.valor, sub+ship);
-  }
-  const totalFinal=Math.max(0,total-descuento);
 
   cont.innerHTML=`<div>
     ${items}
@@ -666,7 +666,7 @@ async function confirmOrder(){
   const ship=delivery==='delivery'?(cfg.envio||500):0;
   let sub=0;
   const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).map(k=>{
-    const p=products.find(x=>x.id==k);if(!p)return null;
+    const p=products.find(x=>String(x.id)===k);if(!p)return null;
     const varNombre=cart[k+'_var'];
     const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
     const unitPrice=varObj?varObj.precio:p.price;
