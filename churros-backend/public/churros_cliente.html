@@ -538,7 +538,7 @@ function renderCart(){
         ${availSlotsFiltered.map(s=>{
           const st=slotStatus(s);
           const blocked=st==='full'||st==='pronto';
-          const label=s.maxPedidos>0&&st==='ok'?` (${Math.max(0,s.maxPedidos-(s.pedidosActuales||0))} disp.)`:st==='full'?' — LLENO':st==='pronto'?' — Cerrando':'';
+          const label=st==='full'?' — Completo':st==='pronto'?' — Cerrando':'';
           const sel=selectedSlot===String(s.id)?'selected':'';
           return `<option value="${blocked?'':''+s.id}" ${sel} ${blocked?'disabled':''}>⏰ ${s.from} – ${s.to}${label}</option>`;
         }).join('')}
