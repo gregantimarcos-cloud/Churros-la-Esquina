@@ -331,29 +331,59 @@ function addItem(id, varNombre){
   const p=products.find(x=>x.id===id);if(!p)return;
   if(!p.unlimited&&(p.stock||0)<=(cart[id]||0))return;
   // If product has variants and none selected yet, show variant picker
-  if(p.variantes&&p.variantes.length&&!varNombre&&!cart[id]){
+  if(p.variantes&&p.variantes.length&&!varNombre&&!cart[String(id)]){
     showVariantPicker(p);return;
   }
-  cart[id]=(cart[id]||0)+1;
-  if(varNombre)cart[id+'_var']=varNombre;
+  const sid=String(id);
+  cart[sid]=(cart[sid]||0)+1;
+  if(varNombre)cart[sid+'_var']=varNombre;
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
   showAddedToast();
 }
 
 function showVariantPicker(p){
-  // Show a quick modal-like overlay for variant selection
   const existing=document.getElementById('var-picker');
   if(existing)existing.remove();
   const el=document.createElement('div');
   el.id='var-picker';
-  el.style.cssText='position:fixed;inset:0;background:rgba(61,28,2,.55);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:16px;';
-  el.innerHTML=`<div style="background:var(--paper);border-radius:14px 14px 0 0;width:100%;max-width:480px;padding:20px;border:2px solid var(--kraft);">
-    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--brown);margin-bottom:14px;">Elegí una opción</div>
-    <div class="variante-sel">${p.variantes.map(v=>`<button class="var-opt" onclick="elegirVariante(${p.id},'${v.nombre}',${v.precio})">${v.nombre}<br><span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--red-warm)">${fmt(v.precio)}</span></button>`).join('')}</div>
-    <button onclick="document.getElementById('var-picker').remove()" style="width:100%;margin-top:12px;background:none;border:2px solid var(--brown);border-radius:9px;padding:10px;cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;color:var(--brown);">Cancelar</button>
-  </div>`;
+  el.style.cssText='position:fixed;inset:0;background:rgba(45,18,0,.6);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:16px;';
+  const btns=p.variantes.map((v,i)=>{
+    const btn=document.createElement('button');
+    btn.className='var-opt';
+    btn.innerHTML=v.nombre+'<br><span style="font-family:Playfair Display,serif;font-weight:700;color:var(--red-warm)">'+fmt(v.precio)+'</span>';
+    btn.addEventListener('click',()=>elegirVariante(p.id,v.nombre,v.precio));
+    return btn.outerHTML;
+  });
+  // safer: build as DOM
+  el.innerHTML='<div style="background:var(--paper);border-radius:14px 14px 0 0;width:100%;max-width:480px;padding:20px;border:2px solid var(--kraft);"><div id="var-picker-inner"></div></div>';
   el.addEventListener('click',function(e){if(e.target===this)this.remove();});
   document.body.appendChild(el);
+  // Build inner DOM safely
+  const inner=document.getElementById('var-picker-inner');
+  const title=document.createElement('div');
+  title.style.cssText="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--brown);margin-bottom:14px;";
+  title.textContent='Elegí una opción · '+p.name;
+  inner.appendChild(title);
+  const grid=document.createElement('div');
+  grid.className='variante-sel';
+  p.variantes.forEach(v=>{
+    const btn=document.createElement('button');
+    btn.className='var-opt';
+    const nameSpan=document.createElement('span');nameSpan.textContent=v.nombre;
+    const br=document.createElement('br');
+    const priceSpan=document.createElement('span');
+    priceSpan.style.cssText="font-family:'Playfair Display',serif;font-weight:700;color:var(--red-warm)";
+    priceSpan.textContent=fmt(v.precio);
+    btn.appendChild(nameSpan);btn.appendChild(br);btn.appendChild(priceSpan);
+    btn.addEventListener('click',()=>elegirVariante(p.id,v.nombre,v.precio));
+    grid.appendChild(btn);
+  });
+  inner.appendChild(grid);
+  const cancelBtn=document.createElement('button');
+  cancelBtn.style.cssText="width:100%;margin-top:12px;background:none;border:2px solid var(--brown);border-radius:9px;padding:10px;cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;color:var(--brown);";
+  cancelBtn.textContent='Cancelar';
+  cancelBtn.addEventListener('click',()=>el.remove());
+  inner.appendChild(cancelBtn);
 }
 
 function elegirVariante(id, varNombre, varPrecio){
@@ -361,9 +391,10 @@ function elegirVariante(id, varNombre, varPrecio){
   addItem(id, varNombre);
 }
 function remItem(id){
-  if(cart[id]>0){
-    cart[id]--;
-    if(cart[id]===0){delete cart[id];delete cart[id+'_var'];}
+  const sid=String(id);
+  if(cart[sid]>0){
+    cart[sid]--;
+    if(cart[sid]===0){delete cart[sid];delete cart[sid+'_var'];}
   }
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
@@ -388,7 +419,7 @@ function renderMenu(){
   Object.entries(bycat).forEach(([cat,prods])=>{
     html+=`<div class="sec-label">${cat}</div><div class="menu-grid">`;
     prods.forEach(p=>{
-      const q=cart[p.id]||0;
+      const q=cart[String(p.id)]||0;
       const outOfStock=!p.unlimited&&(p.stock||0)<=0&&q===0;
       const lowStock=!p.unlimited&&(p.stock||0)>0&&(p.stock||0)<=3;
       const lowTxt=(cfg.txtStockBajo||'Últimas {n} unidades').replace('{n}',p.stock);
@@ -440,7 +471,7 @@ function slotStatus(s){
 }
 
 function renderCart(){
-  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0);
+  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&Number(k)>0&&cart[k]>0);
   const cont=document.getElementById('cart-content');if(!cont)return;
   if(keys.length===0){
     const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
@@ -453,8 +484,8 @@ function renderCart(){
     // Use variant price if selected
     const varNombre=cart[k+'_var'];
     const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
-    const unitPrice=varObj?varObj.precio:p.price;
-    const tot=unitPrice*cart[k];sub+=tot;
+    const unitPrice=varObj?Number(varObj.precio):Number(p.price);
+    const tot=unitPrice*(cart[k]||0);sub+=tot;
     const thumb=p.img?`<div class="ci-thumb"><img src="${p.img}" alt="${p.name}"></div>`:`<div class="ci-thumb" style="font-size:22px">🥐</div>`;
     const varSel=varNombre?`<div style="font-size:10px;color:var(--brown-light);font-style:italic;margin-top:2px">📦 ${varNombre}</div>`:'';
     return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(unitPrice)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
