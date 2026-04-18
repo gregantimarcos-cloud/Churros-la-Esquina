@@ -67,7 +67,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .btn-done{background:var(--cream-dark);color:var(--brown-light);border-color:var(--kraft);}
 .btn-del{background:#fff0f0;color:#b91c1c;border-color:#fca5a5;}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
-.ap-item{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.ap-item{background:var(--paper);border:1.5px solid var(--kraft);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;cursor:grab;transition:box-shadow .15s,opacity .15s;}
+.ap-item.dragging{opacity:.4;box-shadow:0 6px 20px rgba(45,18,0,.3);cursor:grabbing;}
+.ap-item.drag-over{border-color:var(--brown);border-style:dashed;}
+.drag-handle{color:var(--kraft);font-size:16px;cursor:grab;padding:0 4px;flex-shrink:0;user-select:none;}
+.slot-label{background:var(--cream-dark);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-family:'IM Fell English SC',serif;font-size:12px;letter-spacing:.08em;color:var(--brown-mid);display:flex;align-items:center;gap:8px;}
+.slot-label::after{content:'';flex:1;height:1px;background:var(--kraft);opacity:.4;}
 .ap-thumb{width:52px;height:52px;border-radius:9px;border:1.5px solid var(--kraft);flex-shrink:0;background:var(--cream-dark);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--brown-light);overflow:hidden;}
 .ap-thumb img{width:100%;height:100%;object-fit:cover;}
 .ap-inf{flex:1;min-width:0;}
@@ -824,18 +829,40 @@ function filterOrders(f){
 function renderOrders(){
   let orders=[..._orders];
   if(orderFilter!=='all')orders=orders.filter(o=>o.status===orderFilter);
-  orders.reverse();
+
+  // Sort by slot time, then by order id
+  orders.sort((a,b)=>{
+    const slotA=a.slot||'99:99';
+    const slotB=b.slot||'99:99';
+    if(slotA!==slotB)return slotA.localeCompare(slotB);
+    return a.id-b.id;
+  });
+
   const sb=s=>({new:'badge-new',prep:'badge-prep',ready:'badge-ready',done:'badge-done'}[s]||'');
-  document.getElementById('orders-list').innerHTML=orders.length?orders.map(o=>{
-    const items=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(', ')||'–';
+  if(!orders.length){document.getElementById('orders-list').innerHTML='<div class="empty-state">No hay pedidos con este filtro.</div>';return;}
+
+  // Group by slot for display
+  let html='';
+  let lastSlot=null;
+  orders.forEach(o=>{
+    const slotLabel=o.slot||'Sin franja horaria';
+    if(slotLabel!==lastSlot){
+      html+=`<div class="slot-label">⏰ ${slotLabel}</div>`;
+      lastSlot=slotLabel;
+    }
+    const items=(o.items||[]).map(it=>{
+      // Find product desc from _products
+      const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name);
+      const desc=prod&&prod.desc?` <span style="font-size:11px;color:var(--brown-light);font-style:italic">— ${prod.desc}</span>`:'';
+      return `${it.qty}x ${it.name}${desc}`;
+    }).join('<br>')||'–';
     const addr=o.address?' · '+o.address:'';
     const gps=o.gps?' · 📍 '+o.gps:'';
-    const slot=o.slot?' · ⏰ '+o.slot:'';
     const phone=o.phone?'<br>📱 '+o.phone:'';
     const dt=new Date(o.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    return`<div class="order-card">
+    html+=`<div class="order-card">
       <div class="order-header"><span class="order-id">#${o.id}</span><span class="order-name">${o.customer}</span><span class="order-badge ${sb(o.status)}">${statusLabel(o.status)}</span></div>
-      <div class="order-time">${dt}${slot}</div>
+      <div class="order-time">Recibido: ${dt}</div>
       <div class="order-items" style="margin-top:6px">${items}</div>
       <div class="order-delivery">${o.delivery==='delivery'?'🛵 Envío'+addr:'🏪 Retiro'}${phone}</div>
       ${o.gps?`<div style="margin-bottom:3px"><a class="maps-link" href="https://maps.google.com/?q=${o.gps}" target="_blank">📍 Ver en Google Maps</a></div>`:''}
@@ -850,7 +877,9 @@ function renderOrders(){
         ${o.payment==='transferencia'?`<button class="comp-badge ${o.comprobante?'':'pending'}" onclick="verComprobante(${o.id})">${o.comprobante?'📎 Ver comprobante':'⏳ Sin comprobante'}</button>`:''}
         ${o.phone&&_cfg.whatsapp?`<a class="wa-btn" href="${waOrderLink(o)||'#'}" target="_blank">💬 Confirmar por WA</a>`:''}
       </div>
-    </div>`;}).join(''):'<div class="empty-state">No hay pedidos con este filtro.</div>';
+    </div>`;
+  });
+  document.getElementById('orders-list').innerHTML=html;
 }
 async function setOrderStatus(id,status){
   await apiFetch(`/api/orders/${id}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
@@ -894,16 +923,58 @@ async function marcarComprobanteOk(){
 document.getElementById('comp-modal').addEventListener('click',function(e){if(e.target===this)closeCompModal();});
 
 // ── PRODUCTS ───────────────────────────────────────────────────────────
-async function loadProducts(){
-  _products=await apiFetch('/api/products')||[];
-  renderProductList();
-}
+
 function renderProductList(){
-  document.getElementById('admin-list').innerHTML=_products.map(p=>{
+  const container=document.getElementById('admin-list');
+  container.innerHTML='<div style="font-size:11px;color:var(--brown-light);font-style:italic;margin-bottom:8px;">☰ Arrastrá los productos para reordenarlos. El orden se refleja en la página del cliente.</div>';
+  _products.forEach((p,idx)=>{
     const sl=p.unlimited?'<span class="ap-stock stock-ok">∞ Sin límite</span>':p.stock>5?`<span class="ap-stock stock-ok">Stock: ${p.stock}</span>`:p.stock>0?`<span class="ap-stock stock-low">⚠ Stock bajo: ${p.stock}</span>`:'<span class="ap-stock stock-out">✕ Sin stock</span>';
-    const varBadge=p.variantes&&p.variantes.length?`<span style="font-size:10px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;border-radius:10px;padding:2px 7px;margin-left:4px;">${p.variantes.length} variantes</span>`:'';
-    return`<div class="ap-item"><div class="ap-thumb">${p.img?`<img src="${p.img}" alt="">`:' 📷 '}</div><div class="ap-inf"><div class="ap-name">${p.name}${varBadge}</div><div class="ap-meta">${p.cat} · ${fmt(p.price)}</div>${sl}</div><button class="edit-btn" onclick="openModal(${p.id})">Editar</button></div>`;
-  }).join('');
+    const varBadge=p.variantes&&p.variantes.length?`<span style="font-size:10px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;border-radius:10px;padding:2px 7px;margin-left:4px;">${p.variantes.length} var.</span>`:'';
+    const div=document.createElement('div');
+    div.className='ap-item';
+    div.dataset.id=String(p.id);
+    div.draggable=true;
+    div.innerHTML=`<span class="drag-handle">☰</span><div class="ap-thumb">${p.img?`<img src="${p.img}" alt="">`:' 📷 '}</div><div class="ap-inf"><div class="ap-name">${p.name}${varBadge}</div><div class="ap-meta">${p.cat} · ${fmt(p.price)}</div>${sl}</div><button class="edit-btn" onclick="openModal(${p.id})">Editar</button>`;
+    // Drag events
+    div.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(p.id));div.classList.add('dragging');});
+    div.addEventListener('dragend',()=>{div.classList.remove('dragging');document.querySelectorAll('.ap-item').forEach(el=>el.classList.remove('drag-over'));});
+    div.addEventListener('dragover',e=>{e.preventDefault();div.classList.add('drag-over');});
+    div.addEventListener('dragleave',()=>div.classList.remove('drag-over'));
+    div.addEventListener('drop',e=>{
+      e.preventDefault();
+      div.classList.remove('drag-over');
+      const draggedId=e.dataTransfer.getData('text/plain');
+      const fromIdx=_products.findIndex(x=>String(x.id)===draggedId);
+      const toIdx=_products.findIndex(x=>String(x.id)===String(p.id));
+      if(fromIdx<0||toIdx<0||fromIdx===toIdx)return;
+      const [moved]=_products.splice(fromIdx,1);
+      _products.splice(toIdx,0,moved);
+      saveProductOrder();
+      renderProductList();
+    });
+    container.appendChild(div);
+  });
+}
+
+function saveProductOrder(){
+  // Save order to localStorage so it persists
+  const order=_products.map(p=>String(p.id));
+  localStorage.setItem('churros_product_order',JSON.stringify(order));
+}
+
+async function loadProducts(){
+  const raw=await apiFetch('/api/products')||[];
+  // Apply saved order if exists
+  const savedOrder=JSON.parse(localStorage.getItem('churros_product_order')||'[]');
+  if(savedOrder.length){
+    const map={};raw.forEach(p=>{map[String(p.id)]=p;});
+    const ordered=savedOrder.map(id=>map[id]).filter(Boolean);
+    const rest=raw.filter(p=>!savedOrder.includes(String(p.id)));
+    _products=[...ordered,...rest];
+  } else {
+    _products=raw;
+  }
+  renderProductList();
 }
 function openModal(id){
   editId=id;

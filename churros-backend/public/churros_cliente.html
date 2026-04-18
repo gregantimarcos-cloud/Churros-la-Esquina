@@ -294,8 +294,18 @@ async function init(){
   ]);
 
   cfg = cfgData || {};
-  products = productsData || [];
   slots = slotsData || [];
+  // Apply saved display order from admin
+  const rawProducts = productsData || [];
+  const savedOrder = JSON.parse(localStorage.getItem('churros_product_order') || '[]');
+  if(savedOrder.length){
+    const map={};rawProducts.forEach(p=>{map[String(p.id)]=p;});
+    const ordered=savedOrder.map(id=>map[id]).filter(Boolean);
+    const rest=rawProducts.filter(p=>!savedOrder.includes(String(p.id)));
+    products=[...ordered,...rest];
+  } else {
+    products=rawProducts;
+  }
 
   // Apply config to UI
   const defTxts={
