@@ -79,6 +79,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
 .slot-btn.full{opacity:.45;pointer-events:none;text-decoration:line-through;}
+.slot-btn.pasado{opacity:.35;pointer-events:none;color:var(--brown-light);text-decoration:line-through;}
+.slot-btn.pronto{border-color:#f59e0b;background:#fefce8;color:#92400e;}
+/* VARIANTES */
+.variante-sel{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
+.var-opt{padding:7px 14px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
+.var-opt.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
 .retiro-info{background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;padding:11px 13px;margin-top:8px;font-size:13px;color:#166534;line-height:1.6;}
 .retiro-info strong{font-family:'Playfair Display',serif;font-size:12px;display:block;margin-bottom:3px;}
 .slot-required{font-size:11px;color:#b91c1c;font-style:italic;margin-top:5px;display:none;}
@@ -317,11 +323,37 @@ function goTab(t){
 function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
 // ── CART ───────────────────────────────────────────────────────────────
-function addItem(id){
+function addItem(id, varNombre){
   const p=products.find(x=>x.id===id);if(!p)return;
   if(!p.unlimited&&(p.stock||0)<=(cart[id]||0))return;
+  // If product has variants and none selected yet, show variant picker
+  if(p.variantes&&p.variantes.length&&!varNombre&&!cart[id]){
+    showVariantPicker(p);return;
+  }
   cart[id]=(cart[id]||0)+1;
+  if(varNombre)cart[id+'_var']=varNombre;
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
+}
+
+function showVariantPicker(p){
+  // Show a quick modal-like overlay for variant selection
+  const existing=document.getElementById('var-picker');
+  if(existing)existing.remove();
+  const el=document.createElement('div');
+  el.id='var-picker';
+  el.style.cssText='position:fixed;inset:0;background:rgba(61,28,2,.55);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:16px;';
+  el.innerHTML=`<div style="background:var(--paper);border-radius:14px 14px 0 0;width:100%;max-width:480px;padding:20px;border:2px solid var(--kraft);">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--brown);margin-bottom:14px;">Elegí una opción</div>
+    <div class="variante-sel">${p.variantes.map(v=>`<button class="var-opt" onclick="elegirVariante(${p.id},'${v.nombre}',${v.precio})">${v.nombre}<br><span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--red-warm)">${fmt(v.precio)}</span></button>`).join('')}</div>
+    <button onclick="document.getElementById('var-picker').remove()" style="width:100%;margin-top:12px;background:none;border:2px solid var(--brown);border-radius:9px;padding:10px;cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;color:var(--brown);">Cancelar</button>
+  </div>`;
+  el.addEventListener('click',function(e){if(e.target===this)this.remove();});
+  document.body.appendChild(el);
+}
+
+function elegirVariante(id, varNombre, varPrecio){
+  document.getElementById('var-picker')?.remove();
+  addItem(id, varNombre);
 }
 function remItem(id){
   if(cart[id]>0){cart[id]--;if(cart[id]===0)delete cart[id];}
@@ -364,6 +396,7 @@ function renderMenu(){
             ${outOfStock?`<span style="font-size:11px;color:var(--red-warm);font-style:italic">${sinStockTxt}</span>`
               :q===0?`<button class="addbtn" onclick="addItem(${p.id})">+</button>`
               :`<div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${q}</span><button onclick="addItem(${p.id})">+</button></div>`}
+          ${p.variantes&&p.variantes.length&&q===0?`<div style="font-size:9px;color:var(--brown-light);font-style:italic;margin-top:3px;">${p.variantes.map(v=>v.nombre).join(' / ')}</div>`:''}
           </div>
         </div>
       </div>`;
@@ -376,17 +409,26 @@ function renderMenu(){
 
 // ── CART RENDER ────────────────────────────────────────────────────────
 function getAvailableSlots(deliveryType){
-  // Count existing orders per slot to enforce capacity limits
   return slots.filter(s=>{
     if(!s.active)return false;
     if(s.type!=='both'&&s.type!==deliveryType)return false;
-    return true; // capacity check happens in renderCart
+    return true;
   });
 }
-function slotIsFull(slotId){
-  // We don't have access to all orders client-side, so we just show limit info
-  // Full enforcement is on the server
-  return false;
+
+function slotStatus(s){
+  // Returns: 'ok', 'pasado', 'pronto', 'full'
+  if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
+  const buffer=cfg.slotBuffer||15; // minutes before close to block
+  const now=new Date();
+  const [toH,toM]=s.to.split(':').map(Number);
+  const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
+  const [fromH,fromM]=s.from.split(':').map(Number);
+  const slotStart=new Date();slotStart.setHours(fromH,fromM,0,0);
+  const msBuffer=buffer*60*1000;
+  if(now>=slotEnd)return'pasado';
+  if(now>=new Date(slotEnd-msBuffer))return'pronto'; // less than buffer minutes left
+  return'ok';
 }
 
 function renderCart(){
@@ -402,20 +444,24 @@ function renderCart(){
     const p=products.find(x=>x.id==k);if(!p)return'';
     const tot=p.price*cart[k];sub+=tot;
     const thumb=p.img?`<div class="ci-thumb"><img src="${p.img}" alt="${p.name}"></div>`:`<div class="ci-thumb" style="font-size:22px">🥐</div>`;
-    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div><div class="ci-sub">${cart[k]} × ${fmt(p.price)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
+    const varSel=p.variantes&&p.variantes.length?`<div style="font-size:10px;color:var(--brown-light);margin-top:2px">${cart[k+'_var']||p.variantes[0]?.nombre||''}</div>`:'';
+    return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${p.name}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(p.variantes&&cart[k+'_var']?(p.variantes.find(v=>v.nombre===cart[k+'_var'])?.precio||p.price):p.price)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="remItem(${p.id})">−</button><span>${cart[k]}</span><button onclick="addItem(${p.id})">+</button></div></div>`;
   }).join('');
 
   const ship=delivery==='delivery'?(cfg.envio||500):0;
   const total=sub+ship;
   const availSlots=getAvailableSlots(delivery);
-  const slotsHtml=availSlots.length
-    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlots.map(s=>{
-      const isFull=s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos;
+  const availSlotsFiltered=availSlots.filter(s=>slotStatus(s)!=='pasado');
+  const slotsHtml=availSlotsFiltered.length
+    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label><div class="slots-grid">${availSlotsFiltered.map(s=>{
+      const st=slotStatus(s);
       const isOn=selectedSlot===String(s.id);
-      const label=s.maxPedidos>0?` (${Math.max(0,s.maxPedidos-(s.pedidosActuales||0))} disp.)`:'';
-      return `<button class="slot-btn${isOn?' on':''}${isFull?' full':''}" onclick="${isFull?'':'selectSlot('+s.id+')'}">⏰ ${s.from} – ${s.to}${isFull?' · Lleno':label}</button>`;
+      const blocked=st==='full'||st==='pronto';
+      const label=s.maxPedidos>0&&st==='ok'?` (${Math.max(0,s.maxPedidos-(s.pedidosActuales||0))} disp.)`:'';
+      const tag=st==='full'?' · Lleno':st==='pronto'?' · Cerrando pronto':'';
+      return `<button class="slot-btn${isOn?' on':''} ${st}" onclick="${blocked||st==='pronto'?'':'selectSlot('+s.id+')'}">⏰ ${s.from} – ${s.to}${tag}${label}</button>`;
     }).join('')}</div><div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>`
-    :'';
+    :(availSlots.length?`<div style="font-size:12px;color:var(--brown-light);font-style:italic;margin-top:8px">⏰ No hay franjas disponibles por el momento.</div>`:'');
   const retiroInfoTxt=cfg.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!';
   let retiroInfoHtml='';
   if(delivery==='pickup'){

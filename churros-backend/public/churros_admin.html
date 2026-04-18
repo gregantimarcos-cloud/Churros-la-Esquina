@@ -136,6 +136,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .comp-modal.open{display:flex;}
 .comp-modal-box{background:#fff;border-radius:12px;padding:16px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;}
 .comp-modal-box img{width:100%;border-radius:8px;display:block;}
+.var-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+.var-row input{flex:1;}
+.var-tag{display:inline-flex;align-items:center;gap:6px;background:var(--cream-dark);border:1px solid var(--kraft);border-radius:20px;padding:5px 11px;font-size:12px;color:var(--brown);margin-bottom:6px;margin-right:4px;}
+.var-tag button{background:none;border:none;cursor:pointer;color:var(--red-warm);font-size:14px;line-height:1;}
 .comp-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .comp-modal-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--brown);}
 .comp-modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--brown-light);}
@@ -325,7 +329,9 @@ window.addEventListener('load',function(){
           <option value="delivery">Solo envío</option>
         </select>
         <label class="flabel">Límite de pedidos por franja <small>(0 = sin límite)</small></label>
-        <input class="finput" type="number" id="slot-max" placeholder="0" style="margin-bottom:8px" min="0">
+        <input class="finput field-mb" type="number" id="slot-max" placeholder="0" min="0">
+        <label class="flabel">Minutos de cierre anticipado <small>(bloquear X min. antes del fin de la franja)</small></label>
+        <input class="finput" type="number" id="slot-buffer" placeholder="15" value="15" style="margin-bottom:8px" min="0">
         <button class="savebtn" style="margin-top:0" onclick="addSlot()">Agregar franja</button>
       </div>
       <div class="sec-label">Franjas configuradas</div>
@@ -576,6 +582,14 @@ window.addEventListener('load',function(){
         <label for="m-unlimited" style="font-size:13px;cursor:pointer;color:var(--brown-light)">Sin límite</label>
       </div>
     </div>
+    <div class="sec-label" style="padding:10px 0 6px">Variantes <small style="font-family:'Crimson Text',serif;font-style:italic;letter-spacing:0;font-size:10px;color:var(--kraft-dark)">(opcional — ej: Media docena / Docena)</small></div>
+    <div id="var-tags" style="min-height:30px;margin-bottom:8px;"></div>
+    <div class="var-row">
+      <input class="finput" id="var-nombre" placeholder="Nombre (ej: Media docena)" style="flex:2">
+      <input class="finput" id="var-precio" type="number" placeholder="Precio ($)" style="flex:1">
+      <button onclick="agregarVariante()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:9px 12px;cursor:pointer;font-family:'Crimson Text',serif;font-size:13px;font-weight:600;flex-shrink:0">+</button>
+    </div>
+    <p style="font-size:10px;color:var(--brown-light);font-style:italic;margin-bottom:10px;">Si agregás variantes, el precio principal queda como precio base y el cliente elegirá al agregar al carrito.</p>
     <button class="savebtn" onclick="saveProduct()">Guardar producto</button>
     <button class="delbtn" id="modal-del" onclick="deleteProduct()" style="display:none">Eliminar producto</button>
     <button class="cancelbtn" onclick="closeModal()">Cancelar</button>
@@ -870,7 +884,8 @@ async function loadProducts(){
 function renderProductList(){
   document.getElementById('admin-list').innerHTML=_products.map(p=>{
     const sl=p.unlimited?'<span class="ap-stock stock-ok">∞ Sin límite</span>':p.stock>5?`<span class="ap-stock stock-ok">Stock: ${p.stock}</span>`:p.stock>0?`<span class="ap-stock stock-low">⚠ Stock bajo: ${p.stock}</span>`:'<span class="ap-stock stock-out">✕ Sin stock</span>';
-    return`<div class="ap-item"><div class="ap-thumb">${p.img?`<img src="${p.img}" alt="">`:' 📷 '}</div><div class="ap-inf"><div class="ap-name">${p.name}</div><div class="ap-meta">${p.cat} · ${fmt(p.price)}</div>${sl}</div><button class="edit-btn" onclick="openModal(${p.id})">Editar</button></div>`;
+    const varBadge=p.variantes&&p.variantes.length?`<span style="font-size:10px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;border-radius:10px;padding:2px 7px;margin-left:4px;">${p.variantes.length} variantes</span>`:'';
+    return`<div class="ap-item"><div class="ap-thumb">${p.img?`<img src="${p.img}" alt="">`:' 📷 '}</div><div class="ap-inf"><div class="ap-name">${p.name}${varBadge}</div><div class="ap-meta">${p.cat} · ${fmt(p.price)}</div>${sl}</div><button class="edit-btn" onclick="openModal(${p.id})">Editar</button></div>`;
   }).join('');
 }
 function openModal(id){
@@ -887,19 +902,43 @@ function openModal(id){
   if(currentImg){prev.src=currentImg;prev.style.display='block';lbl.style.display='none';rb.style.display='inline-block';}
   else{prev.src='';prev.style.display='none';lbl.style.display='block';rb.style.display='none';}
   document.getElementById('img-file-input').value='';
+  // Load variants
+  _editVariantes=(p&&p.variantes)?[...p.variantes]:[];
+  renderVariantTags();
+  document.getElementById('var-nombre').value='';
+  document.getElementById('var-precio').value='';
   document.getElementById('modal-overlay').classList.add('open');
 }
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editId=null;currentImg='';}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editId=null;currentImg='';_editVariantes=[];}
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 function toggleUnlimited(){const c=document.getElementById('m-unlimited').checked;document.getElementById('m-stock').disabled=c;if(c)document.getElementById('m-stock').value='';}
 function handleImgUpload(event){const file=event.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){currentImg=e.target.result;document.getElementById('img-preview').src=currentImg;document.getElementById('img-preview').style.display='block';document.getElementById('img-upload-label').style.display='none';document.getElementById('img-remove-btn').style.display='inline-block';};r.readAsDataURL(file);}
 function removeImg(e){e.preventDefault();e.stopPropagation();currentImg='';document.getElementById('img-preview').src='';document.getElementById('img-preview').style.display='none';document.getElementById('img-upload-label').style.display='block';document.getElementById('img-remove-btn').style.display='none';document.getElementById('img-file-input').value='';}
+let _editVariantes=[];
+function renderVariantTags(){
+  const container=document.getElementById('var-tags');
+  if(!container)return;
+  container.innerHTML=_editVariantes.map((v,i)=>
+    `<span class="var-tag">${v.nombre} — ${fmt(v.precio)}<button onclick="quitarVariante(${i})">✕</button></span>`
+  ).join('');
+}
+function agregarVariante(){
+  const nombre=document.getElementById('var-nombre').value.trim();
+  const precio=parseInt(document.getElementById('var-precio').value)||0;
+  if(!nombre||!precio){alert('Ingresá nombre y precio de la variante');return;}
+  _editVariantes.push({nombre,precio});
+  renderVariantTags();
+  document.getElementById('var-nombre').value='';
+  document.getElementById('var-precio').value='';
+}
+function quitarVariante(i){_editVariantes.splice(i,1);renderVariantTags();}
+
 async function saveProduct(){
   const name=document.getElementById('m-name').value.trim(),desc=document.getElementById('m-desc').value.trim();
   const price=parseInt(document.getElementById('m-price').value)||0,cat=document.getElementById('m-cat').value;
   const unlimited=document.getElementById('m-unlimited').checked,stock=unlimited?0:(parseInt(document.getElementById('m-stock').value)||0);
   if(!name||!price){alert('Completá nombre y precio');return}
-  const data={img:currentImg,name,desc,price,cat,stock,unlimited};
+  const data={img:currentImg,name,desc,price,cat,stock,unlimited,variantes:_editVariantes};
   if(editId){await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
   else{await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
   closeModal();await loadProducts();
@@ -918,16 +957,19 @@ async function loadSlots(){
 function renderSlots(){
   const tl={both:'Retiro y envío',pickup:'Solo retiro',delivery:'Solo envío'};
   document.getElementById('slots-list').innerHTML=_slots.length?_slots.map(s=>{
-    const limitLabel=s.maxPedidos>0?`<span style="font-size:10px;background:var(--cream-dark);border:1px solid var(--kraft);border-radius:10px;padding:2px 7px;margin-left:5px;">máx. ${s.maxPedidos} pedidos</span>`:'';
-    return`<div class="slot-item"><div><div class="slot-text">⏰ ${s.from} – ${s.to}${limitLabel}</div><div class="slot-type-lbl">${tl[s.type]||s.type}</div></div><button class="slot-toggle ${s.active?'active':''}" onclick="toggleSlot(${s.id})">${s.active?'✓ Activo':'Inactivo'}</button><button class="slot-del" onclick="deleteSlot(${s.id})">✕</button></div>`;
+    const limitLabel=s.maxPedidos>0?`<span style="font-size:10px;background:var(--cream-dark);border:1px solid var(--kraft);border-radius:10px;padding:2px 7px;margin-left:4px;">máx. ${s.maxPedidos} ped.</span>`:'';
+    const bufferLabel=s.buffer?`<span style="font-size:10px;background:#fefce8;border:1px solid #fde047;border-radius:10px;padding:2px 7px;margin-left:4px;">cierra ${s.buffer} min. antes</span>`:'';
+    return`<div class="slot-item"><div><div class="slot-text">⏰ ${s.from} – ${s.to}${limitLabel}${bufferLabel}</div><div class="slot-type-lbl">${tl[s.type]||s.type}</div></div><button class="slot-toggle ${s.active?'active':''}" onclick="toggleSlot(${s.id})">${s.active?'✓ Activo':'Inactivo'}</button><button class="slot-del" onclick="deleteSlot(${s.id})">✕</button></div>`;
   }).join(''):'<div class="empty-state">No hay franjas. Agregá una arriba.</div>';
 }
 async function addSlot(){
   const from=gv('slot-from'),to=gv('slot-to'),type=gv('slot-type');
   const maxPedidos=parseInt(gv('slot-max'))||0;
+  const buffer=parseInt(gv('slot-buffer'))||15;
   if(!from||!to){alert('Completá los horarios');return}
-  await apiFetch('/api/slots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to,type,active:true,maxPedidos,pedidosActuales:0})});
+  await apiFetch('/api/slots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from,to,type,active:true,maxPedidos,buffer,pedidosActuales:0})});
   document.getElementById('slot-max').value='';
+  document.getElementById('slot-buffer').value='15';
   await loadSlots();
 }
 async function toggleSlot(id){
