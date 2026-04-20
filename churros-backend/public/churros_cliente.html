@@ -540,7 +540,7 @@ function renderCart(){
     return`<div class="ci">${thumb}<div class="ci-inf"><div class="ci-name">${displayName}</div>${varSel}<div class="ci-sub">${cart[k]} × ${fmt(unitPrice)} = ${fmt(tot)}</div></div><div class="qctrl"><button onclick="${remFn}">−</button><span>${cart[k]}</span><button onclick="${addFn}">+</button></div></div>`;
   }).join('');
 
-  const ship=delivery==='delivery'?(cfg.envio||500):0;
+  const ship=delivery==='delivery'?(cfg.envio||0):0;
   const total=sub+ship;
   const availSlots=getAvailableSlots(delivery);
   const availSlotsFiltered=availSlots.filter(s=>slotStatus(s)!=='pasado');
@@ -602,7 +602,7 @@ function renderCart(){
     <div class="fbox" style="margin-bottom:10px">
       <div class="opts2">
         <div class="opt ${delivery==='pickup'?'on':''}" onclick="setDelivery('pickup')"><div class="oi">🏪</div><div class="ol">Retiro</div><div class="os">en el local</div></div>
-        <div class="opt ${delivery==='delivery'?'on':''}" onclick="setDelivery('delivery')"><div class="oi">🛵</div><div class="ol">Envío</div><div class="os">${fmt(cfg.envio||500)}</div></div>
+        <div class="opt ${delivery==='delivery'?'on':''}" onclick="setDelivery('delivery')"><div class="oi">🛵</div><div class="ol">Envío</div><div class="os">${fmt(cfg.envio||0)}</div></div>
       </div>
       ${retiroInfoHtml}
       ${locHtml}
@@ -742,7 +742,7 @@ async function confirmOrder(){
   if(!cfg.open){alert('El local está cerrado.');return;}
   const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
-  const ship=delivery==='delivery'?(cfg.envio||500):0;
+  const ship=delivery==='delivery'?(cfg.envio||0):0;
   let sub=0;
   const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).map(k=>{
     const p=products.find(x=>String(x.id)===k);if(!p)return null;

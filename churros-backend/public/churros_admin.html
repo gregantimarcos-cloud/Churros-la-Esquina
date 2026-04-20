@@ -253,6 +253,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="stat-grid" id="stat-grid"></div>
       <div class="sec-label">Productos más pedidos</div>
       <div id="top-products-chart"></div>
+      <div class="sec-label" style="padding-top:10px">Detalle de unidades vendidas</div>
+      <div id="prod-qty-table"></div>
       <div class="sec-label">Últimos pedidos</div>
       <div id="recent-orders-list"></div>
       <div class="sec-label">Métodos de pago</div>
@@ -286,6 +288,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           <button class="btn-sm badge-done" onclick="filterOrders('done')" id="filter-done">Entregados</button>
         </div>
         <button onclick="loadOrders()" style="background:none;border:1.5px solid var(--kraft);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--brown-light)">↻ Actualizar</button>
+        <button onclick="openManualOrder()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-family:'Playfair Display',serif;font-weight:700;">+ Cargar pedido manual</button>
       </div>
       <div id="orders-list"></div>
       <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
@@ -558,6 +561,49 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 </div>
 
+<!-- MANUAL ORDER MODAL -->
+<div class="modal-overlay" id="manual-order-overlay" style="align-items:flex-start;padding-top:20px;">
+  <div class="modal-box" style="max-width:500px;max-height:90vh;overflow-y:auto;">
+    <h3>Cargar pedido manual</h3>
+    <label class="flabel">Cliente (nombre)</label>
+    <input class="finput field-mb" id="mo-customer" placeholder="Nombre del cliente">
+    <label class="flabel">Teléfono</label>
+    <input class="finput field-mb" id="mo-phone" placeholder="Ej: 2477123456" type="tel">
+    <label class="flabel">Productos <small>(uno por línea: cantidad x nombre x precio)</small></label>
+    <textarea class="ftextarea field-mb" id="mo-items" rows="4" placeholder="1 x Churros clásicos media docena x 4500&#10;2 x Churros rellenos docena x 10000"></textarea>
+    <label class="flabel">Modalidad</label>
+    <select class="finput field-mb" id="mo-delivery">
+      <option value="pickup">Retiro en local</option>
+      <option value="delivery">Envío a domicilio</option>
+    </select>
+    <label class="flabel">Dirección <small>(solo si es envío)</small></label>
+    <input class="finput field-mb" id="mo-address" placeholder="Calle y número">
+    <label class="flabel">Franja horaria</label>
+    <select class="finput field-mb" id="mo-slot">
+      <option value="">Sin franja</option>
+    </select>
+    <label class="flabel">Método de pago</label>
+    <select class="finput field-mb" id="mo-payment">
+      <option value="efectivo">Efectivo</option>
+      <option value="transferencia">Transferencia</option>
+      <option value="mercadopago">Mercado Pago</option>
+    </select>
+    <label class="flabel">Total ($) <small>(se calcula automáticamente si dejás en 0)</small></label>
+    <input class="finput field-mb" id="mo-total" type="number" placeholder="0">
+    <label class="flabel">Estado inicial</label>
+    <select class="finput field-mb" id="mo-status">
+      <option value="new">Nuevo</option>
+      <option value="prep">Preparando</option>
+      <option value="ready">Listo</option>
+      <option value="done">Entregado</option>
+    </select>
+    <label class="flabel">Observaciones</label>
+    <input class="finput field-mb" id="mo-obs" placeholder="Notas adicionales">
+    <button class="savebtn" onclick="saveManualOrder()">Guardar pedido</button>
+    <button class="cancelbtn" onclick="closeManualOrder()">Cancelar</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
     <h3 id="modal-title">Nuevo producto</h3>
@@ -736,11 +782,33 @@ async function loadStats(){
     <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val">${fmt(todayIncome)}</div><div class="stat-lbl">Hoy (${todayDone.length} pedidos)</div></div>
     <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val">${fmt(totalIncome)}</div><div class="stat-lbl">Total cobrado</div></div>`;
 
-  // ── Top products ──
-  const pc={};orders.forEach(o=>{(o.items||[]).forEach(it=>{pc[it.name]=(pc[it.name]||0)+it.qty;});});
-  const sorted=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const mx=sorted.length?sorted[0][1]:1;
-  document.getElementById('top-products-chart').innerHTML=sorted.length?sorted.map(([n,q])=>`<div class="chart-bar-wrap"><div class="chart-label"><span>${n}</span><span>${q} uds.</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(q/mx*100)}%"></div></div></div>`).join(''):'<div class="empty-state">Sin datos aún.</div>';
+  // ── Top products — quantity table ──
+  const pc={};
+  orders.forEach(o=>{
+    (o.items||[]).forEach(it=>{
+      if(!pc[it.name])pc[it.name]={qty:0,total:0};
+      pc[it.name].qty+=(it.qty||0);
+      pc[it.name].total+=(it.qty||0)*(it.price||0);
+    });
+  });
+  const sorted=Object.entries(pc).sort((a,b)=>b[1].qty-a[1].qty);
+  const mx=sorted.length?sorted[0][1].qty:1;
+  // Bar chart (top 6)
+  document.getElementById('top-products-chart').innerHTML=sorted.slice(0,6).length?sorted.slice(0,6).map(([n,d])=>`<div class="chart-bar-wrap"><div class="chart-label"><span>${n}</span><span>${d.qty} uds. · ${fmt(d.total)}</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(d.qty/mx*100)}%"></div></div></div>`).join(''):'<div class="empty-state">Sin datos aún.</div>';
+  // Full product table
+  const prodTableEl=document.getElementById('prod-qty-table');
+  if(prodTableEl){
+    prodTableEl.innerHTML=sorted.length?`
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:var(--brown);color:var(--kraft);"><th style="padding:6px 8px;text-align:left;">Producto</th><th style="padding:6px 8px;text-align:center;">Cant.</th><th style="padding:6px 8px;text-align:right;">Total $</th></tr>
+        ${sorted.map(([n,d],i)=>`<tr style="background:${i%2===0?'#fff':'var(--cream-dark)'}"><td style="padding:6px 8px;">${n}</td><td style="padding:6px 8px;text-align:center;font-weight:700;">${d.qty}</td><td style="padding:6px 8px;text-align:right;">${fmt(d.total)}</td></tr>`).join('')}
+        <tr style="background:var(--cream-dark);font-weight:700;border-top:2px solid var(--kraft);">
+          <td style="padding:6px 8px;">TOTAL</td>
+          <td style="padding:6px 8px;text-align:center;">${sorted.reduce((a,[,d])=>a+d.qty,0)}</td>
+          <td style="padding:6px 8px;text-align:right;">${fmt(sorted.reduce((a,[,d])=>a+d.total,0))}</td>
+        </tr>
+      </table>`:'<div class="empty-state">Sin datos aún.</div>';
+  }
 
   // ── Recent orders ──
   const recent=[...orders].reverse().slice(0,5);
@@ -1083,7 +1151,7 @@ function handleLogoUpload(event){
 async function saveCfg(){
   const nu=gv('cfg-admin-user').trim(),np=gv('cfg-admin-pass');
   const data={
-    name:gv('cfg-name'),envio:parseInt(gv('cfg-envio'))||500,alias:gv('cfg-alias'),mp:gv('cfg-mp'),
+    name:gv('cfg-name'),envio:parseInt(gv('cfg-envio'))||0,alias:gv('cfg-alias'),mp:gv('cfg-mp'),
     open:_cfg.open!==false,logo:_cfg.logo||'',
     tagline:gv('cfg-tagline'),txtAbierto:gv('cfg-txt-abierto'),txtCerrado:gv('cfg-txt-cerrado'),
     txtBannerCerrado:gv('cfg-txt-banner-cerrado'),txtCerradoInline:gv('cfg-txt-cerrado-inline'),
@@ -1506,6 +1574,59 @@ function toggleCupon(id){const cupones=getCupones();const c=cupones.find(x=>x.id
 function eliminarCupon(id){if(!confirm('¿Eliminar este cupón?'))return;saveCupones(getCupones().filter(c=>c.id!==id));loadCupones();}
 
 // ── WHATSAPP LINK HELPER (for orders) ─────────────────────────────
+// ── MANUAL ORDERS ─────────────────────────────────────────────────
+function openManualOrder(){
+  // Populate slot select
+  const sel=document.getElementById('mo-slot');
+  sel.innerHTML='<option value="">Sin franja</option>'+_slots.filter(s=>s.active).map(s=>`<option value="${s.from} – ${s.to}">${s.from} – ${s.to}</option>`).join('');
+  document.getElementById('manual-order-overlay').classList.add('open');
+}
+function closeManualOrder(){
+  document.getElementById('manual-order-overlay').classList.remove('open');
+  ['mo-customer','mo-phone','mo-items','mo-address','mo-obs','mo-total'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+}
+async function saveManualOrder(){
+  const customer=gv('mo-customer').trim();
+  if(!customer){alert('Ingresá el nombre del cliente');return;}
+  // Parse items: "1 x Nombre x precio" per line
+  const rawItems=gv('mo-items').trim().split('\n').filter(Boolean);
+  const items=[];
+  let autoTotal=0;
+  rawItems.forEach(line=>{
+    const parts=line.split('x').map(s=>s.trim());
+    if(parts.length>=2){
+      const qty=parseInt(parts[0])||1;
+      const name=parts[1]||'Producto';
+      const price=parts.length>=3?(parseInt(parts[2])||0):0;
+      items.push({qty,name,price,id:Date.now()});
+      autoTotal+=qty*price;
+    }
+  });
+  const totalInput=parseInt(gv('mo-total'))||0;
+  const total=totalInput>0?totalInput:autoTotal;
+  const slot=gv('mo-slot');
+  const orderData={
+    customer,phone:gv('mo-phone'),
+    items,total,
+    delivery:gv('mo-delivery'),
+    address:gv('mo-address'),
+    payment:gv('mo-payment'),
+    slot,obs:gv('mo-obs'),
+    status:gv('mo-status'),
+    manual:true,ts:Date.now()
+  };
+  const result=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+  if(result?.id){
+    closeManualOrder();
+    await loadOrders();loadStats();
+    alert('Pedido #'+result.id+' cargado correctamente.');
+  } else {
+    alert('Error al guardar el pedido.');
+  }
+}
+
 function waOrderLink(o){
   var cfg=_cfg;
   var wa=cfg.whatsapp||'';
