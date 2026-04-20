@@ -76,16 +76,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .field-error{font-size:11px;color:#b91c1c;font-style:italic;margin-top:4px;display:none;}
 .field-error.show{display:block;}
 .slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
-.pcard-pres{display:flex;flex-direction:column;gap:4px;padding:6px 0 2px;}
-.pres-row{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:7px 9px;transition:border-color .15s;}
-.pres-row.has-qty{border-color:var(--brown);background:var(--cream);}
-.pres-info{display:flex;flex-direction:column;flex:1;}
-.pres-nom{font-family:'Crimson Text',serif;font-size:13px;font-weight:600;color:var(--brown);}
-.pres-price{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--red-warm);}
-.pres-ctrl{display:flex;align-items:center;gap:5px;flex-shrink:0;}
-.pres-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;}
-.pres-ctrl span{font-size:13px;font-weight:700;min-width:18px;text-align:center;color:var(--brown);}
-.pres-add{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'Playfair Display',serif;font-weight:700;}
+.pcard-pres{padding:6px 0 4px;}
+.pres-select-row{display:flex;gap:6px;align-items:center;}
+.pres-select{flex:1;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:7px 9px;font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;outline:none;appearance:auto;}
+.pres-select:focus{border-color:var(--brown);}
+.pres-qty-ctrl{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.pres-qty-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;font-weight:700;}
+.pres-qty-ctrl span{font-size:13px;font-weight:700;min-width:20px;text-align:center;color:var(--brown);}
+.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:20px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
 .slot-btn.full{opacity:.45;pointer-events:none;text-decoration:line-through;}
@@ -422,45 +420,62 @@ function remItem(id){
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
 function renderPresRows(p){
+  var pid=String(p.id);
+  // Find which pres is selected (if any in cart)
+  var selPres=null;
+  var selQty=0;
+  p.presentaciones.forEach(function(pres){
+    var k=presKey(pid,pres.nombre);
+    if((cart[k]||0)>0){selPres=pres;selQty=cart[k];}
+  });
+
   var wrap=document.createElement('div');
   wrap.className='pcard-pres';
+  var row=document.createElement('div');
+  row.className='pres-select-row';
+
+  // Select dropdown
+  var sel=document.createElement('select');
+  sel.className='pres-select';
   p.presentaciones.forEach(function(pres){
-    var k=presKey(String(p.id),pres.nombre);
-    var pq=cart[k]||0;
-    var row=document.createElement('div');
-    row.className='pres-row'+(pq>0?' has-qty':'');
-    var info=document.createElement('div');
-    info.className='pres-info';
-    var nom=document.createElement('span');
-    nom.className='pres-nom';
-    nom.textContent=pres.nombre;
-    var price=document.createElement('span');
-    price.className='pres-price';
-    price.textContent=fmt(pres.precio);
-    info.appendChild(nom);
-    info.appendChild(price);
-    var ctrl=document.createElement('div');
-    ctrl.className='pres-ctrl';
-    if(pq>0){
-      var bMinus=document.createElement('button');
-      bMinus.textContent='−';
-      bMinus.addEventListener('click',(function(pid,pnom){return function(){remPres(pid,pnom);};})(String(p.id),pres.nombre));
-      var qty=document.createElement('span');
-      qty.textContent=pq;
-      var bPlus=document.createElement('button');
-      bPlus.textContent='+';
-      bPlus.addEventListener('click',(function(pid,pnom,pp){return function(){addPres(pid,pnom,pp);};})(String(p.id),pres.nombre,pres.precio));
-      ctrl.appendChild(bMinus);ctrl.appendChild(qty);ctrl.appendChild(bPlus);
-    } else {
-      var bAdd=document.createElement('button');
-      bAdd.className='pres-add';
-      bAdd.textContent='+ Agregar';
-      bAdd.addEventListener('click',(function(pid,pnom,pp){return function(){addPres(pid,pnom,pp);};})(String(p.id),pres.nombre,pres.precio));
-      ctrl.appendChild(bAdd);
-    }
-    row.appendChild(info);row.appendChild(ctrl);
-    wrap.appendChild(row);
+    var opt=document.createElement('option');
+    opt.value=pres.nombre;
+    opt.textContent=pres.nombre+' — '+fmt(pres.precio);
+    opt.dataset.precio=pres.precio;
+    if(selPres&&selPres.nombre===pres.nombre)opt.selected=true;
+    sel.appendChild(opt);
   });
+
+  // Controls
+  var ctrl=document.createElement('div');
+  ctrl.className='pres-qty-ctrl';
+
+  if(selPres&&selQty>0){
+    var bMinus=document.createElement('button');
+    bMinus.textContent='−';
+    bMinus.addEventListener('click',(function(pid2,pnom){return function(){remPres(pid2,pnom);};})(pid,selPres.nombre));
+    var qty=document.createElement('span');
+    qty.textContent=selQty;
+    var bPlus=document.createElement('button');
+    bPlus.textContent='+';
+    bPlus.addEventListener('click',(function(pid2,pnom,pp){return function(){addPres(pid2,pnom,pp);};})(pid,selPres.nombre,selPres.precio));
+    ctrl.appendChild(bMinus);ctrl.appendChild(qty);ctrl.appendChild(bPlus);
+  } else {
+    var bAdd=document.createElement('button');
+    bAdd.className='pres-add-btn';
+    bAdd.textContent='+';
+    bAdd.addEventListener('click',function(){
+      var selectedOpt=sel.options[sel.selectedIndex];
+      var nom=selectedOpt.value;
+      var precio=Number(selectedOpt.dataset.precio);
+      addPres(pid,nom,precio);
+    });
+    ctrl.appendChild(bAdd);
+  }
+
+  row.appendChild(sel);
+  row.appendChild(ctrl);
+  wrap.appendChild(row);
   return wrap.outerHTML;
 }
 
