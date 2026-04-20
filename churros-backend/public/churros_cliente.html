@@ -421,64 +421,42 @@ function remItem(id){
 }
 function renderPresRows(p){
   var pid=String(p.id);
-  // Find which pres is selected (if any in cart)
-  var selPres=null;
-  var selQty=0;
-  p.presentaciones.forEach(function(pres){
-    var k=presKey(pid,pres.nombre);
-    if((cart[k]||0)>0){selPres=pres;selQty=cart[k];}
+  // Find selected pres in cart
+  var selPres=null;var selQty=0;
+  p.presentaciones.forEach(function(pr){
+    var k=presKey(pid,pr.nombre);
+    if((cart[k]||0)>0){selPres=pr;selQty=cart[k];}
   });
-
-  var wrap=document.createElement('div');
-  wrap.className='pcard-pres';
-  var row=document.createElement('div');
-  row.className='pres-select-row';
-
-  // Select dropdown
-  var sel=document.createElement('select');
-  sel.className='pres-select';
-  p.presentaciones.forEach(function(pres){
-    var opt=document.createElement('option');
-    opt.value=pres.nombre;
-    opt.textContent=pres.nombre+' — '+fmt(pres.precio);
-    opt.dataset.precio=pres.precio;
-    if(selPres&&selPres.nombre===pres.nombre)opt.selected=true;
-    sel.appendChild(opt);
-  });
-
-  // Controls
-  var ctrl=document.createElement('div');
-  ctrl.className='pres-qty-ctrl';
-
+  // Build options HTML
+  var optsHtml=p.presentaciones.map(function(pr){
+    var sel=(selPres&&selPres.nombre===pr.nombre)?'selected':'';
+    return '<option value="'+pr.nombre+'" data-precio="'+pr.precio+'" '+sel+'>'+pr.nombre+' — '+fmt(pr.precio)+'</option>';
+  }).join('');
+  // Build control HTML
+  var ctrlHtml;
   if(selPres&&selQty>0){
-    var bMinus=document.createElement('button');
-    bMinus.textContent='−';
-    bMinus.addEventListener('click',(function(pid2,pnom){return function(){remPres(pid2,pnom);};})(pid,selPres.nombre));
-    var qty=document.createElement('span');
-    qty.textContent=selQty;
-    var bPlus=document.createElement('button');
-    bPlus.textContent='+';
-    bPlus.addEventListener('click',(function(pid2,pnom,pp){return function(){addPres(pid2,pnom,pp);};})(pid,selPres.nombre,selPres.precio));
-    ctrl.appendChild(bMinus);ctrl.appendChild(qty);ctrl.appendChild(bPlus);
+    ctrlHtml='<div class="pres-qty-ctrl">'
+      +'<button onclick="remPres(''+pid+'',''+selPres.nombre+'')">−</button>'
+      +'<span>'+selQty+'</span>'
+      +'<button onclick="addPres(''+pid+'',''+selPres.nombre+'','+selPres.precio+')">+</button>'
+      +'</div>';
   } else {
-    var bAdd=document.createElement('button');
-    bAdd.className='pres-add-btn';
-    bAdd.textContent='+';
-    bAdd.addEventListener('click',function(){
-      var selectedOpt=sel.options[sel.selectedIndex];
-      if(!selectedOpt)return;
-      var nom=selectedOpt.value;
-      var precio=Number(selectedOpt.dataset.precio)||0;
-      if(!nom||!precio){alert('Seleccioná una presentación');return;}
-      addPres(pid,nom,precio);
-    });
-    ctrl.appendChild(bAdd);
+    ctrlHtml='<button class="pres-add-btn" onclick="addPresFromSelect(''+pid+'',this)">+</button>';
   }
+  return '<div class="pcard-pres"><div class="pres-select-row">'
+    +'<select class="pres-select" id="pres-sel-'+pid+'">'+optsHtml+'</select>'
+    +ctrlHtml
+    +'</div></div>';
+}
 
-  row.appendChild(sel);
-  row.appendChild(ctrl);
-  wrap.appendChild(row);
-  return wrap.outerHTML;
+function addPresFromSelect(pid,btn){
+  var sel=document.getElementById('pres-sel-'+pid);
+  if(!sel)return;
+  var opt=sel.options[sel.selectedIndex];
+  if(!opt)return;
+  var nom=opt.value;
+  var precio=Number(opt.getAttribute('data-precio'))||0;
+  addPres(pid,nom,precio);
 }
 
 function updBadge(){
