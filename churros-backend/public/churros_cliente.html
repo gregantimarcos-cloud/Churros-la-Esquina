@@ -422,26 +422,46 @@ function remItem(id){
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
 function renderPresRows(p){
-  var rows=p.presentaciones.map(function(pres){
+  var wrap=document.createElement('div');
+  wrap.className='pcard-pres';
+  p.presentaciones.forEach(function(pres){
     var k=presKey(String(p.id),pres.nombre);
     var pq=cart[k]||0;
-    var ctrl='';
+    var row=document.createElement('div');
+    row.className='pres-row'+(pq>0?' has-qty':'');
+    var info=document.createElement('div');
+    info.className='pres-info';
+    var nom=document.createElement('span');
+    nom.className='pres-nom';
+    nom.textContent=pres.nombre;
+    var price=document.createElement('span');
+    price.className='pres-price';
+    price.textContent=fmt(pres.precio);
+    info.appendChild(nom);
+    info.appendChild(price);
+    var ctrl=document.createElement('div');
+    ctrl.className='pres-ctrl';
     if(pq>0){
-      ctrl='<button onclick="remPres(''+String(p.id)+'',''+pres.nombre+'')">−</button>'
-          +'<span>'+pq+'</span>'
-          +'<button onclick="addPres(''+String(p.id)+'',''+pres.nombre+'','+pres.precio+')">+</button>';
+      var bMinus=document.createElement('button');
+      bMinus.textContent='−';
+      bMinus.addEventListener('click',(function(pid,pnom){return function(){remPres(pid,pnom);};})(String(p.id),pres.nombre));
+      var qty=document.createElement('span');
+      qty.textContent=pq;
+      var bPlus=document.createElement('button');
+      bPlus.textContent='+';
+      bPlus.addEventListener('click',(function(pid,pnom,pp){return function(){addPres(pid,pnom,pp);};})(String(p.id),pres.nombre,pres.precio));
+      ctrl.appendChild(bMinus);ctrl.appendChild(qty);ctrl.appendChild(bPlus);
     } else {
-      ctrl='<button class="pres-add" onclick="addPres(''+String(p.id)+'',''+pres.nombre+'','+pres.precio+')">+ Agregar</button>';
+      var bAdd=document.createElement('button');
+      bAdd.className='pres-add';
+      bAdd.textContent='+ Agregar';
+      bAdd.addEventListener('click',(function(pid,pnom,pp){return function(){addPres(pid,pnom,pp);};})(String(p.id),pres.nombre,pres.precio));
+      ctrl.appendChild(bAdd);
     }
-    return '<div class="pres-row'+(pq>0?' has-qty':'')+'">'
-      +'<div class="pres-info">'
-      +'<span class="pres-nom">'+pres.nombre+'</span>'
-      +'<span class="pres-price">'+fmt(pres.precio)+'</span>'
-      +'</div>'
-      +'<div class="pres-ctrl">'+ctrl+'</div>'
-      +'</div>';
+    row.appendChild(info);row.appendChild(ctrl);
+    wrap.appendChild(row);
   });
-  return '<div class="pcard-pres">'+rows.join('')+'</div>';
+  return wrap.outerHTML;
 }
 
 function updBadge(){

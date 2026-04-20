@@ -837,13 +837,15 @@ async function loadStats(){
           <th style="padding:6px 8px;text-align:left;">Producto</th>
           <th style="padding:6px 8px;text-align:center;">Ventas</th>
           <th style="padding:6px 8px;text-align:center;">Churros</th>
+          <th style="padding:6px 8px;text-align:center;">Docenas</th>
           <th style="padding:6px 8px;text-align:right;">Total $</th>
         </tr>
         ${rows}
         <tr style="background:var(--cream-dark);font-weight:700;border-top:2px solid var(--kraft);">
           <td style="padding:6px 8px;">TOTAL</td>
           <td style="padding:6px 8px;text-align:center;">${sorted.reduce((a,[,d])=>a+d.ventas,0)}</td>
-          <td style="padding:6px 8px;text-align:center;">${sorted.reduce((a,[,d])=>a+d.churros,0)} churros</td>
+          <td style="padding:6px 8px;text-align:center;">${sorted.reduce((a,[,d])=>a+d.churros,0)}</td>
+          <td style="padding:6px 8px;text-align:center;">${(sorted.reduce((a,[,d])=>a+d.churros,0)/12).toFixed(1)}</td>
           <td style="padding:6px 8px;text-align:right;">${fmt(sorted.reduce((a,[,d])=>a+d.total,0))}</td>
         </tr>
       </table>`:'<div class="empty-state">Sin datos aún.</div>';
