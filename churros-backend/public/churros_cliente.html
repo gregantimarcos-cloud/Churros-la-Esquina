@@ -76,14 +76,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .field-error{font-size:11px;color:#b91c1c;font-style:italic;margin-top:4px;display:none;}
 .field-error.show{display:block;}
 .slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
-.pcard-pres{padding:6px 0 4px;}
-.pres-select-row{display:flex;gap:6px;align-items:center;}
-.pres-select{flex:1;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:7px 9px;font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;outline:none;appearance:auto;}
+.pcard-pres{padding:4px 0 2px;}
+.pres-select-row{display:flex;gap:5px;align-items:center;width:100%;}
+.pres-select{flex:1;min-width:0;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:6px 4px;font-family:'Crimson Text',serif;font-size:12px;color:var(--brown);cursor:pointer;outline:none;max-width:calc(100% - 44px);}
 .pres-select:focus{border-color:var(--brown);}
-.pres-qty-ctrl{display:flex;align-items:center;gap:4px;flex-shrink:0;}
-.pres-qty-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;font-weight:700;}
-.pres-qty-ctrl span{font-size:13px;font-weight:700;min-width:20px;text-align:center;color:var(--brown);}
-.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:20px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.pres-qty-ctrl{display:flex;align-items:center;gap:3px;flex-shrink:0;}
+.pres-qty-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;font-weight:700;flex-shrink:0;}
+.pres-qty-ctrl span{font-size:12px;font-weight:700;min-width:16px;text-align:center;color:var(--brown);}
+.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:8px;width:34px;height:34px;min-width:34px;cursor:pointer;font-size:20px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
 .slot-btn.full{opacity:.45;pointer-events:none;text-decoration:line-through;}
@@ -466,8 +466,10 @@ function renderPresRows(p){
     bAdd.textContent='+';
     bAdd.addEventListener('click',function(){
       var selectedOpt=sel.options[sel.selectedIndex];
+      if(!selectedOpt)return;
       var nom=selectedOpt.value;
-      var precio=Number(selectedOpt.dataset.precio);
+      var precio=Number(selectedOpt.dataset.precio)||0;
+      if(!nom||!precio){alert('Seleccioná una presentación');return;}
       addPres(pid,nom,precio);
     });
     ctrl.appendChild(bAdd);
