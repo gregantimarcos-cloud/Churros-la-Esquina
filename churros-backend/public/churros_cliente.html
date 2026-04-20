@@ -421,6 +421,29 @@ function remItem(id){
   }
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
+function renderPresRows(p){
+  var rows=p.presentaciones.map(function(pres){
+    var k=presKey(String(p.id),pres.nombre);
+    var pq=cart[k]||0;
+    var ctrl='';
+    if(pq>0){
+      ctrl='<button onclick="remPres(''+String(p.id)+'',''+pres.nombre+'')">−</button>'
+          +'<span>'+pq+'</span>'
+          +'<button onclick="addPres(''+String(p.id)+'',''+pres.nombre+'','+pres.precio+')">+</button>';
+    } else {
+      ctrl='<button class="pres-add" onclick="addPres(''+String(p.id)+'',''+pres.nombre+'','+pres.precio+')">+ Agregar</button>';
+    }
+    return '<div class="pres-row'+(pq>0?' has-qty':'')+'">'
+      +'<div class="pres-info">'
+      +'<span class="pres-nom">'+pres.nombre+'</span>'
+      +'<span class="pres-price">'+fmt(pres.precio)+'</span>'
+      +'</div>'
+      +'<div class="pres-ctrl">'+ctrl+'</div>'
+      +'</div>';
+  });
+  return '<div class="pcard-pres">'+rows.join('')+'</div>';
+}
+
 function updBadge(){
   const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
   document.getElementById('cart-count').textContent=t;
