@@ -497,11 +497,7 @@ function renderMenu(){
           <div class="pcard-desc">${p.desc||''}</div>
           ${lowStock?`<div class="stock-tag">⚠ ${lowTxt}</div>`:''}
           ${(p.presentaciones&&p.presentaciones.length&&!outOfStock)?
-            `<div class="pcard-pres">${p.presentaciones.map(pres=>{
-              const k=presKey(String(p.id),pres.nombre);
-              const pq=cart[k]||0;
-              return '<div class="pres-row'+(pq>0?' has-qty':'')+'"><div class="pres-info"><span class="pres-nom">'+pres.nombre+'</span><span class="pres-price">'+fmt(pres.precio)+'</span></div><div class="pres-ctrl">'+(pq>0?'<button onclick="remPres(''+String(p.id)+'',''+pres.nombre+'')">−</button><span>'+pq+'</span><button onclick="addPres(''+String(p.id)+'',''+pres.nombre+'','+pres.precio+')">+</button>':'<button class="pres-add" onclick="addPres(''+String(p.id)+'',''+pres.nombre+'','+pres.precio+')">+ Agregar</button>')+'</div></div>';
-            }).join('')}</div>`
+            renderPresRows(p)
             :`<div class="pcard-foot">
             <span class="price">${fmt(p.price)}</span>
             ${outOfStock?`<span style="font-size:11px;color:var(--red-warm);font-style:italic">${sinStockTxt}</span>`
