@@ -617,6 +617,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <label class="flabel">Nombre</label><input class="finput field-mb" id="m-name" placeholder="Ej: Churros con chocolate">
     <label class="flabel">Descripción</label><input class="finput field-mb" id="m-desc" placeholder="Porción de 6 churros...">
     <div class="row2" style="margin-bottom:10px">
+      <div><label class="flabel">Grupo estadístico <small>para agrupar en stats</small></label><input class="finput" id="m-grupo" placeholder="Ej: Churros clásicos"></div>
+      <div><label class="flabel">Churros que equivale <small>para contar unidades reales</small></label><input class="finput" id="m-uds" type="number" placeholder="Ej: 6" min="1"></div>
+    </div>
+    <div class="row2" style="margin-bottom:10px">
       <div><label class="flabel">Precio ($)</label><input class="finput" id="m-price" type="number" placeholder="1500"></div>
       <div><label class="flabel">Categoría</label>
         <select class="finput" id="m-cat">
@@ -632,14 +636,16 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <label for="m-unlimited" style="font-size:13px;cursor:pointer;color:var(--brown-light)">Sin límite</label>
       </div>
     </div>
-    <div class="sec-label" style="padding:10px 0 6px">Variantes <small style="font-family:'Crimson Text',serif;font-style:italic;letter-spacing:0;font-size:10px;color:var(--kraft-dark)">(opcional — ej: Media docena / Docena)</small></div>
-    <div id="var-tags" style="min-height:30px;margin-bottom:8px;"></div>
-    <div class="var-row">
-      <input class="finput" id="var-nombre" placeholder="Nombre (ej: Media docena)" style="flex:2">
-      <input class="finput" id="var-precio" type="number" placeholder="Precio ($)" style="flex:1">
-      <button onclick="agregarVariante()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:9px 12px;cursor:pointer;font-family:'Crimson Text',serif;font-size:13px;font-weight:600;flex-shrink:0">+</button>
+    <div class="sec-label" style="padding:10px 0 4px">Presentaciones <small style="font-family:'Crimson Text',serif;font-style:italic;letter-spacing:0;font-size:10px;color:var(--kraft-dark)">(ej: Unidad, Media docena, Docena)</small></div>
+    <p style="font-size:11px;color:var(--brown-light);font-style:italic;margin-bottom:8px;">Cada presentación tiene su propio precio. El campo "Uds." indica cuántos churros reales equivale (para estadísticas).</p>
+    <div id="pres-tags" style="margin-bottom:8px;"></div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:5px;align-items:center;margin-bottom:4px;">
+      <input class="finput" id="pres-nombre" placeholder="Nombre (ej: Media docena)">
+      <input class="finput" id="pres-precio" type="number" placeholder="Precio $">
+      <input class="finput" id="pres-uds" type="number" placeholder="Uds." title="Churros reales que equivale esta presentación">
+      <button onclick="agregarPresentacion()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:9px 12px;cursor:pointer;font-size:14px;font-weight:700;">+</button>
     </div>
-    <p style="font-size:10px;color:var(--brown-light);font-style:italic;margin-bottom:10px;">Si agregás variantes, el precio principal queda como precio base y el cliente elegirá al agregar al carrito.</p>
+    <p style="font-size:10px;color:var(--brown-light);font-style:italic;margin-bottom:10px;">Si no agregás presentaciones, el producto se vende con el precio base con un solo botón +.</p>
     <button class="savebtn" onclick="saveProduct()">Guardar producto</button>
     <button class="delbtn" id="modal-del" onclick="deleteProduct()" style="display:none">Eliminar producto</button>
     <button class="cancelbtn" onclick="closeModal()">Cancelar</button>
@@ -782,29 +788,62 @@ async function loadStats(){
     <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val">${fmt(todayIncome)}</div><div class="stat-lbl">Hoy (${todayDone.length} pedidos)</div></div>
     <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val">${fmt(totalIncome)}</div><div class="stat-lbl">Total cobrado</div></div>`;
 
-  // ── Top products — quantity table ──
+  // ── Top products — group by "grupo" field, count real churros ──
   const pc={};
   orders.forEach(o=>{
     (o.items||[]).forEach(it=>{
-      if(!pc[it.name])pc[it.name]={qty:0,total:0};
-      pc[it.name].qty+=(it.qty||0);
-      pc[it.name].total+=(it.qty||0)*(it.price||0);
+      // Find matching product
+      const prod=_products.find(p=>p.name===it.name||(it.name.includes(' — ')&&p.name===it.name.split(' — ')[0].trim()));
+      // Determine group name: use grupo field if set, else base product name
+      const baseName=it.name.includes(' — ')?it.name.split(' — ')[0].trim():it.name;
+      const groupName=(prod&&prod.grupo)?prod.grupo:baseName;
+      const presName=it.name.includes(' — ')?it.name.split(' — ')[1].trim():'';
+      if(!pc[groupName])pc[groupName]={ventas:0,churros:0,total:0,pres:{}};
+      // Determine uds: check presentacion uds first, then product uds field
+      let udsPerUnit=1;
+      if(prod&&prod.presentaciones&&presName){
+        const pres=prod.presentaciones.find(p=>p.nombre===presName);
+        if(pres)udsPerUnit=pres.uds||1;
+      } else if(prod&&prod.uds){
+        udsPerUnit=prod.uds;
+      }
+      const churros=(it.qty||0)*udsPerUnit;
+      pc[groupName].ventas+=(it.qty||0);
+      pc[groupName].churros+=churros;
+      pc[groupName].total+=(it.qty||0)*(it.price||0);
+      // Track per-presentacion for breakdown
+      const presKey=presName||prod?.name||'Unidad';
+      if(!pc[groupName].pres[presKey])pc[groupName].pres[presKey]={qty:0,churros:0};
+      pc[groupName].pres[presKey].qty+=(it.qty||0);
+      pc[groupName].pres[presKey].churros+=churros;
     });
   });
-  const sorted=Object.entries(pc).sort((a,b)=>b[1].qty-a[1].qty);
-  const mx=sorted.length?sorted[0][1].qty:1;
-  // Bar chart (top 6)
-  document.getElementById('top-products-chart').innerHTML=sorted.slice(0,6).length?sorted.slice(0,6).map(([n,d])=>`<div class="chart-bar-wrap"><div class="chart-label"><span>${n}</span><span>${d.qty} uds. · ${fmt(d.total)}</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(d.qty/mx*100)}%"></div></div></div>`).join(''):'<div class="empty-state">Sin datos aún.</div>';
-  // Full product table
+  const sorted=Object.entries(pc).sort((a,b)=>b[1].churros-a[1].churros);
+  const mx=sorted.length?sorted[0][1].churros:1;
+  // Bar chart (top 6 by churros)
+  document.getElementById('top-products-chart').innerHTML=sorted.slice(0,6).length?sorted.slice(0,6).map(([n,d])=>`<div class="chart-bar-wrap"><div class="chart-label"><span>${n}</span><span>${d.churros} churros · ${fmt(d.total)}</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(d.churros/mx*100)}%"></div></div></div>`).join(''):'<div class="empty-state">Sin datos aún.</div>';
+  // Full product table with presentacion breakdown
   const prodTableEl=document.getElementById('prod-qty-table');
   if(prodTableEl){
+    const rows=sorted.map(([n,d],i)=>{
+      const presRows=Object.entries(d.pres).map(([pn,pd])=>
+        `<tr style="background:#f9f9f9"><td style="padding:4px 8px 4px 20px;color:var(--brown-light);font-style:italic">↳ ${pn}</td><td style="padding:4px 8px;text-align:center;color:var(--brown-light)">${pd.qty}×</td><td style="padding:4px 8px;text-align:center;color:var(--brown-light)">${pd.churros} chur.</td><td style="padding:4px 8px;text-align:right;color:var(--brown-light)">–</td></tr>`
+      ).join('');
+      return `<tr style="background:${i%2===0?'#fff':'var(--cream-dark)'}"><td style="padding:6px 8px;font-weight:600">${n}</td><td style="padding:6px 8px;text-align:center;font-weight:700">${d.ventas}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:var(--brown)">${d.churros}</td><td style="padding:6px 8px;text-align:right">${fmt(d.total)}</td></tr>${presRows}`;
+    }).join('');
     prodTableEl.innerHTML=sorted.length?`
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <tr style="background:var(--brown);color:var(--kraft);"><th style="padding:6px 8px;text-align:left;">Producto</th><th style="padding:6px 8px;text-align:center;">Cant.</th><th style="padding:6px 8px;text-align:right;">Total $</th></tr>
-        ${sorted.map(([n,d],i)=>`<tr style="background:${i%2===0?'#fff':'var(--cream-dark)'}"><td style="padding:6px 8px;">${n}</td><td style="padding:6px 8px;text-align:center;font-weight:700;">${d.qty}</td><td style="padding:6px 8px;text-align:right;">${fmt(d.total)}</td></tr>`).join('')}
+        <tr style="background:var(--brown);color:var(--kraft);">
+          <th style="padding:6px 8px;text-align:left;">Producto</th>
+          <th style="padding:6px 8px;text-align:center;">Ventas</th>
+          <th style="padding:6px 8px;text-align:center;">Churros</th>
+          <th style="padding:6px 8px;text-align:right;">Total $</th>
+        </tr>
+        ${rows}
         <tr style="background:var(--cream-dark);font-weight:700;border-top:2px solid var(--kraft);">
           <td style="padding:6px 8px;">TOTAL</td>
-          <td style="padding:6px 8px;text-align:center;">${sorted.reduce((a,[,d])=>a+d.qty,0)}</td>
+          <td style="padding:6px 8px;text-align:center;">${sorted.reduce((a,[,d])=>a+d.ventas,0)}</td>
+          <td style="padding:6px 8px;text-align:center;">${sorted.reduce((a,[,d])=>a+d.churros,0)} churros</td>
           <td style="padding:6px 8px;text-align:right;">${fmt(sorted.reduce((a,[,d])=>a+d.total,0))}</td>
         </tr>
       </table>`:'<div class="empty-state">Sin datos aún.</div>';
@@ -979,7 +1018,7 @@ function renderProductList(){
   container.innerHTML='<div style="font-size:11px;color:var(--brown-light);font-style:italic;margin-bottom:8px;">☰ Arrastrá los productos para reordenarlos. El orden se refleja en la página del cliente.</div>';
   _products.forEach((p,idx)=>{
     const sl=p.unlimited?'<span class="ap-stock stock-ok">∞ Sin límite</span>':p.stock>5?`<span class="ap-stock stock-ok">Stock: ${p.stock}</span>`:p.stock>0?`<span class="ap-stock stock-low">⚠ Stock bajo: ${p.stock}</span>`:'<span class="ap-stock stock-out">✕ Sin stock</span>';
-    const varBadge=p.variantes&&p.variantes.length?`<span style="font-size:10px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;border-radius:10px;padding:2px 7px;margin-left:4px;">${p.variantes.length} var.</span>`:'';
+    const varBadge=p.presentaciones&&p.presentaciones.length?`<span style="font-size:10px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;border-radius:10px;padding:2px 7px;margin-left:4px;">${p.presentaciones.length} presentaciones</span>`:'';
     const div=document.createElement('div');
     div.className='ap-item';
     div.dataset.id=String(p.id);
@@ -1041,6 +1080,8 @@ function openModal(id){
   currentImg=p&&p.img?p.img:'';
   document.getElementById('modal-title').textContent=p?'Editar producto':'Nuevo producto';
   document.getElementById('m-name').value=p?p.name:'';document.getElementById('m-desc').value=p?p.desc||'':'';
+  document.getElementById('m-grupo').value=p?p.grupo||'':'';
+  document.getElementById('m-uds').value=p?p.uds||1:1;
   document.getElementById('m-price').value=p?p.price:'';document.getElementById('m-cat').value=p?p.cat:'Clásicos';
   const unl=p?p.unlimited!==false:true;
   document.getElementById('m-unlimited').checked=unl;document.getElementById('m-stock').value=p&&!unl?p.stock:'';document.getElementById('m-stock').disabled=unl;
@@ -1049,43 +1090,52 @@ function openModal(id){
   if(currentImg){prev.src=currentImg;prev.style.display='block';lbl.style.display='none';rb.style.display='inline-block';}
   else{prev.src='';prev.style.display='none';lbl.style.display='block';rb.style.display='none';}
   document.getElementById('img-file-input').value='';
-  // Load variants
-  _editVariantes=(p&&p.variantes)?[...p.variantes]:[];
-  renderVariantTags();
-  document.getElementById('var-nombre').value='';
-  document.getElementById('var-precio').value='';
+  // Load presentaciones
+  _editPresentaciones=(p&&p.presentaciones)?JSON.parse(JSON.stringify(p.presentaciones)):[];
+  renderPresTags();
+  document.getElementById('pres-nombre').value='';
+  document.getElementById('pres-precio').value='';
+  document.getElementById('pres-uds').value='';
   document.getElementById('modal-overlay').classList.add('open');
 }
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editId=null;currentImg='';_editVariantes=[];}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editId=null;currentImg='';_editPresentaciones=[];}
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 function toggleUnlimited(){const c=document.getElementById('m-unlimited').checked;document.getElementById('m-stock').disabled=c;if(c)document.getElementById('m-stock').value='';}
 function handleImgUpload(event){const file=event.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){currentImg=e.target.result;document.getElementById('img-preview').src=currentImg;document.getElementById('img-preview').style.display='block';document.getElementById('img-upload-label').style.display='none';document.getElementById('img-remove-btn').style.display='inline-block';};r.readAsDataURL(file);}
 function removeImg(e){e.preventDefault();e.stopPropagation();currentImg='';document.getElementById('img-preview').src='';document.getElementById('img-preview').style.display='none';document.getElementById('img-upload-label').style.display='block';document.getElementById('img-remove-btn').style.display='none';document.getElementById('img-file-input').value='';}
-let _editVariantes=[];
-function renderVariantTags(){
-  const container=document.getElementById('var-tags');
+let _editPresentaciones=[];
+function renderPresTags(){
+  const container=document.getElementById('pres-tags');
   if(!container)return;
-  container.innerHTML=_editVariantes.map((v,i)=>
-    `<span class="var-tag">${v.nombre} — ${fmt(v.precio)}<button onclick="quitarVariante(${i})">✕</button></span>`
+  if(!_editPresentaciones.length){
+    container.innerHTML='<div style="font-size:11px;color:var(--brown-light);font-style:italic;padding:4px 0">Sin presentaciones — se usa el precio base.</div>';
+    return;
+  }
+  container.innerHTML=_editPresentaciones.map((p,i)=>
+    `<span class="var-tag">${p.nombre} — ${fmt(p.precio)} (${p.uds} ud${p.uds!==1?'s':''})<button onclick="quitarPresentacion(${i})">✕</button></span>`
   ).join('');
 }
-function agregarVariante(){
-  const nombre=document.getElementById('var-nombre').value.trim();
-  const precio=parseInt(document.getElementById('var-precio').value)||0;
-  if(!nombre||!precio){alert('Ingresá nombre y precio de la variante');return;}
-  _editVariantes.push({nombre,precio});
-  renderVariantTags();
-  document.getElementById('var-nombre').value='';
-  document.getElementById('var-precio').value='';
+function agregarPresentacion(){
+  const nombre=document.getElementById('pres-nombre').value.trim();
+  const precio=parseInt(document.getElementById('pres-precio').value)||0;
+  const uds=parseInt(document.getElementById('pres-uds').value)||1;
+  if(!nombre||!precio){alert('Ingresá nombre y precio de la presentación');return;}
+  _editPresentaciones.push({nombre,precio,uds});
+  renderPresTags();
+  document.getElementById('pres-nombre').value='';
+  document.getElementById('pres-precio').value='';
+  document.getElementById('pres-uds').value='';
 }
-function quitarVariante(i){_editVariantes.splice(i,1);renderVariantTags();}
+function quitarPresentacion(i){_editPresentaciones.splice(i,1);renderPresTags();}
 
 async function saveProduct(){
   const name=document.getElementById('m-name').value.trim(),desc=document.getElementById('m-desc').value.trim();
   const price=parseInt(document.getElementById('m-price').value)||0,cat=document.getElementById('m-cat').value;
   const unlimited=document.getElementById('m-unlimited').checked,stock=unlimited?0:(parseInt(document.getElementById('m-stock').value)||0);
   if(!name||!price){alert('Completá nombre y precio');return}
-  const data={img:currentImg,name,desc,price,cat,stock,unlimited,variantes:_editVariantes};
+  const grupo=document.getElementById('m-grupo').value.trim();
+  const uds=parseInt(document.getElementById('m-uds').value)||1;
+  const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds};
   if(editId){await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
   else{await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
   closeModal();await loadProducts();
