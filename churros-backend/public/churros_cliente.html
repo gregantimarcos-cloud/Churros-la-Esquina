@@ -419,44 +419,54 @@ function remItem(id){
   }
   updBadge();renderMenu();if(activeTab==='cart')renderCart();
 }
+// Store pres data globally indexed by pid for safe onclick access
+var _presData={};
+
 function renderPresRows(p){
   var pid=String(p.id);
+  // Store presentaciones data for this product
+  _presData[pid]=p.presentaciones;
   // Find selected pres in cart
-  var selPres=null;var selQty=0;
-  p.presentaciones.forEach(function(pr){
+  var selIdx=-1;var selQty=0;
+  p.presentaciones.forEach(function(pr,i){
     var k=presKey(pid,pr.nombre);
-    if((cart[k]||0)>0){selPres=pr;selQty=cart[k];}
+    if((cart[k]||0)>0){selIdx=i;selQty=cart[k];}
   });
-  // Build options HTML
-  var optsHtml=p.presentaciones.map(function(pr){
-    var sel=(selPres&&selPres.nombre===pr.nombre)?'selected':'';
-    return '<option value="'+pr.nombre+'" data-precio="'+pr.precio+'" '+sel+'>'+pr.nombre+' — '+fmt(pr.precio)+'</option>';
+  // Build options
+  var optsHtml=p.presentaciones.map(function(pr,i){
+    var isSel=(i===selIdx)?'selected':'';
+    return '<option value="'+i+'" '+isSel+'>'+pr.nombre+' — '+fmt(pr.precio)+'</option>';
   }).join('');
-  // Build control HTML
+  // Build control
   var ctrlHtml;
-  if(selPres&&selQty>0){
+  if(selIdx>=0&&selQty>0){
+    var sp=p.presentaciones[selIdx];
     ctrlHtml='<div class="pres-qty-ctrl">'
-      +'<button onclick="remPres(''+pid+'',''+selPres.nombre+'')">−</button>'
+      +'<button onclick="presRem('+JSON.stringify(pid)+','+selIdx+')">-</button>'
       +'<span>'+selQty+'</span>'
-      +'<button onclick="addPres(''+pid+'',''+selPres.nombre+'','+selPres.precio+')">+</button>'
+      +'<button onclick="presAdd('+JSON.stringify(pid)+','+selIdx+')">+</button>'
       +'</div>';
   } else {
-    ctrlHtml='<button class="pres-add-btn" onclick="addPresFromSelect(''+pid+'',this)">+</button>';
+    ctrlHtml='<button class="pres-add-btn" onclick="presAdd('+JSON.stringify(pid)+',document.getElementById('+JSON.stringify('pres-sel-'+pid)+').value)">+</button>';
   }
   return '<div class="pcard-pres"><div class="pres-select-row">'
     +'<select class="pres-select" id="pres-sel-'+pid+'">'+optsHtml+'</select>'
-    +ctrlHtml
-    +'</div></div>';
+    +ctrlHtml+'</div></div>';
 }
 
-function addPresFromSelect(pid,btn){
-  var sel=document.getElementById('pres-sel-'+pid);
-  if(!sel)return;
-  var opt=sel.options[sel.selectedIndex];
-  if(!opt)return;
-  var nom=opt.value;
-  var precio=Number(opt.getAttribute('data-precio'))||0;
-  addPres(pid,nom,precio);
+function presAdd(pid,idx){
+  var pres=_presData[pid];
+  if(!pres)return;
+  var pr=pres[Number(idx)];
+  if(!pr)return;
+  addPres(String(pid),pr.nombre,pr.precio);
+}
+function presRem(pid,idx){
+  var pres=_presData[pid];
+  if(!pres)return;
+  var pr=pres[Number(idx)];
+  if(!pr)return;
+  remPres(String(pid),pr.nombre);
 }
 
 function updBadge(){
