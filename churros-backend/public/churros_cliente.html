@@ -447,11 +447,18 @@ function renderPresRows(p){
       +'<button onclick="presAdd('+JSON.stringify(pid)+','+selIdx+')">+</button>'
       +'</div>';
   } else {
-    ctrlHtml='<button class="pres-add-btn" onclick="presAdd('+JSON.stringify(pid)+',document.getElementById('+JSON.stringify('pres-sel-'+pid)+').value)">+</button>';
+    ctrlHtml='<button class="pres-add-btn" onclick="presAddFromSel('+JSON.stringify(pid)+')">+</button>';
   }
   return '<div class="pcard-pres"><div class="pres-select-row">'
     +'<select class="pres-select" id="pres-sel-'+pid+'">'+optsHtml+'</select>'
     +ctrlHtml+'</div></div>';
+}
+
+function presAddFromSel(pid){
+  var sel=document.getElementById('pres-sel-'+pid);
+  if(!sel)return;
+  var idx=Number(sel.value);
+  presAdd(pid,idx);
 }
 
 function presAdd(pid,idx){
