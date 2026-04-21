@@ -337,7 +337,7 @@ function initGA(gaId){
 function gaEvent(name,params){if(window.gtag)gtag('event',name,params);}
 
 function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR')}
-function tpl(str,vars){return str.replace(/\\{(\\w+)\\}/g,(m,k)=>vars[k]!==undefined?vars[k]:m);}
+function tpl(str,vars){return str.replace(/\{(\w+)\}/g,(m,k)=>vars[k]!==undefined?vars[k]:m);}
 function getFieldVal(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 
 // ── API CALLS ──────────────────────────────────────────────────────────
@@ -563,7 +563,7 @@ function presRem(pid,idx){
 }
 
 function updBadge(){
-  const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
+  const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
   document.getElementById('cart-count').textContent=t;
   document.getElementById('cart-badge').textContent=t;
   document.getElementById('cart-badge').style.display=t>0?'flex':'none';
@@ -582,6 +582,484 @@ function renderMenu(){
   const sinStockTxt=cfg.txtSinStock||'Sin stock';
   Object.entries(bycat).forEach(([cat,prods])=>{
     html+=\`<div class="sec-label">\${cat}</div><div class="menu-grid">\`;
+    prods.forEach(p=>{
+      const sid_p=String(p.id); const q=cart[sid_p]||0;
+      const outOfStock=!p.unlimited&&(p.stock||0)<=0&&q===0;
+      const lowStock=!p.unlimited&&(p.stock||0)>0&&(p.stock||0)<=3;
+      const lowTxt=(cfg.txtStockBajo||'Últimas {n} unidades').replace('{n}',p.stock);
+      const imgHtml=p.img?\`<img src="\${p.img}" alt="\${p.name}" onerror="this.style.display='none'">\`:\`<div class="no-img">📷 Sin foto</div>\`;
+      html+=\`<div class="pcard\${outOfStock?' out-of-stock':''}">
+        <div class="pcard-img-wrap">\${imgHtml}\${outOfStock?\`<div class="out-badge">\${sinStockTxt}</div>\`:''}</div>
+        <div class="pcard-body">
+          <div class="pcard-name">\${p.name}</div>
+          <div class="pcard-desc">\${p.desc||''}</div>
+          \${lowStock?\`<div class="stock-tag">⚠ \${lowTxt}</div>\`:''}
+          \${(p.presentaciones&&p.presentaciones.length&&!outOfStock)?
+            renderPresRows(p)
+            :\`<div class="pcard-foot">
+            <span class="price">\${fmt(p.price)}</span>
+            \${outOfStock?\`<span style="font-size:11px;color:var(--red-warm);font-style:italic">\${sinStockTxt}</span>\`
+              :q===0?\`<button class="addbtn" onclick="addItem('\${p.id}')">+</button>\`
+              :\`<div class="qctrl"><button onclick="remItem('\${p.id}')">−</button><span>\${q}</span><button onclick="addItem('\${p.id}')">+</button></div>\`}
+          </div>\`}
+        </div>
+      </div>\`;
+    });
+    html+='</div>';
+  });
+  html+='<div class="ornament">· · · ✦ · · ·</div>';
+  document.getElementById('menu-container').innerHTML=html;
+}
+
+// ── CART RENDER ────────────────────────────────────────────────────────
+function getAvailableSlots(deliveryType){
+  return slots.filter(s=>{
+    if(!s.active)return false;
+    if(s.type!=='both'&&s.type!==deliveryType)return false;
+    return true;
+  });
+}
+
+function slotStatus(s){
+  // Returns: 'ok', 'pasado', 'pronto', 'full'
+  if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
+  const buffer=cfg.slotBuffer||15; // minutes before close to block
+  const now=new Date();
+  const [toH,toM]=s.to.split(':').map(Number);
+  const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
+  const [fromH,fromM]=s.from.split(':').map(Number);
+  const slotStart=new Date();slotStart.setHours(fromH,fromM,0,0);
+  const msBuffer=buffer*60*1000;
+  if(now>=slotEnd)return'pasado';
+  if(now>=new Date(slotEnd-msBuffer))return'pronto'; // less than buffer minutes left
+  return'ok';
+}
+
+function renderCart(){
+  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('_price')&&!k.endsWith('_nom')&&cart[k]>0);
+  const cont=document.getElementById('cart-content');if(!cont)return;
+  if(keys.length===0){
+    const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
+    cont.innerHTML=\`<div class="empty"><div class="ei">🥐</div><p>\${msg}</p></div>\`;
+    return;
+  }
+  let sub=0;
+  const items=keys.filter(k=>!k.endsWith('_var')).map(k=>{
+    // Key is either "pid" (plain product) or "pid__PresNombre" (presentation)
+    const isPres=k.includes('__');
+    let p, unitPrice, displayName, presNombre, remFn, addFn;
+    if(isPres){
+      const sepIdx=k.indexOf('__');
+      const pid=k.substring(0,sepIdx);
+      presNombre=cart[k+'__n']||k.substring(sepIdx+2);
+      p=products.find(x=>String(x.id)===pid);if(!p)return'';
+      unitPrice=Number(cart[k+'__p']||p.price);
+      displayName=p.name;
+      remFn="remPres('"+pid+"','"+presNombre+"')";
+      addFn="addPres('"+pid+"','"+presNombre+"',"+unitPrice+")";
+    } else {
+      p=products.find(x=>String(x.id)===k);if(!p)return'';
+      unitPrice=Number(p.price);
+      displayName=p.name;
+      presNombre=null;
+      remFn="remItem('"+p.id+"')";
+      addFn="addItem('"+p.id+"')";
+    }
+    const tot=unitPrice*(cart[k]||0);sub+=tot;
+    const thumb=p.img?\`<div class="ci-thumb"><img src="\${p.img}" alt="\${displayName}"></div>\`:\`<div class="ci-thumb" style="font-size:22px">🥐</div>\`;
+    const presLabel=presNombre?\`<div style="font-size:11px;color:var(--brown-light);font-style:italic;margin-top:1px">📦 \${presNombre}</div>\`:'';
+    return\`<div class="ci">\${thumb}<div class="ci-inf"><div class="ci-name">\${displayName}</div>\${presLabel}<div class="ci-sub">\${cart[k]} × \${fmt(unitPrice)} = \${fmt(tot)}</div></div><div class="qctrl"><button onclick="\${remFn}">−</button><span>\${cart[k]}</span><button onclick="\${addFn}">+</button></div></div>\`;
+  }).join('');
+
+  const ship=delivery==='delivery'?(cfg.envio||0):0;
+  const total=sub+ship;
+  const availSlots=getAvailableSlots(delivery);
+  const availSlotsFiltered=availSlots.filter(s=>slotStatus(s)!=='pasado');
+  const slotsHtml=availSlotsFiltered.length
+    ?\`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label>
+      <select class="finput" id="slot-select" onchange="selectSlotFromSelect(this.value)" style="margin-top:4px">
+        <option value="">⏰ Elegí un horario...</option>
+        \${availSlotsFiltered.map(s=>{
+          const st=slotStatus(s);
+          const blocked=st==='full'||st==='pronto';
+          const label=st==='full'?' — Completo':st==='pronto'?' — Cerrando':'';
+          const sel=selectedSlot===String(s.id)?'selected':'';
+          return \`<option value="\${blocked?'':''+s.id}" \${sel} \${blocked?'disabled':''}>⏰ \${s.from} – \${s.to}\${label}</option>\`;
+        }).join('')}
+      </select>
+      <div class="slot-required" id="slot-error">Seleccioná una franja horaria para continuar</div>\`
+    :(availSlots.length?\`<div style="font-size:12px;color:var(--brown-light);font-style:italic;margin-top:8px">⏰ No hay franjas disponibles por el momento.</div>\`:'');
+  const retiroInfoTxt=cfg.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!';
+  let retiroInfoHtml='';
+  if(delivery==='pickup'){
+    const slotSel=selectedSlot?slots.find(x=>String(x.id)===selectedSlot):null;
+    const horarioTxt=slotSel?\`<br>⏰ Horario de retiro: <strong style="font-family:'Playfair Display',serif">\${slotSel.from} – \${slotSel.to}</strong>\`:'';
+    retiroInfoHtml=\`<div class="retiro-info"><strong>🏪 Retiro en el local</strong>\${retiroInfoTxt}\${horarioTxt}</div>\`;
+  }
+  const locHtml=delivery!=='delivery'?'':(\`
+    <div style="height:8px"></div>
+    <label class="flabel">Tu dirección de entrega <span class="req">*</span></label>
+    <div class="field-wrap" style="margin-bottom:0">
+      <input class="finput" id="f-addr" placeholder="Calle, número, piso..." oninput="checkForm()">
+      <div class="field-error" id="f-addr-err">Ingresá tu dirección de entrega</div>
+    </div>
+    <button class="locbtn" id="loc-btn" onclick="getLocation()">📍 Compartir mi ubicación GPS (más exacto)</button>\`);
+
+  // Apply coupon FIRST so totalFinal is available for payExtra
+  let descuento=0;
+  if(_cuponAplicado){
+    if(_cuponAplicado.tipo==='pct') descuento=(sub+ship)*(_cuponAplicado.valor/100);
+    else descuento=Math.min(_cuponAplicado.valor, sub+ship);
+  }
+  const totalFinal=Math.max(0,total-descuento);
+
+  let payExtra='';
+  if(payment==='efectivo')payExtra=\`<div class="pay-efectivo"><div class="pt">💵 Pago en efectivo</div><div class="ps">Tené listos \${fmt(totalFinal)} al \${delivery==='delivery'?'recibir el pedido':'retirar'}.</div></div>\`;
+  if(payment==='transferencia')payExtra=\`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:600">\${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">\${fmt(totalFinal)}</span></div></div>\`;
+  if(payment==='mercadopago')payExtra=\`<div class="pay-mp"><div class="pt">💳 Mercado Pago</div><div class="ps">Al confirmar, Mercado Pago se abrirá automáticamente.</div></div>\`;
+
+  const isClosed=!cfg.open;
+  const confirmTxt=cfg.txtConfirmarBtn||'Confirmar pedido';
+
+  cont.innerHTML=\`<div>
+    \${items}
+    <div class="totbox">
+      <div class="tot-row"><span>Subtotal</span><span>\${fmt(sub)}</span></div>
+      <div class="tot-row"><span>Envío</span><span>\${ship===0?'Gratis (retiro)':fmt(ship)}</span></div>
+      \${_cuponAplicado?\`<div class="tot-row" style="color:#166534"><span>🎟 Cupón \${_cuponAplicado.codigo}</span><span>-\${fmt(descuento)}</span></div>\`:''}
+      <div class="tot-row grand"><span>Total</span><span>\${fmt(totalFinal)}</span></div>
+    </div>
+    <div class="sec-label">Entrega</div>
+    <div class="fbox" style="margin-bottom:10px">
+      <div class="opts2">
+        <div class="opt \${delivery==='pickup'?'on':''}" onclick="setDelivery('pickup')"><div class="oi">🏪</div><div class="ol">Retiro</div><div class="os">en el local</div></div>
+        <div class="opt \${delivery==='delivery'?'on':''}" onclick="setDelivery('delivery')"><div class="oi">🛵</div><div class="ol">Envío</div><div class="os">\${fmt(cfg.envio||0)}</div></div>
+      </div>
+      \${retiroInfoHtml}
+      \${locHtml}
+      \${slotsHtml}
+    </div>
+    <div class="sec-label">Forma de pago</div>
+    <div class="fbox" style="margin-bottom:10px">
+      <div class="opts3">
+        <div class="opt \${payment==='efectivo'?'on':''}" onclick="setPayment('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>
+        <div class="opt \${payment==='transferencia'?'on':''}" onclick="setPayment('transferencia')"><div class="oi">📲</div><div class="ol">Transfer.</div></div>
+        <div class="opt \${payment==='mercadopago'?'on':''}" onclick="setPayment('mercadopago')"><div class="oi">💳</div><div class="ol">Merc.Pago</div></div>
+      </div>
+      \${payExtra}
+    </div>
+    <div class="sec-label">Cupón de descuento</div>
+    <div class="fbox" style="margin-bottom:10px">
+      <label class="flabel">¿Tenés un código de descuento?</label>
+      <div class="cupon-row">
+        <input class="cupon-input" id="f-cupon" placeholder="CÓDIGO" maxlength="20" oninput="this.value=this.value.toUpperCase()">
+        <button class="cupon-btn" onclick="aplicarCupon()">Aplicar</button>
+      </div>
+      <div class="cupon-ok" id="cupon-ok"></div>
+      <div class="cupon-err" id="cupon-err"></div>
+    </div>
+    <div class="sec-label">Tus datos</div>
+    <div class="fbox">
+      <label class="flabel">Nombre completo <span class="req">*</span></label>
+      <div class="field-wrap">
+        <input class="finput" id="f-name" placeholder="Ej: María González" oninput="checkForm()">
+        <div class="field-error" id="f-name-err">Ingresá tu nombre completo</div>
+      </div>
+      <label class="flabel">Teléfono <span class="req">*</span></label>
+      <div class="field-wrap">
+        <input class="finput" id="f-phone" type="tel" placeholder="Ej: 336 412-3456" oninput="checkForm()">
+        <div class="field-error" id="f-phone-err">Ingresá tu número de teléfono</div>
+      </div>
+      <label class="flabel">Observaciones <small style="font-family:'Crimson Text',serif;font-style:italic;letter-spacing:0">(opcional)</small></label>
+      <textarea class="finput" id="f-obs" rows="2" placeholder="Ej: casa roja con planta en frente, timbre no funciona..." style="resize:none;line-height:1.5;min-height:60px;margin-bottom:0"></textarea>
+    </div>
+    <div class="form-errors" id="form-errors"></div>
+    \${isClosed?\`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">\${cfg.txtCerradoInline||'🔒 El local está cerrado.'}</div>\`:''}
+    <button class="cfmbtn" id="cfm-btn" onclick="tryConfirm()" \${isClosed?'disabled style="display:none"':''}>\${confirmTxt}</button>
+    <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
+  </div>\`;
+  setTimeout(()=>validateForm(),0);
+}
+
+// ── VALIDATION ─────────────────────────────────────────────────────────
+function validateForm(){
+  const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
+  const addr=delivery==='delivery'?getFieldVal('f-addr'):'ok';
+  const availSlots=getAvailableSlots(delivery);
+  const slotOk=availSlots.length===0||selectedSlot!=='';
+  markField('f-name',!name,'Ingresá tu nombre completo');
+  markField('f-phone',!phone,'Ingresá tu teléfono');
+  if(delivery==='delivery')markField('f-addr',!addr.trim(),'Ingresá tu dirección');
+  const slotErr=document.getElementById('slot-error');
+  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0);
+  const valid=!!(name&&phone&&addr.trim()&&slotOk);
+  const summary=document.getElementById('form-errors');
+  if(summary&&triedSubmit&&!valid){
+    const errors=[];
+    if(!name)errors.push('Nombre completo');
+    if(!phone)errors.push('Teléfono');
+    if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
+    if(!slotOk&&availSlots.length>0)errors.push('Franja horaria');
+    if(errors.length){summary.classList.add('show');summary.innerHTML=\`<div class="fe-title">⚠ Completá los siguientes campos:</div>\${errors.map(e=>\`<p>• \${e}</p>\`).join('')}\`;}
+    else summary.classList.remove('show');
+  } else if(summary)summary.classList.remove('show');
+  const btn=document.getElementById('cfm-btn');if(btn)btn.disabled=!valid;
+  return valid;
+}
+function markField(id,hasError,msg){
+  const input=document.getElementById(id),errEl=document.getElementById(id+'-err');
+  if(input)input.classList.toggle('error',hasError&&triedSubmit);
+  if(errEl){errEl.textContent=msg;errEl.classList.toggle('show',hasError&&triedSubmit);}
+}
+function checkForm(){validateForm();}
+function selectSlot(id){selectedSlot=String(id);renderCart();}
+function selectSlotFromSelect(val){
+  // Save current address and GPS before any re-render
+  const addrEl=document.getElementById('f-addr');
+  const savedAddr=addrEl?addrEl.value:'';
+  const savedGeo=geoLocation;
+  selectedSlot=val?String(val):'';
+  // Only update retiro box without full re-render
+  const retBox=document.getElementById('retiro-info-box');
+  if(retBox&&delivery==='pickup'){
+    const s=val?slots.find(x=>String(x.id)===String(val)):null;
+    const horarioTxt=s?\`<br>⏰ Horario: <strong style="font-family:'Playfair Display',serif">\${s.from} – \${s.to}</strong>\`:'';
+    const retiroInfoTxt=cfg.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!';
+    retBox.innerHTML=\`<strong>🏪 Retiro en el local</strong> \${retiroInfoTxt}\${horarioTxt}\`;
+  }
+  // If delivery, restore address and GPS state without full re-render
+  if(delivery==='delivery'){
+    const addrEl2=document.getElementById('f-addr');
+    if(addrEl2&&savedAddr)addrEl2.value=savedAddr;
+    if(savedGeo){
+      geoLocation=savedGeo;
+      const btn=document.getElementById('loc-btn');
+      if(btn){btn.className='locbtn ok';btn.textContent='✓ Ubicación GPS obtenida';}
+    }
+  }
+  checkForm();
+}
+function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
+function setPayment(p){payment=p;renderCart();}
+
+function getLocation(){
+  if(!navigator.geolocation){alert('Tu navegador no soporta geolocalización');return}
+  const btn=document.getElementById('loc-btn');if(btn){btn.textContent='📍 Obteniendo...';btn.disabled=true;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    geoLocation={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    const addrField=document.getElementById('f-addr');
+    if(addrField&&!addrField.value.trim())addrField.value='Ubicación GPS compartida';
+    const b=document.getElementById('loc-btn');
+    if(b){b.className='locbtn ok';b.disabled=false;b.textContent='✓ Ubicación obtenida ('+geoLocation.lat.toFixed(5)+', '+geoLocation.lng.toFixed(5)+')';}
+    validateForm();
+  },err=>{
+    const b=document.getElementById('loc-btn');if(b){b.disabled=false;b.textContent='📍 No se pudo obtener · Ingresá dirección manual';}
+    if(err.code===1)alert('Permiso denegado. Ingresá la dirección manualmente.');
+  },{enableHighAccuracy:true,timeout:10000});
+}
+
+// ── ORDER ──────────────────────────────────────────────────────────────
+function tryConfirm(){
+  triedSubmit=true;
+  if(!validateForm()){
+    const firstErr=document.querySelector('.finput.error,.slot-required.show');
+    if(firstErr)firstErr.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  confirmOrder();
+}
+
+async function confirmOrder(){
+  if(!cfg.open){alert('El local está cerrado.');return;}
+  const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
+  const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
+  const ship=delivery==='delivery'?(cfg.envio||0):0;
+  let sub=0;
+  const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).map(k=>{
+    const p=products.find(x=>String(x.id)===k);if(!p)return null;
+    const varNombre=cart[k+'_var'];
+    const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
+    const unitPrice=varObj?varObj.precio:p.price;
+    const itemName=varNombre?\`\${p.name} (\${varNombre})\`:p.name;
+    sub+=unitPrice*cart[k];return{name:itemName,qty:cart[k],price:unitPrice,id:p.id};
+  }).filter(Boolean);
+  const total=sub+ship;
+  let slotLabel='';
+  if(selectedSlot){const s=slots.find(x=>String(x.id)===selectedSlot);if(s)slotLabel=\`\${s.from} – \${s.to}\`;}
+
+  const btn=document.getElementById('cfm-btn');
+  btn.disabled=true;btn.textContent='Confirmando...';
+
+  // Save order via API
+  const obs=getFieldVal('f-obs');
+  // recalc total with coupon
+  let descuento=0;
+  if(_cuponAplicado){
+    if(_cuponAplicado.tipo==='pct') descuento=(sub+ship)*(_cuponAplicado.valor/100);
+    else descuento=Math.min(_cuponAplicado.valor,sub+ship);
+  }
+  const totalFinal=Math.max(0,total-descuento);
+  const orderData={customer:name,phone,address:addr,gps:geoLocation?\`\${geoLocation.lat.toFixed(5)},\${geoLocation.lng.toFixed(5)}\`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel};
+  gaEvent('purchase',{currency:'ARS',value:totalFinal,items:items.map(i=>({item_name:i.name,quantity:i.qty,price:i.price}))});
+
+  let orderId=null;
+
+  // If MP, create preference first
+  if(payment==='mercadopago'){
+    const prefData=await apiFetch('/api/mp/create-preference',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items,orderId:'pending',backUrl:window.location.origin}),
+    });
+    const orderRes=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+    orderId=orderRes?.id;
+    await apiFetch('/api/stock/deduct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
+    const updProds=await apiFetch('/api/products');if(updProds)products=updProds;
+    _pendingOrderId=orderId;
+    const mpUrl=prefData?.init_point||cfg.mp||'https://www.mercadopago.com.ar';
+    const horario=slotLabel?\` · ⏰ \${slotLabel}\`:'';
+    const msg=tpl(cfg.txtMsgMP||'Pedido #{id}{horario}',{id:orderId,horario});
+    document.getElementById('suc-icon').textContent='💳';
+    document.getElementById('suc-title').textContent='¡Redirigiendo a Mercado Pago!';
+    document.getElementById('suc-msg').textContent=msg;
+    document.getElementById('suc-mp-box').style.display='block';
+    document.getElementById('suc-mp-amount').textContent=fmt(total);
+    document.getElementById('suc-mp-btn').onclick=()=>window.open(mpUrl,'_blank');
+    document.getElementById('suc-comprobante-box').style.display='none';
+    showView('v-success');
+    setTimeout(()=>window.open(mpUrl,'_blank'),400);
+    return;
+  }
+
+  const orderRaw=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+  if(orderRaw.status===409){
+    const errData=await orderRaw.json();
+    btn.disabled=false;btn.textContent=cfg.txtConfirmarBtn||'Confirmar pedido';
+    alert(errData.error||'La franja horaria está completa. Elegí otra.');
+    selectedSlot='';renderCart();return;
+  }
+  const orderRes=await orderRaw.json();
+  orderId=orderRes?.id||'?';
+  // Deduct stock for sold items
+  await apiFetch('/api/stock/deduct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
+  // Refresh products to show updated stock
+  const updatedProducts=await apiFetch('/api/products');
+  if(updatedProducts)products=updatedProducts;
+  _pendingOrderId=orderId;
+
+  const nombre=name.split(' ')[0];
+  const totalChurros=items.reduce((a,it)=>a+it.qty,0);
+  const detallePedido=items.map(it=>\`\${it.qty}x \${it.name}\`).join(', ');
+  const horarioTxt=slotLabel?\`en el horario \${slotLabel}\`:'a la brevedad';
+  const direccionTxt=delivery==='delivery'
+    ?(addr&&addr!=='ok'?\`en \${addr}\`:'en tu domicilio')
+    :'en Malvinas Argentinas 297';
+  const entregaTxt=delivery==='delivery'
+    ?\`Lo recibís \${direccionTxt} \${horarioTxt}.\`
+    :\`Lo podés retirar \${direccionTxt} \${horarioTxt}.\`;
+
+  let icon='✅', title='¡Pedido confirmado!', msg='';
+
+  const pagoTxt=payment==='transferencia'
+    ?\`El pago es por transferencia bancaria al alias \${cfg.alias||'churros.local'} por \${fmt(totalFinal)}. Aguardamos tu comprobante para comenzar a prepararlo.\`
+    :payment==='mercadopago'
+    ?\`El pago fue realizado por Mercado Pago por \${fmt(totalFinal)}.\`
+    :\`El pago es en efectivo por \${fmt(totalFinal)} al momento del \${delivery==='delivery'?'envío':'retiro'}.\`;
+
+  msg=\`¡Muchas gracias, \${nombre}! Tu pedido de \${detallePedido} por el importe de \${fmt(totalFinal)} fue ingresado correctamente. \${entregaTxt} \${pagoTxt} ¡Muchas gracias por confiar en nosotros, esperamos que los disfrutes!\`;
+  document.getElementById('suc-icon').textContent=icon;
+  document.getElementById('suc-title').textContent=title;
+  document.getElementById('suc-msg').textContent=msg;
+  document.getElementById('suc-mp-box').style.display='none';
+  const compBox=document.getElementById('suc-comprobante-box');
+  compBox.style.display=payment==='transferencia'?'block':'none';
+  showView('v-success');
+}
+
+// ── COMPROBANTE ────────────────────────────────────────────────────────
+function handleComprobanteFile(event){
+  const file=event.target.files[0];if(!file)return;
+  _comprobanteFile=file;
+  const nameEl=document.getElementById('comp-file-name');
+  nameEl.textContent=file.name;nameEl.style.display='block';
+  document.getElementById('comp-send-btn').style.display='block';
+}
+async function guardarComprobante(){
+  if(!_comprobanteFile){alert('Seleccioná el archivo del comprobante primero.');return;}
+  const btn=document.getElementById('comp-send-btn');
+  btn.textContent='Guardando...';btn.disabled=true;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const b64=e.target.result;
+    // Save comprobante via API
+    await apiFetch(\`/api/orders/\${_pendingOrderId}/comprobante\`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({data:b64,name:_comprobanteFile.name,type:_comprobanteFile.type,ts:Date.now()}),
+    });
+    document.getElementById('comp-sent').style.display='block';
+    document.getElementById('comp-send-btn').style.display='none';
+    document.getElementById('comp-upload-area').style.display='none';
+  };
+  reader.onerror=function(){btn.textContent='Adjuntar comprobante al pedido →';btn.disabled=false;alert('Error al leer el archivo.');};
+  reader.readAsDataURL(_comprobanteFile);
+}
+
+function aplicarCupon(){
+  const codigo=document.getElementById('f-cupon').value.trim().toUpperCase();
+  const okEl=document.getElementById('cupon-ok');
+  const errEl=document.getElementById('cupon-err');
+  okEl.style.display='none';errEl.style.display='none';
+  if(!codigo)return;
+  const cupones=JSON.parse(localStorage.getItem('churros_cupones')||'[]');
+  const c=cupones.find(x=>x.codigo===codigo&&x.activo);
+  if(!c){errEl.textContent='Cupón no válido o inactivo.';errEl.style.display='block';_cuponAplicado=null;renderCart();return;}
+  if(c.usos>0&&c.usosUsados>=c.usos){errEl.textContent='Este cupón ya agotó sus usos.';errEl.style.display='block';_cuponAplicado=null;renderCart();return;}
+  if(c.vence&&c.vence<new Date().toISOString().split('T')[0]){errEl.textContent='Este cupón está vencido.';errEl.style.display='block';_cuponAplicado=null;renderCart();return;}
+  _cuponAplicado={codigo:c.codigo,tipo:c.tipo,valor:c.valor};
+  const descTxt=c.tipo==='pct'?c.valor+'% de descuento':'$'+Math.round(c.valor).toLocaleString('es-AR')+' de descuento';
+  okEl.textContent='✓ Cupón aplicado: '+descTxt;okEl.style.display='block';
+  renderCart();
+}
+
+// ── PRESENTACION CART FUNCTIONS ────────────────────────────────────
+// Cart key format: "pid__PresNombre" — simple and unambiguous
+function presKey(pid, nom){ return String(pid)+'__'+nom; }
+
+function addPres(pid, nom, precio){
+  const k=presKey(pid,nom);
+  cart[k]=(cart[k]||0)+1;
+  cart[k+'__p']=precio;
+  cart[k+'__n']=nom;
+  updBadge();renderMenu();if(activeTab==='cart')renderCart();
+  showAddedToast();
+}
+function remPres(pid, nom){
+  const k=presKey(pid,nom);
+  if((cart[k]||0)>0){
+    cart[k]--;
+    if(cart[k]===0){delete cart[k];delete cart[k+'__p'];delete cart[k+'__n'];}
+  }
+  updBadge();renderMenu();if(activeTab==='cart')renderCart();
+}
+
+let _toastTimer=null;
+function showAddedToast(){
+  const t=document.getElementById('add-toast');
+  if(!t)return;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function resetApp(){
+  cart={};delivery='pickup';payment='efectivo';geoLocation=null;selectedSlot='';triedSubmit=false;_comprobanteFile=null;_pendingOrderId=null;_cuponAplicado=null;
+  updBadge();goTab('menu');renderMenu();showView('v-customer');
+}
+
+init();
+</script>
+</body>
+</html>
+`;
     prods.forEach(p=>{
       const sid_p=String(p.id); const q=cart[sid_p]||0;
       const outOfStock=!p.unlimited&&(p.stock||0)<=0&&q===0;
