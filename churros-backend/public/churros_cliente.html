@@ -493,7 +493,7 @@ function presRem(pid,idx){
 }
 
 function updBadge(){
-  const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
+  const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
   document.getElementById('cart-count').textContent=t;
   document.getElementById('cart-badge').textContent=t;
   document.getElementById('cart-badge').style.display=t>0?'flex':'none';
