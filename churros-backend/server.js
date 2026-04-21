@@ -67,6 +67,15 @@ const mpClient = new MercadoPagoConfig({
 // ── Middleware ──────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+// Disable cache for HTML files so updates are always picked up
+app.use(function(req, res, next){
+  if(req.path.endsWith('.html') || req.path === '/'){
+    res.setHeader('Cache-Control','no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma','no-cache');
+    res.setHeader('Expires','0');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Auth ────────────────────────────────────────────────────────────
