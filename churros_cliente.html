@@ -434,26 +434,47 @@ function renderPresRows(p){
     var isSel=(i===selIdx)?'selected':'';
     return '<option value="'+i+'" '+isSel+'>'+pr.nombre+' — '+fmt(pr.precio)+'</option>';
   }).join('');
+  // Use data attributes to avoid quoting issues in onclick
+  var selId='pres-sel-'+pid;
   var ctrlHtml;
   if(selIdx>=0&&selQty>0){
     ctrlHtml='<div class="pres-qty-ctrl">'
-      +'<button onclick="presRem(''+pid+'','+selIdx+')">-</button>'
+      +'<button data-pid="'+pid+'" data-idx="'+selIdx+'" onclick="presRemBtn(this)">-</button>'
       +'<span>'+selQty+'</span>'
-      +'<button onclick="presAdd(''+pid+'','+selIdx+')">+</button>'
+      +'<button data-pid="'+pid+'" data-idx="'+selIdx+'" onclick="presAddBtn(this)">+</button>'
       +'</div>';
   } else {
-    ctrlHtml='<button class="pres-add-btn" onclick="presAddFromSel(''+pid+'')">+</button>';
+    ctrlHtml='<button class="pres-add-btn" data-pid="'+pid+'" data-sel="'+selId+'" onclick="presAddFromBtn(this)">+</button>';
   }
   return '<div class="pcard-pres"><div class="pres-select-row">'
-    +'<select class="pres-select" id="pres-sel-'+pid+'">'+optsHtml+'</select>'
+    +'<select class="pres-select" id="'+selId+'">'+optsHtml+'</select>'
     +ctrlHtml+'</div></div>';
 }
 
-function presAddFromSel(pid){
-  var sel=document.getElementById('pres-sel-'+pid);
+function presAddFromBtn(btn){
+  var pid=btn.getAttribute('data-pid');
+  var selId=btn.getAttribute('data-sel');
+  var sel=document.getElementById(selId);
   if(!sel)return;
   var idx=Number(sel.value);
   presAdd(pid,idx);
+}
+function presAddBtn(btn){
+  var pid=btn.getAttribute('data-pid');
+  var idx=Number(btn.getAttribute('data-idx'));
+  presAdd(pid,idx);
+}
+function presRemBtn(btn){
+  var pid=btn.getAttribute('data-pid');
+  var idx=Number(btn.getAttribute('data-idx'));
+  presRem2(pid,idx);
+}
+function presRem2(pid,idx){
+  var pres=_presData[pid];
+  if(!pres)return;
+  var pr=pres[Number(idx)];
+  if(!pr)return;
+  remPres(String(pid),pr.nombre);
 }
 
 function presAdd(pid,idx){
