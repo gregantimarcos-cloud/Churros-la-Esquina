@@ -566,7 +566,7 @@ function slotStatus(s){
 }
 
 function renderCart(){
-  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('_price')&&!k.endsWith('_nom')&&cart[k]>0);
+  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('_price')&&!k.endsWith('_nom')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0);
   const cont=document.getElementById('cart-content');if(!cont)return;
   if(keys.length===0){
     const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
@@ -805,7 +805,7 @@ async function confirmOrder(){
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
   const ship=delivery==='delivery'?(cfg.envio||0):0;
   let sub=0;
-  const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).map(k=>{
+  const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0).map(k=>{
     const p=products.find(x=>String(x.id)===k);if(!p)return null;
     const varNombre=cart[k+'_var'];
     const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
