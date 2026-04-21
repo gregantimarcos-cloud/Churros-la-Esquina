@@ -455,9 +455,14 @@ function renderPresRows(p){
 }
 
 function presAddFromSel(pid){
+  console.log('presAddFromSel called, pid='+pid);
+  console.log('_presData keys:', Object.keys(_presData));
+  console.log('sel id: pres-sel-'+pid);
   var sel=document.getElementById('pres-sel-'+pid);
-  if(!sel)return;
+  console.log('sel found:', sel);
+  if(!sel){console.log('NO SELECT FOUND');return;}
   var idx=Number(sel.value);
+  console.log('idx='+idx);
   presAdd(pid,idx);
 }
 
