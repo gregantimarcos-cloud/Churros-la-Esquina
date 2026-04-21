@@ -806,12 +806,25 @@ async function confirmOrder(){
   const ship=delivery==='delivery'?(cfg.envio||0):0;
   let sub=0;
   const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0).map(k=>{
-    const p=products.find(x=>String(x.id)===k);if(!p)return null;
-    const varNombre=cart[k+'_var'];
-    const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
-    const unitPrice=varObj?varObj.precio:p.price;
-    const itemName=varNombre?`${p.name} (${varNombre})`:p.name;
-    sub+=unitPrice*cart[k];return{name:itemName,qty:cart[k],price:unitPrice,id:p.id};
+    // Check if it's a presentation key (pid__PresNombre) or plain product
+    const isPres=k.includes('__');
+    let p, unitPrice, itemName;
+    if(isPres){
+      const sepIdx=k.indexOf('__');
+      const pid=k.substring(0,sepIdx);
+      const presNombre=cart[k+'__n']||k.substring(sepIdx+2);
+      p=products.find(x=>String(x.id)===pid);if(!p)return null;
+      unitPrice=Number(cart[k+'__p']||p.price);
+      itemName=p.name+' — '+presNombre;
+    } else {
+      p=products.find(x=>String(x.id)===k);if(!p)return null;
+      const varNombre=cart[k+'_var'];
+      const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
+      unitPrice=varObj?varObj.precio:p.price;
+      itemName=varNombre?p.name+' ('+varNombre+')':p.name;
+    }
+    sub+=unitPrice*cart[k];
+    return{name:itemName,qty:cart[k],price:unitPrice,id:p.id};
   }).filter(Boolean);
   const total=sub+ship;
   let slotLabel='';
