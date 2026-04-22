@@ -569,8 +569,25 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <input class="finput field-mb" id="mo-customer" placeholder="Nombre del cliente">
     <label class="flabel">Teléfono</label>
     <input class="finput field-mb" id="mo-phone" placeholder="Ej: 2477123456" type="tel">
-    <label class="flabel">Productos <small>(uno por línea: cantidad x nombre x precio)</small></label>
-    <textarea class="ftextarea field-mb" id="mo-items" rows="4" placeholder="1 x Churros clásicos media docena x 4500&#10;2 x Churros rellenos docena x 10000"></textarea>
+
+    <div class="sec-label" style="padding:10px 0 6px">Productos del pedido</div>
+    <div id="mo-items-list" style="margin-bottom:8px"></div>
+    <div style="background:var(--cream-dark);border-radius:9px;padding:10px;margin-bottom:10px">
+      <label class="flabel">Agregar producto</label>
+      <select class="finput" id="mo-prod-sel" onchange="moUpdatePres()" style="margin-bottom:6px">
+        <option value="">— Elegí un producto —</option>
+      </select>
+      <select class="finput" id="mo-pres-sel" style="margin-bottom:6px;display:none">
+        <option value="">— Elegí presentación —</option>
+      </select>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+        <input class="finput" id="mo-qty" type="number" value="1" min="1" style="width:70px">
+        <span style="font-size:12px;color:var(--brown-light)">cantidad</span>
+        <span id="mo-precio-display" style="font-size:13px;font-weight:700;color:var(--red-warm);margin-left:auto"></span>
+      </div>
+      <button onclick="moAddItem()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:7px 14px;cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;width:100%">+ Agregar al pedido</button>
+    </div>
+
     <label class="flabel">Modalidad</label>
     <select class="finput field-mb" id="mo-delivery">
       <option value="pickup">Retiro en local</option>
@@ -588,8 +605,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <option value="transferencia">Transferencia</option>
       <option value="mercadopago">Mercado Pago</option>
     </select>
-    <label class="flabel">Total ($) <small>(se calcula automáticamente si dejás en 0)</small></label>
-    <input class="finput field-mb" id="mo-total" type="number" placeholder="0">
     <label class="flabel">Estado inicial</label>
     <select class="finput field-mb" id="mo-status">
       <option value="new">Nuevo</option>
@@ -599,6 +614,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     </select>
     <label class="flabel">Observaciones</label>
     <input class="finput field-mb" id="mo-obs" placeholder="Notas adicionales">
+    <div id="mo-total-display" style="background:var(--cream-dark);border-radius:9px;padding:10px;margin-bottom:10px;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--brown);text-align:center"></div>
     <button class="savebtn" onclick="saveManualOrder()">Guardar pedido</button>
     <button class="cancelbtn" onclick="closeManualOrder()">Cancelar</button>
   </div>
@@ -1629,41 +1645,97 @@ function eliminarCupon(id){if(!confirm('¿Eliminar este cupón?'))return;saveCup
 
 // ── WHATSAPP LINK HELPER (for orders) ─────────────────────────────
 // ── MANUAL ORDERS ─────────────────────────────────────────────────
+let _moItems=[]; // items added to manual order
+
 function openManualOrder(){
+  _moItems=[];
   // Populate slot select
   const sel=document.getElementById('mo-slot');
   sel.innerHTML='<option value="">Sin franja</option>'+_slots.filter(s=>s.active).map(s=>`<option value="${s.from} – ${s.to}">${s.from} – ${s.to}</option>`).join('');
-  document.getElementById('manual-order-overlay').classList.add('open');
-}
-function closeManualOrder(){
-  document.getElementById('manual-order-overlay').classList.remove('open');
-  ['mo-customer','mo-phone','mo-items','mo-address','mo-obs','mo-total'].forEach(id=>{
+  // Populate product select
+  const prodSel=document.getElementById('mo-prod-sel');
+  prodSel.innerHTML='<option value="">— Elegí un producto —</option>'+_products.map(p=>`<option value="${p.id}">${p.name}${p.desc?' — '+p.desc:''}</option>`).join('');
+  document.getElementById('mo-pres-sel').style.display='none';
+  document.getElementById('mo-precio-display').textContent='';
+  document.getElementById('mo-items-list').innerHTML='';
+  document.getElementById('mo-total-display').textContent='';
+  ['mo-customer','mo-phone','mo-address','mo-obs'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
+  document.getElementById('manual-order-overlay').classList.add('open');
 }
+
+function moUpdatePres(){
+  const pid=document.getElementById('mo-prod-sel').value;
+  const p=_products.find(x=>String(x.id)===pid);
+  const presSel=document.getElementById('mo-pres-sel');
+  const precioEl=document.getElementById('mo-precio-display');
+  if(!p){presSel.style.display='none';precioEl.textContent='';return;}
+  if(p.presentaciones&&p.presentaciones.length){
+    presSel.style.display='block';
+    presSel.innerHTML='<option value="">— Elegí presentación —</option>'+p.presentaciones.map((pr,i)=>`<option value="${i}">${pr.nombre} — ${fmt(pr.precio)}</option>`).join('');
+    presSel.onchange=function(){
+      const idx=parseInt(this.value);
+      if(!isNaN(idx)&&p.presentaciones[idx])precioEl.textContent=fmt(p.presentaciones[idx].precio)+' c/u';
+      else precioEl.textContent='';
+    };
+    precioEl.textContent='';
+  } else {
+    presSel.style.display='none';
+    precioEl.textContent=fmt(p.price)+' c/u';
+  }
+}
+
+function moAddItem(){
+  const pid=document.getElementById('mo-prod-sel').value;
+  const p=_products.find(x=>String(x.id)===pid);
+  if(!p){alert('Elegí un producto');return;}
+  const qty=parseInt(document.getElementById('mo-qty').value)||1;
+  let name=p.name, price=p.price, uds=p.uds||1;
+  if(p.presentaciones&&p.presentaciones.length){
+    const presIdx=parseInt(document.getElementById('mo-pres-sel').value);
+    if(isNaN(presIdx)){alert('Elegí una presentación');return;}
+    const pres=p.presentaciones[presIdx];
+    name=p.name+' — '+pres.nombre;
+    price=pres.precio;
+    uds=pres.uds||1;
+  }
+  _moItems.push({name,price,qty,id:p.id,uds});
+  moRenderItems();
+}
+
+function moRenderItems(){
+  const list=document.getElementById('mo-items-list');
+  if(!_moItems.length){list.innerHTML='';document.getElementById('mo-total-display').textContent='';return;}
+  let total=0;
+  list.innerHTML=_moItems.map((it,i)=>{
+    const sub=it.price*it.qty;total+=sub;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--cream);border:1px solid var(--kraft);border-radius:7px;padding:6px 10px;margin-bottom:5px">
+      <span style="font-size:13px;color:var(--brown)">${it.qty}× ${it.name}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--red-warm)">${fmt(sub)}</span>
+      <button onclick="moRemItem(${i})" style="background:none;border:none;color:#b91c1c;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
+    </div>`;
+  }).join('');
+  document.getElementById('mo-total-display').textContent='Total: '+fmt(total);
+}
+
+function moRemItem(i){_moItems.splice(i,1);moRenderItems();}
+
+function closeManualOrder(){
+  document.getElementById('manual-order-overlay').classList.remove('open');
+  _moItems=[];
+}
+
 async function saveManualOrder(){
   const customer=gv('mo-customer').trim();
   if(!customer){alert('Ingresá el nombre del cliente');return;}
-  // Parse items: "1 x Nombre x precio" per line
-  const rawItems=gv('mo-items').trim().split('\n').filter(Boolean);
-  const items=[];
-  let autoTotal=0;
-  rawItems.forEach(line=>{
-    const parts=line.split('x').map(s=>s.trim());
-    if(parts.length>=2){
-      const qty=parseInt(parts[0])||1;
-      const name=parts[1]||'Producto';
-      const price=parts.length>=3?(parseInt(parts[2])||0):0;
-      items.push({qty,name,price,id:Date.now()});
-      autoTotal+=qty*price;
-    }
-  });
-  const totalInput=parseInt(gv('mo-total'))||0;
-  const total=totalInput>0?totalInput:autoTotal;
+  if(!_moItems.length){alert('Agregá al menos un producto');return;}
+  const total=_moItems.reduce((a,it)=>a+it.price*it.qty,0);
   const slot=gv('mo-slot');
   const orderData={
     customer,phone:gv('mo-phone'),
-    items,total,
+    items:_moItems.map(it=>({name:it.name,qty:it.qty,price:it.price,id:it.id,uds:it.uds})),
+    total,
     delivery:gv('mo-delivery'),
     address:gv('mo-address'),
     payment:gv('mo-payment'),
