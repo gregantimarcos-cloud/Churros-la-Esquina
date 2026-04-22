@@ -826,10 +826,12 @@ async function loadStats(){
   const prodTableEl=document.getElementById('prod-qty-table');
   if(prodTableEl){
     const rows=sorted.map(([n,d],i)=>{
-      const presRows=Object.entries(d.pres).map(([pn,pd])=>
-        `<tr style="background:#f9f9f9"><td style="padding:4px 8px 4px 20px;color:var(--brown-light);font-style:italic">↳ ${pn}</td><td style="padding:4px 8px;text-align:center;color:var(--brown-light)">${pd.qty}×</td><td style="padding:4px 8px;text-align:center;color:var(--brown-light)">${pd.churros} chur.</td><td style="padding:4px 8px;text-align:right;color:var(--brown-light)">–</td></tr>`
-      ).join('');
-      return `<tr style="background:${i%2===0?'#fff':'var(--cream-dark)'}"><td style="padding:6px 8px;font-weight:600">${n}</td><td style="padding:6px 8px;text-align:center;font-weight:700">${d.ventas}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:var(--brown)">${d.churros}</td><td style="padding:6px 8px;text-align:right">${fmt(d.total)}</td></tr>${presRows}`;
+      const docenas=(d.churros/12).toFixed(1);
+      const presRows=Object.entries(d.pres).map(([pn,pd])=>{
+        const presDoc=(pd.churros/12).toFixed(1);
+        return `<tr style="background:#f9f9f9"><td style="padding:4px 8px 4px 20px;color:var(--brown-light);font-style:italic">↳ ${pn}</td><td style="padding:4px 8px;text-align:center;color:var(--brown-light)">${pd.qty}×</td><td style="padding:4px 8px;text-align:center;color:var(--brown-light)">${pd.churros}</td><td style="padding:4px 8px;text-align:center;color:var(--brown-light)">${presDoc}</td><td style="padding:4px 8px;text-align:right;color:var(--brown-light)">–</td></tr>`;
+      }).join('');
+      return `<tr style="background:${i%2===0?'#fff':'var(--cream-dark)'}"><td style="padding:6px 8px;font-weight:600">${n}</td><td style="padding:6px 8px;text-align:center;font-weight:700">${d.ventas}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:var(--brown)">${d.churros}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:var(--brown-mid)">${docenas}</td><td style="padding:6px 8px;text-align:right">${fmt(d.total)}</td></tr>${presRows}`;
     }).join('');
     prodTableEl.innerHTML=sorted.length?`
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
