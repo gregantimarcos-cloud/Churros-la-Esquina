@@ -769,8 +769,40 @@ function selectSlotFromSelect(val){
   }
   checkForm();
 }
-function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
-function setPayment(p){payment=p;renderCart();}
+function setDelivery(d){
+  const savedName=getFieldVal('f-name');
+  const savedPhone=getFieldVal('f-phone');
+  const savedObs=getFieldVal('f-obs');
+  const savedCupon=getFieldVal('f-cupon');
+  delivery=d;selectedSlot='';triedSubmit=false;
+  renderCart();
+  const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
+  const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
+  const cup=document.getElementById('f-cupon');if(cup&&savedCupon)cup.value=savedCupon;
+}
+function setPayment(p){
+  // Save form state before re-render
+  const savedName=getFieldVal('f-name');
+  const savedPhone=getFieldVal('f-phone');
+  const savedAddr=getFieldVal('f-addr');
+  const savedObs=getFieldVal('f-obs');
+  const savedGeo=geoLocation;
+  const savedCupon=getFieldVal('f-cupon');
+  payment=p;
+  renderCart();
+  // Restore form state after re-render
+  const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
+  const addr=document.getElementById('f-addr');if(addr&&savedAddr)addr.value=savedAddr;
+  const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
+  const cup=document.getElementById('f-cupon');if(cup&&savedCupon)cup.value=savedCupon;
+  if(savedGeo){
+    geoLocation=savedGeo;
+    const btn=document.getElementById('loc-btn');
+    if(btn){btn.className='locbtn ok';btn.textContent='✓ Ubicación GPS obtenida';}
+  }
+}
 
 function getLocation(){
   if(!navigator.geolocation){alert('Tu navegador no soporta geolocalización');return}
