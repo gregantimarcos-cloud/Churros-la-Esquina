@@ -225,6 +225,12 @@ window.addEventListener('load',function(){
       <div style="font-size:12px;color:#92400e;font-style:italic;margin-bottom:12px;">Si Mercado Pago no se abrió automáticamente, usá este botón:</div>
       <button id="suc-mp-btn" style="background:#009ee3;color:#fff;border:none;border-radius:9px;padding:11px 24px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;width:100%;">Abrir Mercado Pago →</button>
     </div>
+    <div id="suc-wa-box" style="display:none;margin-bottom:16px;">
+      <button id="suc-wa-btn" style="width:100%;background:#25D366;color:#fff;border:none;border-radius:11px;padding:14px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        💬 Enviar confirmación por WhatsApp
+      </button>
+      <div style="font-size:11px;color:var(--brown-light);text-align:center;margin-top:4px;font-style:italic">Se abre WhatsApp con el resumen del pedido listo para enviar</div>
+    </div>
     <div id="suc-comprobante-box" style="display:none;margin-bottom:20px;">
       <div class="comprobante-box">
         <div class="cb-title">📎 Adjuntá tu comprobante de transferencia</div>
@@ -493,7 +499,7 @@ function presRem(pid,idx){
 }
 
 function updBadge(){
-  const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
+  const t=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0).reduce((a,k)=>a+cart[k],0);
   document.getElementById('cart-count').textContent=t;
   document.getElementById('cart-badge').textContent=t;
   document.getElementById('cart-badge').style.display=t>0?'flex':'none';
@@ -566,7 +572,7 @@ function slotStatus(s){
 }
 
 function renderCart(){
-  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('_price')&&!k.endsWith('_nom')&&cart[k]>0);
+  const keys=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('_price')&&!k.endsWith('_nom')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0);
   const cont=document.getElementById('cart-content');if(!cont)return;
   if(keys.length===0){
     const msg=cfg.txtCarritoVacio||'Tu carrito está vacío. ¡Elegí tus churros desde el menú!';
@@ -769,8 +775,40 @@ function selectSlotFromSelect(val){
   }
   checkForm();
 }
-function setDelivery(d){delivery=d;selectedSlot='';triedSubmit=false;renderCart();}
-function setPayment(p){payment=p;renderCart();}
+function setDelivery(d){
+  const savedName=getFieldVal('f-name');
+  const savedPhone=getFieldVal('f-phone');
+  const savedObs=getFieldVal('f-obs');
+  const savedCupon=getFieldVal('f-cupon');
+  delivery=d;selectedSlot='';triedSubmit=false;
+  renderCart();
+  const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
+  const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
+  const cup=document.getElementById('f-cupon');if(cup&&savedCupon)cup.value=savedCupon;
+}
+function setPayment(p){
+  // Save form state before re-render
+  const savedName=getFieldVal('f-name');
+  const savedPhone=getFieldVal('f-phone');
+  const savedAddr=getFieldVal('f-addr');
+  const savedObs=getFieldVal('f-obs');
+  const savedGeo=geoLocation;
+  const savedCupon=getFieldVal('f-cupon');
+  payment=p;
+  renderCart();
+  // Restore form state after re-render
+  const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
+  const addr=document.getElementById('f-addr');if(addr&&savedAddr)addr.value=savedAddr;
+  const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
+  const cup=document.getElementById('f-cupon');if(cup&&savedCupon)cup.value=savedCupon;
+  if(savedGeo){
+    geoLocation=savedGeo;
+    const btn=document.getElementById('loc-btn');
+    if(btn){btn.className='locbtn ok';btn.textContent='✓ Ubicación GPS obtenida';}
+  }
+}
 
 function getLocation(){
   if(!navigator.geolocation){alert('Tu navegador no soporta geolocalización');return}
@@ -805,13 +843,26 @@ async function confirmOrder(){
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
   const ship=delivery==='delivery'?(cfg.envio||0):0;
   let sub=0;
-  const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&cart[k]>0).map(k=>{
-    const p=products.find(x=>String(x.id)===k);if(!p)return null;
-    const varNombre=cart[k+'_var'];
-    const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
-    const unitPrice=varObj?varObj.precio:p.price;
-    const itemName=varNombre?`${p.name} (${varNombre})`:p.name;
-    sub+=unitPrice*cart[k];return{name:itemName,qty:cart[k],price:unitPrice,id:p.id};
+  const items=Object.keys(cart).filter(k=>!k.endsWith('_var')&&!k.endsWith('__p')&&!k.endsWith('__n')&&cart[k]>0).map(k=>{
+    // Check if it's a presentation key (pid__PresNombre) or plain product
+    const isPres=k.includes('__');
+    let p, unitPrice, itemName;
+    if(isPres){
+      const sepIdx=k.indexOf('__');
+      const pid=k.substring(0,sepIdx);
+      const presNombre=cart[k+'__n']||k.substring(sepIdx+2);
+      p=products.find(x=>String(x.id)===pid);if(!p)return null;
+      unitPrice=Number(cart[k+'__p']||p.price);
+      itemName=p.name+' — '+presNombre;
+    } else {
+      p=products.find(x=>String(x.id)===k);if(!p)return null;
+      const varNombre=cart[k+'_var'];
+      const varObj=varNombre&&p.variantes?p.variantes.find(v=>v.nombre===varNombre):null;
+      unitPrice=varObj?varObj.precio:p.price;
+      itemName=varNombre?p.name+' ('+varNombre+')':p.name;
+    }
+    sub+=unitPrice*cart[k];
+    return{name:itemName,qty:cart[k],price:unitPrice,id:p.id};
   }).filter(Boolean);
   const total=sub+ship;
   let slotLabel='';
@@ -860,14 +911,24 @@ async function confirmOrder(){
     return;
   }
 
-  const orderRaw=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
-  if(orderRaw.status===409){
-    const errData=await orderRaw.json();
+  let orderRaw, orderRes;
+  try {
+    orderRaw=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+    if(orderRaw.status===409){
+      const errData=await orderRaw.json();
+      btn.disabled=false;btn.textContent=cfg.txtConfirmarBtn||'Confirmar pedido';
+      alert(errData.error||'La franja horaria está completa. Elegí otra.');
+      selectedSlot='';renderCart();return;
+    }
+    if(!orderRaw.ok){
+      throw new Error('Error del servidor: '+orderRaw.status);
+    }
+    orderRes=await orderRaw.json();
+  } catch(e) {
     btn.disabled=false;btn.textContent=cfg.txtConfirmarBtn||'Confirmar pedido';
-    alert(errData.error||'La franja horaria está completa. Elegí otra.');
-    selectedSlot='';renderCart();return;
+    alert('Error al enviar el pedido. Por favor intentá de nuevo.\n'+e.message);
+    return;
   }
-  const orderRes=await orderRaw.json();
   orderId=orderRes?.id||'?';
   // Deduct stock for sold items
   await apiFetch('/api/stock/deduct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
@@ -902,6 +963,17 @@ async function confirmOrder(){
   document.getElementById('suc-mp-box').style.display='none';
   const compBox=document.getElementById('suc-comprobante-box');
   compBox.style.display=payment==='transferencia'?'block':'none';
+
+  // WhatsApp confirmation button
+  const waBox=document.getElementById('suc-wa-box');
+  if(waBox){
+    const phone=(phone||'').replace(/\D/g,'');
+    const waMsg=encodeURIComponent(msg);
+    const waUrl=phone?`https://wa.me/549${phone}?text=${waMsg}`:`https://wa.me/?text=${waMsg}`;
+    waBox.style.display='block';
+    document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
+  }
+
   showView('v-success');
 }
 
