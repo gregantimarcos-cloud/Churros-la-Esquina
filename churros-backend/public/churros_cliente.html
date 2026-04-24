@@ -911,14 +911,24 @@ async function confirmOrder(){
     return;
   }
 
-  const orderRaw=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
-  if(orderRaw.status===409){
-    const errData=await orderRaw.json();
+  let orderRaw, orderRes;
+  try {
+    orderRaw=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+    if(orderRaw.status===409){
+      const errData=await orderRaw.json();
+      btn.disabled=false;btn.textContent=cfg.txtConfirmarBtn||'Confirmar pedido';
+      alert(errData.error||'La franja horaria está completa. Elegí otra.');
+      selectedSlot='';renderCart();return;
+    }
+    if(!orderRaw.ok){
+      throw new Error('Error del servidor: '+orderRaw.status);
+    }
+    orderRes=await orderRaw.json();
+  } catch(e) {
     btn.disabled=false;btn.textContent=cfg.txtConfirmarBtn||'Confirmar pedido';
-    alert(errData.error||'La franja horaria está completa. Elegí otra.');
-    selectedSlot='';renderCart();return;
+    alert('Error al enviar el pedido. Por favor intentá de nuevo.\n'+e.message);
+    return;
   }
-  const orderRes=await orderRaw.json();
   orderId=orderRes?.id||'?';
   // Deduct stock for sold items
   await apiFetch('/api/stock/deduct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
@@ -957,9 +967,9 @@ async function confirmOrder(){
   // WhatsApp confirmation button
   const waBox=document.getElementById('suc-wa-box');
   if(waBox){
-    const phone=(phone||'').replace(/\D/g,'');
+    const waPhone=(getFieldVal('f-phone')||'').replace(/\D/g,'');
     const waMsg=encodeURIComponent(msg);
-    const waUrl=phone?`https://wa.me/549${phone}?text=${waMsg}`:`https://wa.me/?text=${waMsg}`;
+    const waUrl=waPhone?`https://wa.me/549${waPhone}?text=${waMsg}`:`https://wa.me/?text=${waMsg}`;
     waBox.style.display='block';
     document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
   }
