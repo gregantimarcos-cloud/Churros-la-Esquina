@@ -967,9 +967,9 @@ async function confirmOrder(){
   // WhatsApp confirmation button
   const waBox=document.getElementById('suc-wa-box');
   if(waBox){
-    const phone=(phone||'').replace(/\D/g,'');
+    const waPhone=(getFieldVal('f-phone')||'').replace(/\D/g,'');
     const waMsg=encodeURIComponent(msg);
-    const waUrl=phone?`https://wa.me/549${phone}?text=${waMsg}`:`https://wa.me/?text=${waMsg}`;
+    const waUrl=waPhone?`https://wa.me/549${waPhone}?text=${waMsg}`:`https://wa.me/?text=${waMsg}`;
     waBox.style.display='block';
     document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
   }
