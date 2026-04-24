@@ -985,6 +985,7 @@ function renderOrders(){
         <button class="btn-sm btn-del" onclick="deleteOrder(${o.id})">✕</button>
         ${o.payment==='transferencia'?`<button class="comp-badge ${o.comprobante?'':'pending'}" onclick="verComprobante(${o.id})">${o.comprobante?'📎 Ver comprobante':'⏳ Sin comprobante'}</button>`:''}
         ${o.phone&&_cfg.whatsapp?`<a class="wa-btn" href="${waOrderLink(o)||'#'}" target="_blank">💬 Confirmar por WA</a>`:''}
+        ${o.phone&&o.delivery==='delivery'&&o.status!=='done'?`<a class="wa-btn" href="${waEnCaminoLink(o)||'#'}" target="_blank" style="background:#1a6b3c;">🛵 En camino</a>`:''}
       </div>
     </div>`;
   });

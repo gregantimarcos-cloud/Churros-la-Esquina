@@ -225,6 +225,12 @@ window.addEventListener('load',function(){
       <div style="font-size:12px;color:#92400e;font-style:italic;margin-bottom:12px;">Si Mercado Pago no se abrió automáticamente, usá este botón:</div>
       <button id="suc-mp-btn" style="background:#009ee3;color:#fff;border:none;border-radius:9px;padding:11px 24px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;width:100%;">Abrir Mercado Pago →</button>
     </div>
+    <div id="suc-wa-box" style="display:none;margin-bottom:16px;">
+      <button id="suc-wa-btn" style="width:100%;background:#25D366;color:#fff;border:none;border-radius:11px;padding:14px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        💬 Enviar confirmación por WhatsApp
+      </button>
+      <div style="font-size:11px;color:var(--brown-light);text-align:center;margin-top:4px;font-style:italic">Se abre WhatsApp con el resumen del pedido listo para enviar</div>
+    </div>
     <div id="suc-comprobante-box" style="display:none;margin-bottom:20px;">
       <div class="comprobante-box">
         <div class="cb-title">📎 Adjuntá tu comprobante de transferencia</div>
@@ -947,6 +953,17 @@ async function confirmOrder(){
   document.getElementById('suc-mp-box').style.display='none';
   const compBox=document.getElementById('suc-comprobante-box');
   compBox.style.display=payment==='transferencia'?'block':'none';
+
+  // WhatsApp confirmation button
+  const waBox=document.getElementById('suc-wa-box');
+  if(waBox){
+    const phone=(phone||'').replace(/\D/g,'');
+    const waMsg=encodeURIComponent(msg);
+    const waUrl=phone?`https://wa.me/549${phone}?text=${waMsg}`:`https://wa.me/?text=${waMsg}`;
+    waBox.style.display='block';
+    document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
+  }
+
   showView('v-success');
 }
 
