@@ -956,7 +956,21 @@ async function confirmOrder(){
     ?`El pago fue realizado por Mercado Pago por ${fmt(totalFinal)}.`
     :`El pago es en efectivo por ${fmt(totalFinal)} al momento del ${delivery==='delivery'?'envío':'retiro'}.`;
 
-  msg=`¡Muchas gracias, ${nombre}! Tu pedido de ${detallePedido} por el importe de ${fmt(totalFinal)} fue ingresado correctamente. ${entregaTxt} ${pagoTxt} ¡Muchas gracias por confiar en nosotros, esperamos que los disfrutes!`;
+  const nl='\n';
+  const itemsList=items.map(it=>'• '+it.qty+'x '+it.name).join(nl);
+  const pagoExtra=payment==='transferencia'
+    ?nl+'Si aún no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
+    :'';
+  msg='¡Hola '+nombre+'! 👋'+nl+nl
+    +'Tu pedido en Churros La Esquina fue confirmado ✅'+nl+nl
+    +'🛒 Detalle:'+nl+itemsList+nl+nl
+    +'💰 Total: '+fmt(totalFinal)+nl
+    +(payment==='transferencia'?'📲 Transferí al alias: '+(cfg.alias||'churros.local')+nl:'')
+    +(payment==='mercadopago'?'💳 Pago por Mercado Pago'+nl:'')
+    +(payment==='efectivo'?'💵 Pago en efectivo al '+( delivery==='delivery'?'recibir':'retirar')+nl:'')
+    +nl+'⏰ '+entregaTxt
+    +pagoExtra+nl+nl
+    +'¡Gracias por elegirnos! 🙌';
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
   document.getElementById('suc-msg').textContent=msg;

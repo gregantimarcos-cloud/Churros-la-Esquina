@@ -1754,6 +1754,19 @@ async function saveManualOrder(){
   }
 }
 
+function waEnCaminoLink(o){
+  var nombre=o.customer.split(' ')[0];
+  var nl=String.fromCharCode(10);
+  var horario=o.slot?' para el horario '+o.slot:'';
+  var msg='Hola '+nombre+'! 👋'+nl+nl
+    +'Tu pedido en Churros La Esquina ya está en camino'+horario+'. 🛵🥐'+nl+nl
+    +'¡Preparate para recibirlo! En breve llegamos a tu puerta.'+nl+nl
+    +'Cualquier consulta respondé este mensaje. ¡Gracias por elegirnos! 🙌';
+  var phone=o.phone?o.phone.replace(/[^0-9]/g,''):(_cfg.whatsapp||'');
+  if(!phone)return null;
+  return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
+}
+
 function waOrderLink(o){
   var cfg=_cfg;
   var wa=cfg.whatsapp||'';
