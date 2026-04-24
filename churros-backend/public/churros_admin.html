@@ -1228,10 +1228,10 @@ async function toggleCupon(on, silent){
   _cfg.cupones=on;
   document.getElementById('cfg-cupon-on').classList.toggle('on', on);
   document.getElementById('cfg-cupon-off').classList.toggle('on', !on);
-  if(!silent) saveCfg();
+  if(!silent) await saveCfg();
 }
 
-function saveCfg(){
+async function saveCfg(){
   const nu=gv('cfg-admin-user').trim(),np=gv('cfg-admin-pass');
   const data={
     name:gv('cfg-name'),envio:parseInt(gv('cfg-envio'))||0,alias:gv('cfg-alias'),mp:gv('cfg-mp'),
