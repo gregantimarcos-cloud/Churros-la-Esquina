@@ -684,6 +684,7 @@ function renderCart(){
       </div>
       ${payExtra}
     </div>
+    <div id="cupon-section" style="display:${cfg.cupones!==false?'block':'none'}">
     <div class="sec-label">Cupón de descuento</div>
     <div class="fbox" style="margin-bottom:10px">
       <label class="flabel">¿Tenés un código de descuento?</label>
@@ -693,6 +694,7 @@ function renderCart(){
       </div>
       <div class="cupon-ok" id="cupon-ok"></div>
       <div class="cupon-err" id="cupon-err"></div>
+    </div>
     </div>
     <div class="sec-label">Tus datos</div>
     <div class="fbox">
@@ -945,8 +947,8 @@ async function confirmOrder(){
     ?(addr&&addr!=='ok'?`en ${addr}`:'en tu domicilio')
     :'en Malvinas Argentinas 297';
   const entregaTxt=delivery==='delivery'
-    ?`Lo recibís ${direccionTxt} ${horarioTxt}.`
-    :`Lo podés retirar ${direccionTxt} ${horarioTxt}.`;
+    ?`Te lo entregamos en tu domicilio ${horarioTxt}.`
+    :`Lo podés retirar en Malvinas Argentinas 297 ${horarioTxt}.`;
 
   let icon='✅', title='¡Pedido confirmado!', msg='';
 
@@ -957,20 +959,20 @@ async function confirmOrder(){
     :`El pago es en efectivo por ${fmt(totalFinal)} al momento del ${delivery==='delivery'?'envío':'retiro'}.`;
 
   const nl='\n';
-  const itemsList=items.map(it=>'• '+it.qty+'x '+it.name).join(nl);
+  const itemsList=items.map(it=>'-  '+it.qty+'x '+it.name).join(nl);
   const pagoExtra=payment==='transferencia'
     ?nl+'Si aún no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
     :'';
-  msg='¡Hola '+nombre+'! 👋'+nl+nl
-    +'Tu pedido en Churros La Esquina fue confirmado ✅'+nl+nl
-    +'🛒 Detalle:'+nl+itemsList+nl+nl
-    +'💰 Total: '+fmt(totalFinal)+nl
-    +(payment==='transferencia'?'📲 Transferí al alias: '+(cfg.alias||'churros.local')+nl:'')
-    +(payment==='mercadopago'?'💳 Pago por Mercado Pago'+nl:'')
-    +(payment==='efectivo'?'💵 Pago en efectivo al '+( delivery==='delivery'?'recibir':'retirar')+nl:'')
-    +nl+'⏰ '+entregaTxt
+  msg='\u00a1Hola '+nombre+'! \ud83d\udc4b'+nl+nl
+    +'Tu pedido en Churros La Esquina fue confirmado \u2705'+nl+nl
+    +'Detalle:'+nl+itemsList+nl+nl
+    +'Total: '+fmt(totalFinal)+nl
+    +(payment==='transferencia'?'Transferí al alias: '+(cfg.alias||'churros.local')+nl:'')
+    +(payment==='mercadopago'?'Pago por Mercado Pago'+nl:'')
+    +(payment==='efectivo'?'Pago en efectivo al '+(delivery==='delivery'?'recibir':'retirar')+nl:'')
+    +nl+entregaTxt
     +pagoExtra+nl+nl
-    +'¡Gracias por elegirnos! 🙌';
+    +'\u00a1Gracias por elegirnos!';
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
   document.getElementById('suc-msg').textContent=msg;

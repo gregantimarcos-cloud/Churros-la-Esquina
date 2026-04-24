@@ -351,6 +351,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <input class="finput field-mb" id="cfg-whatsapp" placeholder="5493364123456" type="tel">
         <label class="flabel">Google Analytics ID <small>(ej: G-XXXXXXXXXX — dejá vacío si no lo tenés)</small></label>
         <input class="finput field-mb" id="cfg-ga" placeholder="G-XXXXXXXXXX">
+        <label class="flabel">Cupones de descuento</label>
+        <div class="opts2" style="margin-bottom:12px">
+          <div class="opt" id="cfg-cupon-on" onclick="toggleCupon(true)"><div class="oi">✅</div><div class="ol">Activados</div></div>
+          <div class="opt on" id="cfg-cupon-off" onclick="toggleCupon(false)"><div class="oi">❌</div><div class="ol">Desactivados</div></div>
+        </div>
         <label class="flabel">Estado</label>
         <div class="opts2">
           <div class="opt on" id="cfg-open" onclick="setCfgStatus('open')"><div class="oi">🟢</div><div class="ol">Abierto</div></div>
@@ -1219,7 +1224,14 @@ function handleLogoUpload(event){
     document.getElementById('cfg-logo-placeholder').style.display='none';
   };r.readAsDataURL(file);
 }
-async function saveCfg(){
+async function toggleCupon(on, silent){
+  _cfg.cupones=on;
+  document.getElementById('cfg-cupon-on').classList.toggle('on', on);
+  document.getElementById('cfg-cupon-off').classList.toggle('on', !on);
+  if(!silent) saveCfg();
+}
+
+function saveCfg(){
   const nu=gv('cfg-admin-user').trim(),np=gv('cfg-admin-pass');
   const data={
     name:gv('cfg-name'),envio:parseInt(gv('cfg-envio'))||0,alias:gv('cfg-alias'),mp:gv('cfg-mp'),
@@ -1232,6 +1244,7 @@ async function saveCfg(){
     txtRetiro:gv('cfg-txt-retiro'),
     whatsapp:gv('cfg-whatsapp'),
     gaId:gv('cfg-ga'),
+    cupones:_cfg.cupones!==false,
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
