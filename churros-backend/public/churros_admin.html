@@ -989,7 +989,7 @@ function renderOrders(){
         ${o.status==='ready'?`<button class="btn-sm btn-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
         <button class="btn-sm btn-del" onclick="deleteOrder(${o.id})">✕</button>
         ${o.payment==='transferencia'?`<button class="comp-badge ${o.comprobante?'':'pending'}" onclick="verComprobante(${o.id})">${o.comprobante?'📎 Ver comprobante':'⏳ Sin comprobante'}</button>`:''}
-        ${o.phone&&_cfg.whatsapp?`<a class="wa-btn" href="${waOrderLink(o)||'#'}" target="_blank">💬 Confirmar por WA</a>`:''}
+        ${o.phone?`<a class="wa-btn" href="${waOrderLink(o)||'#'}" target="_blank">💬 Confirmar pedido</a>`:''}
         ${o.phone&&o.delivery==='delivery'&&o.status!=='done'?`<a class="wa-btn" href="${waEnCaminoLink(o)||'#'}" target="_blank" style="background:#1a6b3c;">🛵 En camino</a>`:''}
       </div>
     </div>`;
@@ -1782,24 +1782,30 @@ function waEnCaminoLink(o){
 
 function waOrderLink(o){
   var cfg=_cfg;
-  var wa=cfg.whatsapp||'';
-  if(!wa)return null;
   var nombre=o.customer.split(' ')[0];
-  var itemLines=(o.items||[]).map(function(it){
-    var prod=_products.find(function(p){return String(p.id)===String(it.id)||p.name===it.name;});
-    var desc=prod&&prod.desc?' - '+prod.desc:'';
-    return it.qty+'x '+it.name+desc+' ('+fmt(it.price*it.qty)+')';
-  }).join(String.fromCharCode(10));
-  var entrega=o.delivery==='delivery'
-    ?'Envio a domicilio'+(o.address?String.fromCharCode(10)+'Direccion: '+o.address:'')+(o.gps?String.fromCharCode(10)+'Ubicacion: https://maps.google.com/?q='+o.gps:'')
-    :'Retiro en local - Malvinas Argentinas 297';
-  var slot=o.slot?String.fromCharCode(10)+'Horario: '+o.slot:'';
-  var pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia (alias: '+(cfg.alias||'churros.local')+')':'Mercado Pago';
-  var estado={new:'Confirmado',prep:'En preparacion',ready:'Listo para '+(o.delivery==='delivery'?'enviar':'retirar'),done:'Entregado'}[o.status]||'Confirmado';
   var nl=String.fromCharCode(10);
-  var msg='Hola '+nombre+'! Churros La Esquina'+nl+nl+'Estado: '+estado+nl+'Pedido #'+o.id+':'+nl+itemLines+nl+nl+entrega+slot+nl+'Pago: '+pago+nl+'Total: '+fmt(o.total)+nl+nl+'Gracias por elegirnos!';
-  var phone=o.phone?o.phone.replace(/[^0-9]/g,''):wa;
-  return 'https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
+  var itemLines=o.items.map(function(it){
+    return '- '+it.qty+'x '+it.name;
+  }).join(nl);
+  var entregaTxt=o.delivery==='delivery'
+    ?'Te lo entregamos en tu domicilio'+(o.slot?' en el horario '+o.slot:'')+'.'
+    :'Lo podes retirar en Malvinas Argentinas 297'+(o.slot?' en el horario '+o.slot:'')+'.';
+  var pagoTxt=o.payment==='transferencia'
+    ?nl+'Si aun no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
+    :'';
+  var msg='Hola '+nombre+'! \ud83d\udc4b'+nl+nl
+    +'Tu pedido en Churros La Esquina fue confirmado \u2705'+nl+nl
+    +'Detalle:'+nl+itemLines+nl+nl
+    +'Total: '+fmt(o.total)+nl
+    +(o.payment==='transferencia'?'Transferi al alias: '+(cfg.alias||'churros.local')+nl:'')
+    +(o.payment==='mercadopago'?'Pago por Mercado Pago'+nl:'')
+    +(o.payment==='efectivo'?'Pago en efectivo al '+(o.delivery==='delivery'?'recibir':'retirar')+nl:'')
+    +nl+entregaTxt
+    +pagoTxt+nl+nl
+    +'Gracias por elegirnos!';
+  var phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
+  if(!phone)return null;
+  return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
 }
 </script>
 </body>
