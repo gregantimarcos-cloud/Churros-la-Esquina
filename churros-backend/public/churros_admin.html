@@ -1771,10 +1771,10 @@ function waEnCaminoLink(o){
   var nombre=o.customer.split(' ')[0];
   var nl=String.fromCharCode(10);
   var horario=o.slot?' en el horario '+o.slot:'';
-  var msg='¡Hola '+nombre+'! 👋'+nl+nl
-    +'Tu pedido de Churros La Esquina ya está en camino'+horario+'. 🛵'+nl+nl
-    +'¡Preparate para recibirlo! En breve llegamos a tu puerta. 🥐'+nl+nl
-    +'¡Gracias por elegirnos! 🙌';
+  var msg='Hola '+nombre+'!'+nl+nl
+    +'Tu pedido de Churros La Esquina ya esta en camino'+horario+'.'+nl+nl
+    +'Preparate para recibirlo, en breve llegamos a tu puerta.'+nl+nl
+    +'Gracias por elegirnos!';
   var phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
   if(!phone)return null;
   return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
@@ -1785,27 +1785,27 @@ function waOrderLink(o){
   var nombre=o.customer.split(' ')[0];
   var nl=String.fromCharCode(10);
   var itemLines=o.items.map(function(it){
-    return '• '+it.qty+'x '+it.name;
+    return '  - '+it.qty+'x '+it.name;
   }).join(nl);
   var entregaTxt=o.delivery==='delivery'
-    ?'⏰ Te lo entregamos en tu domicilio'+(o.slot?' en el horario '+o.slot:'')+'.'
-    :'⏰ Lo podés retirar en Malvinas Argentinas 297'+(o.slot?' en el horario '+o.slot:'')+'.';
+    ?'Te lo entregamos en tu domicilio'+(o.slot?' en el horario '+o.slot:'')+'.'
+    :'Lo podes retirar en Malvinas Argentinas 297'+(o.slot?' en el horario '+o.slot:'')+'.';
   var pagoTxt='';
   if(o.payment==='transferencia'){
-    pagoTxt='📲 Transferí al alias: '+(cfg.alias||'churros.local')+nl
-      +'Si aún no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.';
+    pagoTxt='Alias de transferencia: '+(cfg.alias||'churros.local')+nl
+      +'Si aun no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.';
   } else if(o.payment==='mercadopago'){
-    pagoTxt='💳 Pago acreditado por Mercado Pago.';
+    pagoTxt='Pago acreditado por Mercado Pago.';
   } else {
-    pagoTxt='💵 Pago en efectivo al '+(o.delivery==='delivery'?'recibir':'retirar')+'.';
+    pagoTxt='Pago en efectivo al '+(o.delivery==='delivery'?'recibir':'retirar')+'.';
   }
-  var msg='¡Hola '+nombre+'! 👋'+nl+nl
-    +'Tu pedido en Churros La Esquina fue confirmado ✅'+nl+nl
-    +'🛒 Detalle:'+nl+itemLines+nl+nl
-    +'💰 Total: '+fmt(o.total)+nl
+  var msg='Hola '+nombre+'!'+nl+nl
+    +'Tu pedido en Churros La Esquina fue confirmado.'+nl+nl
+    +'Detalle:'+nl+itemLines+nl+nl
+    +'Total: '+fmt(o.total)+nl
     +pagoTxt+nl+nl
     +entregaTxt+nl+nl
-    +'¡Gracias por elegirnos! 🙌';
+    +'Gracias por elegirnos!';
   var phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
   if(!phone)return null;
   return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
