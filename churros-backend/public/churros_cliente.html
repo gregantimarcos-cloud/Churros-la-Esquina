@@ -958,7 +958,7 @@ async function confirmOrder(){
   const pagoExtra=payment==='transferencia'
     ?nl+nl+'Si aun no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
     :'';
-  const pagoTxt=payment==='transferencia'
+  const confirmPagoTxt=payment==='transferencia'
     ?'Alias de transferencia: '+(cfg.alias||'churros.local')+nl+pagoExtra.trim()
     :payment==='mercadopago'?'Pago por Mercado Pago'
     :'Pago en efectivo al '+(delivery==='delivery'?'recibir':'retirar');
@@ -969,7 +969,7 @@ async function confirmOrder(){
       .replace(/{total}/g, fmt(totalFinal))
       .replace(/{alias}/g, cfg.alias||'churros.local')
       .replace(/{horario}/g, entregaTxt)
-      .replace(/{pago}/g, pagoTxt);
+      .replace(/{pago}/g, confirmPagoTxt);
   } else {
     msg='Hola '+nombre+'!'+nl+nl
       +'Tu pedido en Churros La Esquina fue confirmado.'+nl+nl
