@@ -351,6 +351,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <input class="finput field-mb" id="cfg-whatsapp" placeholder="5493364123456" type="tel">
         <label class="flabel">Google Analytics ID <small>(ej: G-XXXXXXXXXX — dejá vacío si no lo tenés)</small></label>
         <input class="finput field-mb" id="cfg-ga" placeholder="G-XXXXXXXXXX">
+        <label class="flabel">Mensaje de confirmación en pantalla <small>(variables: {nombre} {detalle} {total} {alias} {horario} {pago})</small></label>
+        <textarea class="ftextarea field-mb" id="cfg-confirm-template" rows="7" placeholder="Hola {nombre}!&#10;&#10;Tu pedido fue confirmado.&#10;&#10;Detalle:&#10;{detalle}&#10;&#10;Total: {total}&#10;{pago}&#10;&#10;{horario}&#10;&#10;Gracias por elegirnos!"></textarea>
         <label class="flabel">Plantilla mensaje WhatsApp <small>(variables: {nombre} {detalle} {total} {alias} {horario} {pago})</small></label>
         <textarea class="ftextarea field-mb" id="cfg-wa-template" rows="7" placeholder="Hola {nombre}!&#10;&#10;Tu pedido fue confirmado.&#10;&#10;Detalle:&#10;{detalle}&#10;&#10;Total: {total}&#10;{pago}&#10;&#10;{horario}&#10;&#10;Gracias por elegirnos!"></textarea>
         <label class="flabel">Cupones de descuento</label>
@@ -1248,6 +1250,7 @@ async function saveCfg(){
     gaId:gv('cfg-ga'),
     cupones:_cfg.cupones!==false,
     waTemplate:gv('cfg-wa-template'),
+    confirmTemplate:gv('cfg-confirm-template'),
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
