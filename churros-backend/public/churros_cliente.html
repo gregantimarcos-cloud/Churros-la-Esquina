@@ -954,20 +954,20 @@ async function confirmOrder(){
     :`El pago es en efectivo por ${fmt(totalFinal)} al momento del ${delivery==='delivery'?'envío':'retiro'}.`;
 
   const nl='\n';
-  const itemsList=items.map(it=>'• '+it.qty+'x '+it.name).join(nl);
+  const itemsList=items.map(it=>'  - '+it.qty+'x '+it.name).join(nl);
   const pagoExtra=payment==='transferencia'
-    ?nl+nl+'Si aún no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
+    ?nl+nl+'Si aun no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
     :'';
-  msg='¡Hola '+nombre+'! 👋'+nl+nl
-    +'Tu pedido en Churros La Esquina fue confirmado ✅'+nl+nl
-    +'🛒 Detalle:'+nl+itemsList+nl+nl
-    +'💰 Total: '+fmt(totalFinal)+nl
-    +(payment==='transferencia'?'📲 Transferí al alias: '+(cfg.alias||'churros.local')+nl:'')
-    +(payment==='mercadopago'?'💳 Pago por Mercado Pago'+nl:'')
-    +(payment==='efectivo'?'💵 Pago en efectivo al '+(delivery==='delivery'?'recibir':'retirar')+nl:'')
-    +nl+'⏰ '+entregaTxt
+  msg='Hola '+nombre+'!'+nl+nl
+    +'Tu pedido en Churros La Esquina fue confirmado.'+nl+nl
+    +'Detalle:'+nl+itemsList+nl+nl
+    +'Total: '+fmt(totalFinal)+nl
+    +(payment==='transferencia'?'Alias de transferencia: '+(cfg.alias||'churros.local')+nl:'')
+    +(payment==='mercadopago'?'Pago por Mercado Pago'+nl:'')
+    +(payment==='efectivo'?'Pago en efectivo al '+(delivery==='delivery'?'recibir':'retirar')+nl:'')
+    +nl+entregaTxt
     +pagoExtra+nl+nl
-    +'¡Gracias por elegirnos! 🙌';
+    +'Gracias por elegirnos!';
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
   document.getElementById('suc-msg').textContent=msg;

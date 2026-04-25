@@ -351,6 +351,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <input class="finput field-mb" id="cfg-whatsapp" placeholder="5493364123456" type="tel">
         <label class="flabel">Google Analytics ID <small>(ej: G-XXXXXXXXXX — dejá vacío si no lo tenés)</small></label>
         <input class="finput field-mb" id="cfg-ga" placeholder="G-XXXXXXXXXX">
+        <label class="flabel">Plantilla mensaje WhatsApp <small>(variables: {nombre} {detalle} {total} {alias} {horario} {pago})</small></label>
+        <textarea class="ftextarea field-mb" id="cfg-wa-template" rows="7" placeholder="Hola {nombre}!&#10;&#10;Tu pedido fue confirmado.&#10;&#10;Detalle:&#10;{detalle}&#10;&#10;Total: {total}&#10;{pago}&#10;&#10;{horario}&#10;&#10;Gracias por elegirnos!"></textarea>
         <label class="flabel">Cupones de descuento</label>
         <div class="opts2" style="margin-bottom:12px">
           <div class="opt" id="cfg-cupon-on" onclick="toggleCupon(true)"><div class="oi">✅</div><div class="ol">Activados</div></div>
@@ -1245,6 +1247,7 @@ async function saveCfg(){
     whatsapp:gv('cfg-whatsapp'),
     gaId:gv('cfg-ga'),
     cupones:_cfg.cupones!==false,
+    waTemplate:gv('cfg-wa-template'),
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
@@ -1799,13 +1802,24 @@ function waOrderLink(o){
   } else {
     pagoTxt='Pago en efectivo al '+(o.delivery==='delivery'?'recibir':'retirar')+'.';
   }
-  var msg='Hola '+nombre+'!'+nl+nl
-    +'Tu pedido en Churros La Esquina fue confirmado.'+nl+nl
-    +'Detalle:'+nl+itemLines+nl+nl
-    +'Total: '+fmt(o.total)+nl
-    +pagoTxt+nl+nl
-    +entregaTxt+nl+nl
-    +'Gracias por elegirnos!';
+  var msg;
+  if(cfg.waTemplate&&cfg.waTemplate.trim()){
+    msg=cfg.waTemplate
+      .replace(/{nombre}/g, nombre)
+      .replace(/{detalle}/g, itemLines)
+      .replace(/{total}/g, fmt(o.total))
+      .replace(/{alias}/g, cfg.alias||'churros.local')
+      .replace(/{horario}/g, o.slot||'a confirmar')
+      .replace(/{pago}/g, pagoTxt);
+  } else {
+    msg='Hola '+nombre+'!'+nl+nl
+      +'Tu pedido en Churros La Esquina fue confirmado.'+nl+nl
+      +'Detalle:'+nl+itemLines+nl+nl
+      +'Total: '+fmt(o.total)+nl
+      +pagoTxt+nl+nl
+      +entregaTxt+nl+nl
+      +'Gracias por elegirnos!';
+  }
   var phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
   if(!phone)return null;
   return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
