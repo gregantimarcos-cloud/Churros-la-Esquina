@@ -1770,12 +1770,12 @@ async function saveManualOrder(){
 function waEnCaminoLink(o){
   var nombre=o.customer.split(' ')[0];
   var nl=String.fromCharCode(10);
-  var horario=o.slot?' para el horario '+o.slot:'';
-  var msg='Hola '+nombre+'! 👋'+nl+nl
-    +'Tu pedido en Churros La Esquina ya está en camino'+horario+'. 🛵🥐'+nl+nl
-    +'¡Preparate para recibirlo! En breve llegamos a tu puerta.'+nl+nl
-    +'Cualquier consulta respondé este mensaje. ¡Gracias por elegirnos! 🙌';
-  var phone=o.phone?o.phone.replace(/[^0-9]/g,''):(_cfg.whatsapp||'');
+  var horario=o.slot?' en el horario '+o.slot:'';
+  var msg='¡Hola '+nombre+'! 👋'+nl+nl
+    +'Tu pedido de Churros La Esquina ya está en camino'+horario+'. 🛵'+nl+nl
+    +'¡Preparate para recibirlo! En breve llegamos a tu puerta. 🥐'+nl+nl
+    +'¡Gracias por elegirnos! 🙌';
+  var phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
   if(!phone)return null;
   return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
 }
@@ -1785,24 +1785,27 @@ function waOrderLink(o){
   var nombre=o.customer.split(' ')[0];
   var nl=String.fromCharCode(10);
   var itemLines=o.items.map(function(it){
-    return '- '+it.qty+'x '+it.name;
+    return '• '+it.qty+'x '+it.name;
   }).join(nl);
   var entregaTxt=o.delivery==='delivery'
-    ?'Te lo entregamos en tu domicilio'+(o.slot?' en el horario '+o.slot:'')+'.'
-    :'Lo podes retirar en Malvinas Argentinas 297'+(o.slot?' en el horario '+o.slot:'')+'.';
-  var pagoTxt=o.payment==='transferencia'
-    ?nl+'Si aun no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
-    :'';
-  var msg='Hola '+nombre+'! \ud83d\udc4b'+nl+nl
-    +'Tu pedido en Churros La Esquina fue confirmado \u2705'+nl+nl
-    +'Detalle:'+nl+itemLines+nl+nl
-    +'Total: '+fmt(o.total)+nl
-    +(o.payment==='transferencia'?'Transferi al alias: '+(cfg.alias||'churros.local')+nl:'')
-    +(o.payment==='mercadopago'?'Pago por Mercado Pago'+nl:'')
-    +(o.payment==='efectivo'?'Pago en efectivo al '+(o.delivery==='delivery'?'recibir':'retirar')+nl:'')
-    +nl+entregaTxt
+    ?'⏰ Te lo entregamos en tu domicilio'+(o.slot?' en el horario '+o.slot:'')+'.'
+    :'⏰ Lo podés retirar en Malvinas Argentinas 297'+(o.slot?' en el horario '+o.slot:'')+'.';
+  var pagoTxt='';
+  if(o.payment==='transferencia'){
+    pagoTxt='📲 Transferí al alias: '+(cfg.alias||'churros.local')+nl
+      +'Si aún no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.';
+  } else if(o.payment==='mercadopago'){
+    pagoTxt='💳 Pago acreditado por Mercado Pago.';
+  } else {
+    pagoTxt='💵 Pago en efectivo al '+(o.delivery==='delivery'?'recibir':'retirar')+'.';
+  }
+  var msg='¡Hola '+nombre+'! 👋'+nl+nl
+    +'Tu pedido en Churros La Esquina fue confirmado ✅'+nl+nl
+    +'🛒 Detalle:'+nl+itemLines+nl+nl
+    +'💰 Total: '+fmt(o.total)+nl
     +pagoTxt+nl+nl
-    +'Gracias por elegirnos!';
+    +entregaTxt+nl+nl
+    +'¡Gracias por elegirnos! 🙌';
   var phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
   if(!phone)return null;
   return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);

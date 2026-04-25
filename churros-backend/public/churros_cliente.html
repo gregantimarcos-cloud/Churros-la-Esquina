@@ -898,7 +898,7 @@ async function confirmOrder(){
     const msg=tpl(cfg.txtMsgMP||'Pedido #{id}{horario}',{id:orderId,horario});
     document.getElementById('suc-icon').textContent='💳';
     document.getElementById('suc-title').textContent='¡Redirigiendo a Mercado Pago!';
-    document.getElementById('suc-msg').textContent=msg;
+    document.getElementById('suc-msg').innerHTML=msg.replace(/\n/g,'<br>');
     document.getElementById('suc-mp-box').style.display='block';
     document.getElementById('suc-mp-amount').textContent=fmt(total);
     document.getElementById('suc-mp-btn').onclick=()=>window.open(mpUrl,'_blank');
@@ -954,20 +954,20 @@ async function confirmOrder(){
     :`El pago es en efectivo por ${fmt(totalFinal)} al momento del ${delivery==='delivery'?'envío':'retiro'}.`;
 
   const nl='\n';
-  const itemsList=items.map(it=>'-  '+it.qty+'x '+it.name).join(nl);
+  const itemsList=items.map(it=>'• '+it.qty+'x '+it.name).join(nl);
   const pagoExtra=payment==='transferencia'
-    ?nl+'Si aún no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
+    ?nl+nl+'Si aún no lo compartiste, aguardamos tu comprobante para empezar a prepararlo.'
     :'';
-  msg='\u00a1Hola '+nombre+'! \ud83d\udc4b'+nl+nl
-    +'Tu pedido en Churros La Esquina fue confirmado \u2705'+nl+nl
-    +'Detalle:'+nl+itemsList+nl+nl
-    +'Total: '+fmt(totalFinal)+nl
-    +(payment==='transferencia'?'Transferí al alias: '+(cfg.alias||'churros.local')+nl:'')
-    +(payment==='mercadopago'?'Pago por Mercado Pago'+nl:'')
-    +(payment==='efectivo'?'Pago en efectivo al '+(delivery==='delivery'?'recibir':'retirar')+nl:'')
-    +nl+entregaTxt
+  msg='¡Hola '+nombre+'! 👋'+nl+nl
+    +'Tu pedido en Churros La Esquina fue confirmado ✅'+nl+nl
+    +'🛒 Detalle:'+nl+itemsList+nl+nl
+    +'💰 Total: '+fmt(totalFinal)+nl
+    +(payment==='transferencia'?'📲 Transferí al alias: '+(cfg.alias||'churros.local')+nl:'')
+    +(payment==='mercadopago'?'💳 Pago por Mercado Pago'+nl:'')
+    +(payment==='efectivo'?'💵 Pago en efectivo al '+(delivery==='delivery'?'recibir':'retirar')+nl:'')
+    +nl+'⏰ '+entregaTxt
     +pagoExtra+nl+nl
-    +'\u00a1Gracias por elegirnos!';
+    +'¡Gracias por elegirnos! 🙌';
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
   document.getElementById('suc-msg').textContent=msg;
