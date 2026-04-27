@@ -252,7 +252,7 @@ const API = '';  // relative — works on Railway and locally if served by serve
 // ── STATE ──────────────────────────────────────────────────────────────
 let cfg={}, products=[], slots=[];
 let cart={}, delivery='pickup', payment='efectivo', geoLocation=null, selectedSlot='', activeTab='menu';
-let triedSubmit=false, _comprobanteFile=null, _pendingOrderId=null;
+let triedSubmit=false, _comprobanteFile=null, _pendingOrderId=null, _selectedDate=null;
 let _cuponAplicado=null; // {codigo, tipo, valor}
 
 // Google Analytics — se carga dinámicamente si hay GA ID configurado

@@ -975,6 +975,10 @@ async function loadStats(){
       </table>`:'<div class="empty-state">Sin datos aún.</div>';
   }
 
+  // Payment chart
+  const pmt={efectivo:0,transferencia:0,mercadopago:0};
+  orders.forEach(o=>{if(pmt[o.payment]!==undefined)pmt[o.payment]++;else pmt.efectivo++;});
+  const pt=orders.length||1;
   document.getElementById('payment-chart').innerHTML=`
     <div class="chart-bar-wrap"><div class="chart-label"><span>💵 Efectivo</span><span>${pmt.efectivo} (${Math.round(pmt.efectivo/pt*100)}%)</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(pmt.efectivo/pt*100)}%"></div></div></div>
     <div class="chart-bar-wrap"><div class="chart-label"><span>📲 Transferencia</span><span>${pmt.transferencia} (${Math.round(pmt.transferencia/pt*100)}%)</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(pmt.transferencia/pt*100)}%"></div></div></div>
