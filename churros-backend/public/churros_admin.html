@@ -865,14 +865,15 @@ function filterOrdersByDate(orders){
 }
 
 async function loadStats(){
-  const orders=await apiFetch('/api/orders')||[];
-  _orders=orders;
-  const done=orders.filter(o=>o.status==='done');
+  const allOrders=await apiFetch('/api/orders')||[];
+  _orders=allOrders;
+  const orders=filterOrdersByDate(allOrders);
+  const done=orders.filter(o=>o.status==='done'||o.status==='ready'||o.status==='prep'||o.status==='new');
   const today=new Date().toDateString();
-  const todayOrders=orders.filter(o=>new Date(o.ts).toDateString()===today);
+  const todayOrders=allOrders.filter(o=>new Date(o.ts).toDateString()===today);
   const todayDone=todayOrders.filter(o=>o.status==='done');
   const todayIncome=todayDone.reduce((a,o)=>a+o.total,0);
-  const totalIncome=done.reduce((a,o)=>a+o.total,0);
+  const totalIncome=allOrders.filter(o=>o.status==='done'||o.status==='ready'||o.status==='prep'||o.status==='new').reduce((a,o)=>a+o.total,0);
   const pending=orders.filter(o=>o.status!=='done').length;
   const ticketProm=done.length?Math.round(totalIncome/done.length):0;
   const todayTicket=todayDone.length?Math.round(todayIncome/todayDone.length):0;

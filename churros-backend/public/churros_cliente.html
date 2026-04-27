@@ -331,7 +331,9 @@ async function init(){
   if(!cfg.open){
     const b=document.getElementById('closed-banner');
     b.style.display='block';
-    b.textContent=cfg.txtBannerCerrado||defTxts.txtBannerCerrado;
+    b.textContent=cfg.anticipado
+      ?(cfg.txtBannerCerrado||defTxts.txtBannerCerrado)+' — Podés hacer tu pedido con anticipación'
+      :(cfg.txtBannerCerrado||defTxts.txtBannerCerrado);
   }
 
   renderMenu();
@@ -508,7 +510,7 @@ function renderMenu(){
     return;
   }
   const bycat={};
-  products.forEach(p=>{bycat[p.cat]=bycat[p.cat]||[];bycat[p.cat].push(p);});
+  products.filter(p=>!p.hidden).forEach(p=>{bycat[p.cat]=bycat[p.cat]||[];bycat[p.cat].push(p);});
   let html='<div class="ornament">· · · ✦ · · ·</div>';
   const sinStockTxt=cfg.txtSinStock||'Sin stock';
   Object.entries(bycat).forEach(([cat,prods])=>{
@@ -857,7 +859,7 @@ function tryConfirm(){
 }
 
 async function confirmOrder(){
-  if(!cfg.open){alert('El local está cerrado.');return;}
+  if(!cfg.open&&!cfg.anticipado){alert('El local está cerrado. Podés hacer tu pedido cuando estemos abiertos.');return;}
   const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
   const ship=delivery==='delivery'?(cfg.envio||0):0;
