@@ -556,7 +556,10 @@ function getAvailableSlots(deliveryType){
 function slotStatus(s){
   // Returns: 'ok', 'pasado', 'pronto', 'full'
   if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
-  const buffer=cfg.slotBuffer||15; // minutes before close to block
+  // If ordering for a future date, all slots are available
+  const today=new Date().toISOString().slice(0,10);
+  if(_selectedDate&&_selectedDate>today)return'ok';
+  const buffer=cfg.slotBuffer||15;
   const now=new Date();
   const [toH,toM]=s.to.split(':').map(Number);
   const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
@@ -564,7 +567,7 @@ function slotStatus(s){
   const slotStart=new Date();slotStart.setHours(fromH,fromM,0,0);
   const msBuffer=buffer*60*1000;
   if(now>=slotEnd)return'pasado';
-  if(now>=new Date(slotEnd-msBuffer))return'pronto'; // less than buffer minutes left
+  if(now>=new Date(slotEnd-msBuffer))return'pronto';
   return'ok';
 }
 
