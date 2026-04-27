@@ -888,47 +888,6 @@ function filterOrdersByDate(orders){
   });
 }
 
-let _statFilter='all';
-let _statFrom=null,_statTo=null;
-
-function setStatFilter(f){
-  _statFilter=f;
-  ['all','today','week','weekend','month','custom'].forEach(id=>{
-    const b=document.getElementById('sf-'+id);
-    if(b)b.classList.toggle('sf-active',id===f);
-  });
-  const r=document.getElementById('sf-custom-range');
-  if(r)r.style.display=f==='custom'?'flex':'none';
-  if(f!=='custom')loadStats();
-}
-
-function applyCustomFilter(){
-  _statFrom=document.getElementById('sf-from').value;
-  _statTo=document.getElementById('sf-to').value;
-  if(_statFrom&&_statTo)loadStats();
-}
-
-function filterOrdersByDate(orders){
-  const now=new Date();
-  const today=now.toISOString().slice(0,10);
-  const presFilter=document.getElementById('sf-pres')?document.getElementById('sf-pres').value:'';
-  return orders.filter(o=>{
-    if(presFilter&&o.items){
-      const has=o.items.some(it=>it.name&&it.name.includes(presFilter));
-      if(!has)return false;
-    }
-    if(_statFilter==='all')return true;
-    const d=new Date(o.ts||o.created_at);
-    const ds=d.toISOString().slice(0,10);
-    const dow=d.getDay();
-    if(_statFilter==='today')return ds===today;
-    if(_statFilter==='week'){const w=new Date(now);w.setDate(now.getDate()-7);return d>=w;}
-    if(_statFilter==='weekend')return dow===0||dow===6;
-    if(_statFilter==='month')return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
-    if(_statFilter==='custom'&&_statFrom&&_statTo)return ds>=_statFrom&&ds<=_statTo;
-    return true;
-  });
-}
 
 async function loadStats(){
   const allOrders=await apiFetch('/api/orders')||[];
