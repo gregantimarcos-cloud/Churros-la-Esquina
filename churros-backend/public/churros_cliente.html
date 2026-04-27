@@ -608,20 +608,32 @@ function renderCart(){
   const total=sub+ship;
   // Advance order date selector
   const anticipado=cfg.anticipado===true;
-  const anticipadoDias=parseInt(cfg.anticipadoDias)||7;
+  const anticipadoDias=parseInt(cfg.anticipadoDias)||14;
+  const diasDisponibles=cfg.diasDisponibles||[5,6,0];
   let dateOptions='';
+  let availableDates=[];
   if(anticipado){
     const today=new Date();
-    for(let i=0;i<anticipadoDias;i++){
+    // Find next N available dates based on diasDisponibles
+    for(let i=0;i<anticipadoDias&&availableDates.length<14;i++){
       const d=new Date(today);
       d.setDate(today.getDate()+i);
-      const ds=d.toISOString().slice(0,10);
-      const label=i===0?'Hoy':i===1?'Mañana':d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-      const sel=(_selectedDate||ds)===ds?'selected':'';
-      dateOptions+=`<option value="${ds}" ${sel}>${label}</option>`;
+      if(diasDisponibles.includes(d.getDay())){
+        availableDates.push(d);
+      }
     }
+    availableDates.forEach((d,idx)=>{
+      const ds=d.toISOString().slice(0,10);
+      const today2=new Date();
+      const diffDays=Math.round((d-today2)/(1000*60*60*24));
+      const label=diffDays===0?'Hoy':diffDays===1?'Mañana':d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+      // Auto-select first available date if none selected
+      if(!_selectedDate&&idx===0) _selectedDate=ds;
+      const sel=_selectedDate===ds?'selected':'';
+      dateOptions+=`<option value="${ds}" ${sel}>${label}</option>`;
+    });
   }
-  const dateHtml=anticipado?`<div style="height:8px"></div><label class="flabel">Fecha de entrega</label>
+  const dateHtml=anticipado&&availableDates.length?`<div style="height:8px"></div><label class="flabel">¿Para qué día querés tu pedido?</label>
     <select class="finput" id="date-select" onchange="selectDate(this.value)" style="margin-top:4px">
       ${dateOptions}
     </select>`:'';
