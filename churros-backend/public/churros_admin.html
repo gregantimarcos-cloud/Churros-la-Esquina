@@ -207,6 +207,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 /* WA */
 .wa-btn{display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-family:'Crimson Text',serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;}
 .wa-btn:hover{background:#128c7e;}
+.sf-btn{background:var(--cream-dark);border:1px solid var(--kraft);border-radius:7px;padding:5px 10px;cursor:pointer;font-family:'Playfair Display',serif;font-size:12px;color:var(--brown);transition:all 0.2s}
+.sf-btn:hover{background:var(--kraft)}
+.sf-active{background:var(--brown)!important;color:var(--kraft)!important;border-color:var(--brown)!important}
 </style>
 </head>
 <body>
@@ -392,6 +395,23 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <label class="flabel">Mensaje · Efectivo</label><textarea class="ftextarea field-mb" id="cfg-txt-msg-efectivo"></textarea>
         <label class="flabel">Mensaje · Transferencia</label><textarea class="ftextarea field-mb" id="cfg-txt-msg-transferencia"></textarea>
         <label class="flabel">Mensaje · Mercado Pago</label><textarea class="ftextarea" id="cfg-txt-msg-mp"></textarea>
+      </div>
+      <label class="flabel" style="margin-top:12px">Métodos de pago habilitados</label>
+      <div class="opts2" style="margin-bottom:12px">
+        <div class="opt" id="cfg-pay-efectivo" onclick="togglePago('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>
+        <div class="opt" id="cfg-pay-transferencia" onclick="togglePago('transferencia')"><div class="oi">📲</div><div class="ol">Transferencia</div></div>
+        <div class="opt" id="cfg-pay-mp" onclick="togglePago('mp')"><div class="oi">💳</div><div class="ol">Mercado Pago</div></div>
+      </div>
+      <label class="flabel">Pedidos con anticipación</label>
+      <div style="background:var(--cream-dark);border-radius:9px;padding:10px;margin-bottom:12px">
+        <div class="opts2" style="margin-bottom:8px">
+          <div class="opt" id="cfg-anticipado-off" onclick="toggleAnticipado(false)"><div class="oi">❌</div><div class="ol">Solo fecha actual</div></div>
+          <div class="opt on" id="cfg-anticipado-on" onclick="toggleAnticipado(true)"><div class="oi">📅</div><div class="ol">Con anticipación</div></div>
+        </div>
+        <div id="cfg-anticipado-box" style="display:none">
+          <label class="flabel">Días máximos de anticipación</label>
+          <input class="finput" id="cfg-anticipado-dias" type="number" min="1" max="30" value="7" style="width:80px">
+        </div>
       </div>
       <button class="savebtn" onclick="saveCfg()">Guardar toda la configuración</button>
       <div class="ornament" style="margin-top:16px">· · · ✦ · · ·</div>
@@ -793,6 +813,57 @@ function showPanel(id){
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────
+// ── STATS FILTERS ─────────────────────────────────────────────────
+let _statFilter='all';
+let _statFrom=null, _statTo=null;
+
+function setStatFilter(f){
+  _statFilter=f;
+  ['all','today','week','weekend','month','custom'].forEach(id=>{
+    const btn=document.getElementById('sf-'+id);
+    if(btn) btn.classList.toggle('sf-active', id===f);
+  });
+  const range=document.getElementById('sf-custom-range');
+  if(range) range.style.display=f==='custom'?'flex':'none';
+  if(f!=='custom') loadStats();
+}
+
+function applyCustomFilter(){
+  _statFrom=document.getElementById('sf-from').value;
+  _statTo=document.getElementById('sf-to').value;
+  if(_statFrom&&_statTo) loadStats();
+}
+
+function filterOrdersByDate(orders){
+  const now=new Date();
+  const today=now.toISOString().slice(0,10);
+  return orders.filter(o=>{
+    const d=new Date(o.ts||o.created_at);
+    const ds=d.toISOString().slice(0,10);
+    const dow=d.getDay(); // 0=Sun, 6=Sat
+    const presFilter=document.getElementById('sf-pres')?document.getElementById('sf-pres').value:'';
+    // Presentation filter
+    if(presFilter&&o.items){
+      const hasPres=o.items.some(it=>it.name&&it.name.includes(presFilter));
+      if(!hasPres) return false;
+    }
+    if(_statFilter==='all') return true;
+    if(_statFilter==='today') return ds===today;
+    if(_statFilter==='week'){
+      const weekAgo=new Date(now);weekAgo.setDate(now.getDate()-7);
+      return d>=weekAgo;
+    }
+    if(_statFilter==='weekend') return dow===0||dow===6;
+    if(_statFilter==='month'){
+      return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+    }
+    if(_statFilter==='custom'&&_statFrom&&_statTo){
+      return ds>=_statFrom&&ds<=_statTo;
+    }
+    return true;
+  });
+}
+
 async function loadStats(){
   const orders=await apiFetch('/api/orders')||[];
   _orders=orders;
@@ -878,13 +949,6 @@ async function loadStats(){
       </table>`:'<div class="empty-state">Sin datos aún.</div>';
   }
 
-  // ── Recent orders ──
-  const recent=[...orders].reverse().slice(0,5);
-  document.getElementById('recent-orders-list').innerHTML=recent.length?recent.map(o=>`<div class="order-card" style="margin-bottom:8px"><div class="order-header"><span class="order-id">#${o.id}</span><span class="order-name">${o.customer}</span><span class="order-total">${fmt(o.total)}</span><span class="order-badge badge-${o.status}">${statusLabel(o.status)}</span></div><div class="order-delivery">${o.delivery==='delivery'?'🛵 Envío':'🏪 Retiro'}${o.slot?' · ⏰ '+o.slot:''}</div></div>`).join(''):'<div class="empty-state">Sin pedidos aún.</div>';
-
-  // ── Payment chart ──
-  const pmt={efectivo:0,transferencia:0,mercadopago:0};done.forEach(o=>{if(o.payment&&pmt[o.payment]!==undefined)pmt[o.payment]++;});
-  const pt=done.length||1;
   document.getElementById('payment-chart').innerHTML=`
     <div class="chart-bar-wrap"><div class="chart-label"><span>💵 Efectivo</span><span>${pmt.efectivo} (${Math.round(pmt.efectivo/pt*100)}%)</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(pmt.efectivo/pt*100)}%"></div></div></div>
     <div class="chart-bar-wrap"><div class="chart-label"><span>📲 Transferencia</span><span>${pmt.transferencia} (${Math.round(pmt.transferencia/pt*100)}%)</span></div><div class="chart-bar"><div class="chart-fill" style="width:${Math.round(pmt.transferencia/pt*100)}%"></div></div></div>
@@ -1053,7 +1117,9 @@ function renderProductList(){
     div.className='ap-item';
     div.dataset.id=String(p.id);
     div.draggable=true;
-    div.innerHTML=`<span class="drag-handle">☰</span><div class="ap-thumb">${p.img?`<img src="${p.img}" alt="">`:' 📷 '}</div><div class="ap-inf"><div class="ap-name">${p.name}${varBadge}</div><div class="ap-meta">${p.cat} · ${fmt(p.price)}</div>${sl}</div><button class="edit-btn" onclick="openModal(${p.id})">Editar</button>`;
+    const isHidden=p.hidden===true;
+    div.style.opacity=isHidden?'0.5':'1';
+    div.innerHTML=`<span class="drag-handle">☰</span><div class="ap-thumb">${p.img?`<img src="${p.img}" alt="">`:' 📷 '}</div><div class="ap-inf"><div class="ap-name">${p.name}${varBadge}${isHidden?'<span style="font-size:11px;color:#b91c1c;margin-left:6px">(oculto)</span>':''}</div><div class="ap-meta">${p.cat} · ${fmt(p.price)}</div>${sl}</div><button class="edit-btn" onclick="toggleProductHidden(${p.id})" style="background:${isHidden?'#dcfce7':'#fee2e2'};color:${isHidden?'#166534':'#b91c1c'};margin-right:4px">${isHidden?'Mostrar':'Ocultar'}</button><button class="edit-btn" onclick="openModal(${p.id})">Editar</button>`;
     // Drag events
     div.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(p.id));div.classList.add('dragging');});
     div.addEventListener('dragend',()=>{div.classList.remove('dragging');document.querySelectorAll('.ap-item').forEach(el=>el.classList.remove('drag-over'));});
@@ -1228,6 +1294,22 @@ function handleLogoUpload(event){
     document.getElementById('cfg-logo-placeholder').style.display='none';
   };r.readAsDataURL(file);
 }
+function togglePago(tipo){
+  if(!_cfg.pagosHabilitados) _cfg.pagosHabilitados={efectivo:true,transferencia:true,mp:true};
+  _cfg.pagosHabilitados[tipo]=!_cfg.pagosHabilitados[tipo];
+  const el=document.getElementById('cfg-pay-'+tipo);
+  if(el) el.classList.toggle('on', _cfg.pagosHabilitados[tipo]);
+  saveCfg();
+}
+
+function toggleAnticipado(on, silent){
+  _cfg.anticipado=on;
+  document.getElementById('cfg-anticipado-on').classList.toggle('on', on);
+  document.getElementById('cfg-anticipado-off').classList.toggle('on', !on);
+  document.getElementById('cfg-anticipado-box').style.display=on?'block':'none';
+  if(!silent) saveCfg();
+}
+
 async function toggleCupon(on, silent){
   _cfg.cupones=on;
   document.getElementById('cfg-cupon-on').classList.toggle('on', on);
@@ -1251,6 +1333,9 @@ async function saveCfg(){
     cupones:_cfg.cupones!==false,
     waTemplate:gv('cfg-wa-template'),
     confirmTemplate:gv('cfg-confirm-template'),
+    pagosHabilitados:_cfg.pagosHabilitados||{efectivo:true,transferencia:true,mp:true},
+    anticipado:_cfg.anticipado||false,
+    anticipadoDias:parseInt(gv('cfg-anticipado-dias'))||7,
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
@@ -1666,6 +1751,14 @@ function eliminarCupon(id){if(!confirm('¿Eliminar este cupón?'))return;saveCup
 // ── WHATSAPP LINK HELPER (for orders) ─────────────────────────────
 // ── MANUAL ORDERS ─────────────────────────────────────────────────
 let _moItems=[]; // items added to manual order
+
+async function toggleProductHidden(id){
+  const p=_products.find(x=>x.id===id||String(x.id)===String(id));
+  if(!p)return;
+  p.hidden=!p.hidden;
+  await apiFetch(`/api/products/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  await loadProducts();
+}
 
 function openManualOrder(){
   _moItems=[];

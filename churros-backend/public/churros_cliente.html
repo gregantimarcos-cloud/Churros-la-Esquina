@@ -604,6 +604,25 @@ function renderCart(){
 
   const ship=delivery==='delivery'?(cfg.envio||0):0;
   const total=sub+ship;
+  // Advance order date selector
+  const anticipado=cfg.anticipado===true;
+  const anticipadoDias=parseInt(cfg.anticipadoDias)||7;
+  let dateOptions='';
+  if(anticipado){
+    const today=new Date();
+    for(let i=0;i<anticipadoDias;i++){
+      const d=new Date(today);
+      d.setDate(today.getDate()+i);
+      const ds=d.toISOString().slice(0,10);
+      const label=i===0?'Hoy':i===1?'Mañana':d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+      const sel=(_selectedDate||ds)===ds?'selected':'';
+      dateOptions+=`<option value="${ds}" ${sel}>${label}</option>`;
+    }
+  }
+  const dateHtml=anticipado?`<div style="height:8px"></div><label class="flabel">Fecha de entrega</label>
+    <select class="finput" id="date-select" onchange="selectDate(this.value)" style="margin-top:4px">
+      ${dateOptions}
+    </select>`:'';
   const availSlots=getAvailableSlots(delivery);
   const availSlotsFiltered=availSlots.filter(s=>slotStatus(s)!=='pasado');
   const slotsHtml=availSlotsFiltered.length
@@ -668,14 +687,15 @@ function renderCart(){
       </div>
       ${retiroInfoHtml}
       ${locHtml}
+      ${dateHtml}
       ${slotsHtml}
     </div>
     <div class="sec-label">Forma de pago</div>
     <div class="fbox" style="margin-bottom:10px">
       <div class="opts3">
-        <div class="opt ${payment==='efectivo'?'on':''}" onclick="setPayment('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>
-        <div class="opt ${payment==='transferencia'?'on':''}" onclick="setPayment('transferencia')"><div class="oi">📲</div><div class="ol">Transfer.</div></div>
-        <div class="opt ${payment==='mercadopago'?'on':''}" onclick="setPayment('mercadopago')"><div class="oi">💳</div><div class="ol">Merc.Pago</div></div>
+        ${(cfg.pagosHabilitados?.efectivo!==false)?`<div class="opt ${payment==='efectivo'?'on':''}" onclick="setPayment('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>`:''}
+        ${(cfg.pagosHabilitados?.transferencia!==false)?`<div class="opt ${payment==='transferencia'?'on':''}" onclick="setPayment('transferencia')"><div class="oi">📲</div><div class="ol">Transfer.</div></div>`:''}
+        ${(cfg.pagosHabilitados?.mp!==false)?`<div class="opt ${payment==='mercadopago'?'on':''}" onclick="setPayment('mercadopago')"><div class="oi">💳</div><div class="ol">Merc.Pago</div></div>`:''}
       </div>
       ${payExtra}
     </div>
@@ -784,6 +804,8 @@ function setDelivery(d){
   const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
   const cup=document.getElementById('f-cupon');if(cup&&savedCupon)cup.value=savedCupon;
 }
+function selectDate(v){_selectedDate=v;renderCart();}
+
 function setPayment(p){
   // Save form state before re-render
   const savedName=getFieldVal('f-name');
@@ -877,7 +899,7 @@ async function confirmOrder(){
     else descuento=Math.min(_cuponAplicado.valor,sub+ship);
   }
   const totalFinal=Math.max(0,total-descuento);
-  const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel};
+  const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:_selectedDate||new Date().toISOString().slice(0,10)};
   gaEvent('purchase',{currency:'ARS',value:totalFinal,items:items.map(i=>({item_name:i.name,quantity:i.qty,price:i.price}))});
 
   let orderId=null;
