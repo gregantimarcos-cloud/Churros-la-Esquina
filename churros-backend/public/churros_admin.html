@@ -429,12 +429,23 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <label class="flabel">Pedidos con anticipación</label>
       <div style="background:var(--cream-dark);border-radius:9px;padding:10px;margin-bottom:12px">
         <div class="opts2" style="margin-bottom:8px">
-          <div class="opt" id="cfg-anticipado-off" onclick="toggleAnticipado(false)"><div class="oi">❌</div><div class="ol">Solo fecha actual</div></div>
-          <div class="opt on" id="cfg-anticipado-on" onclick="toggleAnticipado(true)"><div class="oi">📅</div><div class="ol">Con anticipación</div></div>
+          <div class="opt" id="cfg-anticipado-off" onclick="toggleAnticipado(false)"><div class="oi">❌</div><div class="ol">Desactivado</div></div>
+          <div class="opt on" id="cfg-anticipado-on" onclick="toggleAnticipado(true)"><div class="oi">📅</div><div class="ol">Activado</div></div>
         </div>
         <div id="cfg-anticipado-box" style="display:none">
-          <label class="flabel">Días máximos de anticipación</label>
-          <input class="finput" id="cfg-anticipado-dias" type="number" min="1" max="30" value="7" style="width:80px">
+          <label class="flabel" style="margin-bottom:6px">Días disponibles para pedidos</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            <button onclick="toggleDia(0)" id="dia-0" class="sf-btn">Dom</button>
+            <button onclick="toggleDia(1)" id="dia-1" class="sf-btn">Lun</button>
+            <button onclick="toggleDia(2)" id="dia-2" class="sf-btn">Mar</button>
+            <button onclick="toggleDia(3)" id="dia-3" class="sf-btn">Mié</button>
+            <button onclick="toggleDia(4)" id="dia-4" class="sf-btn">Jue</button>
+            <button onclick="toggleDia(5)" id="dia-5" class="sf-btn">Vie</button>
+            <button onclick="toggleDia(6)" id="dia-6" class="sf-btn">Sáb</button>
+          </div>
+          <label class="flabel">Mostrar pedidos de los próximos (días)</label>
+          <input class="finput" id="cfg-anticipado-dias" type="number" min="1" max="60" value="14" style="width:80px">
+          <div style="font-size:11px;color:var(--brown-light);margin-top:4px;font-style:italic">Cuántos días hacia adelante buscar fechas disponibles</div>
         </div>
       </div>
       <button class="savebtn" onclick="saveCfg()">Guardar toda la configuración</button>
@@ -1340,6 +1351,23 @@ function toggleAnticipado(on, silent){
   if(!silent) saveCfg();
 }
 
+function toggleDia(d){
+  if(!_cfg.diasDisponibles) _cfg.diasDisponibles=[];
+  const idx=_cfg.diasDisponibles.indexOf(d);
+  if(idx>=0) _cfg.diasDisponibles.splice(idx,1);
+  else _cfg.diasDisponibles.push(d);
+  renderDiasDisponibles();
+  saveCfg();
+}
+
+function renderDiasDisponibles(){
+  const dias=_cfg.diasDisponibles||[];
+  [0,1,2,3,4,5,6].forEach(d=>{
+    const btn=document.getElementById('dia-'+d);
+    if(btn) btn.classList.toggle('sf-active', dias.includes(d));
+  });
+}
+
 async function toggleCupon(on, silent){
   _cfg.cupones=on;
   document.getElementById('cfg-cupon-on').classList.toggle('on', on);
@@ -1365,7 +1393,8 @@ async function saveCfg(){
     confirmTemplate:gv('cfg-confirm-template'),
     pagosHabilitados:_cfg.pagosHabilitados||{efectivo:true,transferencia:true,mp:true},
     anticipado:_cfg.anticipado||false,
-    anticipadoDias:parseInt(gv('cfg-anticipado-dias'))||7,
+    anticipadoDias:parseInt(gv('cfg-anticipado-dias'))||14,
+    diasDisponibles:_cfg.diasDisponibles||[5,6,0],
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
