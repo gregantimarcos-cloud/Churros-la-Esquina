@@ -747,7 +747,7 @@ function renderCart(){
       <textarea class="finput" id="f-obs" rows="2" placeholder="Ej: casa roja con planta en frente, timbre no funciona..." style="resize:none;line-height:1.5;min-height:60px;margin-bottom:0"></textarea>
     </div>
     <div class="form-errors" id="form-errors"></div>
-    ${isClosed?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||'🔒 El local está cerrado.'}</div>`:''}
+    ${isClosed?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||'🔒 El local está cerrado.'}</div>`:!cfg.open&&cfg.anticipado?`<div style="background:#fefce8;border:1.5px solid #fde047;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#854d0e;font-style:italic;text-align:center">📅 Estás haciendo un pedido anticipado para el día seleccionado.</div>`:''}
     <button class="cfmbtn" id="cfm-btn" onclick="tryConfirm()" ${isClosed?'disabled style="display:none"':''}>${confirmTxt}</button>
     <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
   </div>`;
