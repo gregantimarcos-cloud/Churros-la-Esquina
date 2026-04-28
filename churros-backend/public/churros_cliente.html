@@ -685,7 +685,7 @@ function renderCart(){
   if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:600">${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(totalFinal)}</span></div></div>`;
   if(payment==='mercadopago')payExtra=`<div class="pay-mp"><div class="pt">💳 Mercado Pago</div><div class="ps">Al confirmar, Mercado Pago se abrirá automáticamente.</div></div>`;
 
-  const isClosed=!cfg.open;
+  const isClosed=!cfg.open&&!cfg.anticipado;
   const confirmTxt=cfg.txtConfirmarBtn||'Confirmar pedido';
 
   cont.innerHTML=`<div>
