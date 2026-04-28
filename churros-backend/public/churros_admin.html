@@ -697,6 +697,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <label class="flabel">Nombre</label><input class="finput field-mb" id="m-name" placeholder="Ej: Churros con chocolate">
     <label class="flabel">Descripción</label><input class="finput field-mb" id="m-desc" placeholder="Porción de 6 churros...">
     <div class="row2" style="margin-bottom:10px">
+      <details style="margin-bottom:10px">
+        <summary style="cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;color:var(--brown-light);padding:6px 0">⚙ Opciones avanzadas (estadísticas)</summary>
+        <div style="padding-top:8px">
       <div><label class="flabel">Grupo estadístico <small>para agrupar en stats</small></label><input class="finput" id="m-grupo" placeholder="Ej: Churros clásicos"></div>
       <div><label class="flabel">Churros que equivale <small>para contar unidades reales</small></label><input class="finput" id="m-uds" type="number" placeholder="Ej: 6" min="1"></div>
     </div>
@@ -1084,7 +1087,8 @@ function renderOrders(){
     const phone=o.phone?'<br>📱 '+o.phone:'';
     const dt=new Date(o.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     html+=`<div class="order-card">
-      <div class="order-header"><span class="order-id">#${o.id}</span><span class="order-name">${o.customer}</span><span class="order-badge ${sb(o.status)}">${statusLabel(o.status)}</span></div>
+      <div class="order-header"><span class="order-id">#${o.id}</span>
+          <span style="font-size:11px;color:var(--brown-light);margin-left:4px">${o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):''}</span><span class="order-name">${o.customer}</span><span class="order-badge ${sb(o.status)}">${statusLabel(o.status)}</span></div>
       <div class="order-time">Recibido: ${dt}</div>
       <div class="order-items" style="margin-top:6px">${items}</div>
       <div class="order-delivery">${o.delivery==='delivery'?'🛵 Envío'+addr:'🏪 Retiro'}${phone}${o.fecha&&o.fecha>new Date().toISOString().slice(0,10)?` · 📅 ${new Date(o.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`:''}${o.slot?' · ⏰ '+o.slot:''}</div>
@@ -1100,13 +1104,17 @@ function renderOrders(){
         ${o.payment==='transferencia'?`<button class="comp-badge ${o.comprobante?'':'pending'}" onclick="verComprobante(${o.id})">${o.comprobante?'📎 Ver comprobante':'⏳ Sin comprobante'}</button>`:''}
         ${o.phone?`<a class="wa-btn" href="${waOrderLink(o)||'#'}" target="_blank">💬 Confirmar pedido</a>`:''}
         ${o.phone&&o.delivery==='delivery'&&o.status!=='done'?`<a class="wa-btn" href="${waEnCaminoLink(o)||'#'}" target="_blank" style="background:#1a6b3c;">🛵 En camino</a>`:''}
+        <button onclick="printOrder(${o.id})" class="btn-sm" style="background:var(--cream-dark);color:var(--brown);border:1px solid var(--kraft)">🖨️ Ticket</button>
       </div>
     </div>`;
   });
   document.getElementById('orders-list').innerHTML=html;
 }
 async function setOrderStatus(id,status){
-  await apiFetch(`/api/orders/${id}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+  const statusTimes={new:'Recibido',prep:'En preparación',ready:'Listo',done:'Entregado'};
+  const timeLabel=statusTimes[status]||status;
+  const now=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  await apiFetch(`/api/orders/${id}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,statusNote:`${timeLabel} a las ${now}`})});
   await loadOrders();loadStats();
 }
 async function deleteOrder(id){
@@ -1670,60 +1678,20 @@ let _audioCtx=null;
 function playBeep(){
   try{
     if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    const osc=_audioCtx.createOscillator();
-    const gain=_audioCtx.createGain();
-    osc.connect(gain);gain.connect(_audioCtx.destination);
-    osc.frequency.value=880;osc.type='sine';
-    gain.gain.setValueAtTime(0.4,_audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01,_audioCtx.currentTime+0.5);
-    osc.start();osc.stop(_audioCtx.currentTime+0.5);
+    // Play 3 ascending tones
+    [0, 0.25, 0.5].forEach((delay, i) => {
+      const osc=_audioCtx.createOscillator();
+      const gain=_audioCtx.createGain();
+      osc.connect(gain);gain.connect(_audioCtx.destination);
+      osc.frequency.value=440+(i*220);osc.type='sine';
+      const t=_audioCtx.currentTime+delay;
+      gain.gain.setValueAtTime(0.5,t);
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.3);
+      osc.start(t);osc.stop(t+0.3);
+    });
   }catch(e){}
 }
 
-async function toggleNotif(){
-  if(!_notifEnabled){
-    // Request push permission
-    if('Notification' in window){
-      const perm=await Notification.requestPermission();
-      if(perm==='granted'){
-        new Notification('🥐 Churros La Esquina',{body:'Notificaciones de pedidos activadas',icon:'/icon-192.png'});
-      }
-    }
-    _notifEnabled=true;
-    document.getElementById('notif-btn').style.background='rgba(134,239,172,.2)';
-    document.getElementById('notif-dot').style.display='none';
-    // Start polling every 30 seconds
-    _lastOrderCount=_orders.length;
-    _notifInterval=setInterval(checkNewOrders,30000);
-    alert('✓ Notificaciones activadas. Te avisamos cuando llegue un pedido nuevo.');
-  } else {
-    _notifEnabled=false;
-    clearInterval(_notifInterval);
-    document.getElementById('notif-btn').style.background='rgba(255,255,255,.12)';
-    alert('Notificaciones desactivadas.');
-  }
-}
-
-async function checkNewOrders(){
-  if(!_notifEnabled)return;
-  const orders=await apiFetch('/api/orders')||[];
-  const newCount=orders.filter(o=>o.status==='new').length;
-  const prevNew=_orders.filter(o=>o.status==='new').length;
-  _orders=orders;
-  if(newCount>prevNew){
-    const diff=newCount-prevNew;
-    playBeep();
-    document.getElementById('notif-dot').style.display='block';
-    if('Notification' in window&&Notification.permission==='granted'){
-      new Notification('🥐 Pedido nuevo!',{body:`Llegó${diff>1?' '+diff:''} pedido nuevo en Churros La Esquina`,icon:'/icon-192.png'});
-    }
-    // Auto refresh orders panel if it's active
-    if(document.getElementById('panel-orders').classList.contains('active'))renderOrders();
-  }
-}
-
-// ── HISTORIAL DE CLIENTES ──────────────────────────────────────────
-let _allClientes=[];
 
 function loadClientes(){
   const orders=_orders.length?_orders:[];
@@ -1941,6 +1909,31 @@ async function saveManualOrder(){
   } else {
     alert('Error al guardar el pedido.');
   }
+}
+
+function printOrder(id){
+  const o=_orders.find(x=>x.id===id);
+  if(!o)return;
+  const items=(o.items||[]).map(it=>`<tr><td>${it.qty}x ${it.name}</td><td style="text-align:right">${fmt(it.price*it.qty)}</td></tr>`).join('');
+  const fecha=o.fecha?`<br>Fecha: ${new Date(o.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`:'';
+  const w=window.open('','_blank','width=400,height=600');
+  w.document.write(`<!DOCTYPE html><html><head><title>Pedido #${o.id}</title>
+  <style>body{font-family:Arial,sans-serif;padding:20px;max-width:300px;margin:0 auto}
+  h2{text-align:center;border-bottom:2px dashed #000;padding-bottom:10px}
+  table{width:100%;border-collapse:collapse}td{padding:4px 2px}
+  .total{font-weight:bold;font-size:16px;border-top:2px dashed #000;padding-top:8px}
+  .info{font-size:12px;color:#555;margin:4px 0}
+  @media print{button{display:none}}</style></head><body>
+  <h2>🥐 Churros La Esquina<br><small>Pedido #${o.id}</small></h2>
+  <p class="info"><strong>${o.customer}</strong>${o.phone?' · '+o.phone:''}</p>
+  <p class="info">${o.delivery==='delivery'?'🛵 Envío'+(o.address?' a '+o.address:''):'🏪 Retiro en local'}${fecha}</p>
+  ${o.slot?`<p class="info">⏰ ${o.slot}</p>`:''}
+  <table>${items}<tr class="total"><td>TOTAL</td><td style="text-align:right">${fmt(o.total)}</td></tr></table>
+  <p class="info">Pago: ${o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia':'Mercado Pago'}</p>
+  ${o.obs?`<p class="info">📝 ${o.obs}</p>`:''}
+  <br><button onclick="window.print()" style="width:100%;padding:10px;font-size:16px">🖨️ Imprimir</button>
+  </body></html>`);
+  w.document.close();
 }
 
 function waEnCaminoLink(o){

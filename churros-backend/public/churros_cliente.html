@@ -44,7 +44,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .pcard{background:#fff;border:2px solid var(--kraft);border-radius:12px;overflow:hidden;cursor:pointer;box-shadow:2px 4px 10px rgba(45,18,0,.18);transition:transform .15s;}
 .pcard:active{transform:scale(.98)}
 .pcard.out-of-stock{opacity:.55;pointer-events:none;}
-.pcard-img-wrap{height:120px;background:linear-gradient(160deg,var(--cream-dark),var(--paper));border-bottom:1px solid var(--kraft);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.pcard-img-wrap{height:180px;background:linear-gradient(160deg,var(--cream-dark),var(--paper));border-bottom:1px solid var(--kraft);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
 .pcard-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
 .no-img{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--brown-light);font-style:italic;}
 .out-badge{position:absolute;inset:0;background:rgba(61,28,2,.55);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:13px;color:#fff;font-weight:700;}
@@ -218,6 +218,10 @@ window.addEventListener('load',function(){
   <div class="success">
     <div class="si" id="suc-icon">✅</div>
     <h2 id="suc-title">¡Pedido confirmado!</h2>
+    <div id="suc-preparing" style="display:none;background:var(--cream-dark);border-radius:11px;padding:12px;margin-bottom:14px;text-align:center">
+      <div style="font-size:22px;margin-bottom:4px">🥐</div>
+      <div style="font-size:13px;color:var(--brown);font-style:italic">Estamos preparando tu pedido...</div>
+    </div>
     <p id="suc-msg"></p>
     <div id="suc-mp-box" style="display:none;background:#fefce8;border:2px solid #fde047;border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
       <div style="font-family:'Playfair Display',serif;font-size:13px;color:#713f12;font-weight:600;margin-bottom:6px;">💳 Monto a pagar</div>
@@ -239,7 +243,10 @@ window.addEventListener('load',function(){
         <div class="comprobante-sent" id="comp-sent">✓ Comprobante adjuntado. ¡Lo vamos a revisar pronto!</div>
       </div>
     </div>
-    <button class="back-btn" onclick="resetApp()">Hacer otro pedido</button>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="back-btn" onclick="goTab('menu');showView('v-customer')" style="flex:1;background:var(--cream-dark);color:var(--brown);border:1.5px solid var(--kraft)">← Volver al menú</button>
+      <button class="back-btn" onclick="resetApp()" style="flex:1">+ Otro pedido</button>
+    </div>
   </div>
 </div>
 
@@ -942,6 +949,9 @@ async function confirmOrder(){
     document.getElementById('suc-icon').textContent='💳';
     document.getElementById('suc-title').textContent='¡Redirigiendo a Mercado Pago!';
     document.getElementById('suc-msg').innerHTML=msg.replace(/\n/g,'<br>');
+  // Show preparing animation briefly
+  const prepBox=document.getElementById('suc-preparing');
+  if(prepBox){prepBox.style.display='block';setTimeout(()=>{prepBox.style.display='none';},4000);}
     document.getElementById('suc-mp-box').style.display='block';
     document.getElementById('suc-mp-amount').textContent=fmt(total);
     document.getElementById('suc-mp-btn').onclick=()=>window.open(mpUrl,'_blank');
