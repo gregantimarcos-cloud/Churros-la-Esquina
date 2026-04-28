@@ -422,9 +422,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       </div>
       <label class="flabel" style="margin-top:12px">Métodos de pago habilitados</label>
       <div class="opts2" style="margin-bottom:12px">
-        <div class="opt" id="cfg-pay-efectivo" onclick="togglePago('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>
-        <div class="opt" id="cfg-pay-transferencia" onclick="togglePago('transferencia')"><div class="oi">📲</div><div class="ol">Transferencia</div></div>
-        <div class="opt" id="cfg-pay-mp" onclick="togglePago('mp')"><div class="oi">💳</div><div class="ol">Mercado Pago</div></div>
+        <div class="opt" id="cfg-pay-efectivo" onclick="togglePago('efectivo')" style="flex:1;position:relative"><div class="oi">💵</div><div class="ol">Efectivo</div><div id="cfg-pay-efectivo-ind" style="font-size:11px;margin-top:2px"></div></div>
+        <div class="opt" id="cfg-pay-transferencia" onclick="togglePago('transferencia')" style="flex:1;position:relative"><div class="oi">📲</div><div class="ol">Transferencia</div><div id="cfg-pay-transferencia-ind" style="font-size:11px;margin-top:2px"></div></div>
+        <div class="opt" id="cfg-pay-mp" onclick="togglePago('mp')" style="flex:1;position:relative"><div class="oi">💳</div><div class="ol">Mercado Pago</div><div id="cfg-pay-mp-ind" style="font-size:11px;margin-top:2px"></div></div>
       </div>
       <label class="flabel">Pedidos con anticipación</label>
       <div style="background:var(--cream-dark);border-radius:9px;padding:10px;margin-bottom:12px">
@@ -1338,9 +1338,27 @@ function handleLogoUpload(event){
 function togglePago(tipo){
   if(!_cfg.pagosHabilitados) _cfg.pagosHabilitados={efectivo:true,transferencia:true,mp:true};
   _cfg.pagosHabilitados[tipo]=!_cfg.pagosHabilitados[tipo];
-  const el=document.getElementById('cfg-pay-'+tipo);
-  if(el) el.classList.toggle('on', _cfg.pagosHabilitados[tipo]);
+  renderPagosHabilitados();
   saveCfg();
+}
+
+function renderPagosHabilitados(){
+  const ph=_cfg.pagosHabilitados||{efectivo:true,transferencia:true,mp:true};
+  ['efectivo','transferencia','mp'].forEach(k=>{
+    const el=document.getElementById('cfg-pay-'+k);
+    const ind=document.getElementById('cfg-pay-'+k+'-ind');
+    const on=ph[k]!==false;
+    if(el){
+      el.classList.toggle('on', on);
+      el.style.borderColor=on?'#16a34a':'#b91c1c';
+      el.style.background=on?'#dcfce7':'#fee2e2';
+    }
+    if(ind){
+      ind.textContent=on?'✅ Activo':'❌ Inactivo';
+      ind.style.color=on?'#16a34a':'#b91c1c';
+      ind.style.fontWeight='700';
+    }
+  });
 }
 
 function toggleAnticipado(on, silent){
