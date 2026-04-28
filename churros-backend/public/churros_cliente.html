@@ -759,12 +759,14 @@ function validateForm(){
   const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
   const addr=delivery==='delivery'?getFieldVal('f-addr').trim():'ok';
   const availSlots=getAvailableSlots(delivery);
-  const slotOk=availSlots.length===0||selectedSlot!=='';
+  const today=new Date().toISOString().slice(0,10);
+  const isFutureDate=_selectedDate&&_selectedDate>today;
+  const slotOk=availSlots.length===0||selectedSlot!==''||isFutureDate;
   markField('f-name',!name,'Ingresá tu nombre completo');
   markField('f-phone',!phone,'Ingresá tu teléfono');
-  if(delivery==='delivery')markField('f-addr',!addr.trim(),'Ingresá tu dirección');
+  if(delivery==='delivery')markField('f-addr',!addr.trim(),'Ingresá tu dirección de entrega');
   const slotErr=document.getElementById('slot-error');
-  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0);
+  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0&&!isFutureDate);
   const valid=!!(name&&phone&&addr.trim()&&slotOk);
   const summary=document.getElementById('form-errors');
   if(summary&&triedSubmit&&!valid){
@@ -772,7 +774,7 @@ function validateForm(){
     if(!name)errors.push('Nombre completo');
     if(!phone)errors.push('Teléfono');
     if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
-    if(!slotOk&&availSlots.length>0)errors.push('Franja horaria');
+    if(!slotOk&&availSlots.length>0&&!isFutureDate)errors.push('Franja horaria');
     if(errors.length){summary.classList.add('show');summary.innerHTML=`<div class="fe-title">⚠ Completá los siguientes campos:</div>${errors.map(e=>`<p>• ${e}</p>`).join('')}`;}
     else summary.classList.remove('show');
   } else if(summary)summary.classList.remove('show');
@@ -978,7 +980,16 @@ async function confirmOrder(){
   const nombre=name.split(' ')[0];
   const totalChurros=items.reduce((a,it)=>a+it.qty,0);
   const detallePedido=items.map(it=>`${it.qty}x ${it.name}`).join(', ');
-  const horarioTxt=slotLabel?`en el horario ${slotLabel}`:'a la brevedad';
+  // Build date label for anticipado
+  let fechaTxt='';
+  if(_selectedDate){
+    const today=new Date().toISOString().slice(0,10);
+    if(_selectedDate>today){
+      const fd=new Date(_selectedDate+'T12:00:00');
+      fechaTxt='el '+fd.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})+' ';
+    }
+  }
+  const horarioTxt=slotLabel?`${fechaTxt}en el horario ${slotLabel}`:(fechaTxt?`el ${fechaTxt.trim()}`:'a la brevedad');
   const direccionTxt=delivery==='delivery'
     ?(addr&&addr!=='ok'?`en ${addr}`:'en tu domicilio')
     :'en Malvinas Argentinas 297';
