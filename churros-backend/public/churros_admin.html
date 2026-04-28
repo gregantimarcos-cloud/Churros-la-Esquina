@@ -384,8 +384,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <textarea class="ftextarea field-mb" id="cfg-wa-template" rows="7" placeholder="Hola {nombre}!&#10;&#10;Tu pedido fue confirmado.&#10;&#10;Detalle:&#10;{detalle}&#10;&#10;Total: {total}&#10;{pago}&#10;&#10;{horario}&#10;&#10;Gracias por elegirnos!"></textarea>
         <label class="flabel">Cupones de descuento</label>
         <div class="opts2" style="margin-bottom:12px">
-          <div class="opt" id="cfg-cupon-on" onclick="toggleCupon(true)"><div class="oi">✅</div><div class="ol">Activados</div></div>
-          <div class="opt on" id="cfg-cupon-off" onclick="toggleCupon(false)"><div class="oi">❌</div><div class="ol">Desactivados</div></div>
+          <div class="opt" id="cfg-cupon-on" onclick="toggleCuponSection(true)"><div class="oi">✅</div><div class="ol">Activados</div></div>
+          <div class="opt on" id="cfg-cupon-off" onclick="toggleCuponSection(false)"><div class="oi">❌</div><div class="ol">Desactivados</div></div>
         </div>
         <label class="flabel">Estado</label>
         <div class="opts2">
@@ -1368,7 +1368,7 @@ function renderDiasDisponibles(){
   });
 }
 
-async function toggleCupon(on, silent){
+async function toggleCuponSection(on, silent){
   _cfg.cupones=on;
   document.getElementById('cfg-cupon-on').classList.toggle('on', on);
   document.getElementById('cfg-cupon-off').classList.toggle('on', !on);
