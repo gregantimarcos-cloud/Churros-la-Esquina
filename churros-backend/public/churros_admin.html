@@ -1087,7 +1087,7 @@ function renderOrders(){
       <div class="order-header"><span class="order-id">#${o.id}</span><span class="order-name">${o.customer}</span><span class="order-badge ${sb(o.status)}">${statusLabel(o.status)}</span></div>
       <div class="order-time">Recibido: ${dt}</div>
       <div class="order-items" style="margin-top:6px">${items}</div>
-      <div class="order-delivery">${o.delivery==='delivery'?'🛵 Envío'+addr:'🏪 Retiro'}${phone}</div>
+      <div class="order-delivery">${o.delivery==='delivery'?'🛵 Envío'+addr:'🏪 Retiro'}${phone}${o.fecha&&o.fecha>new Date().toISOString().slice(0,10)?` · 📅 ${new Date(o.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`:''}${o.slot?' · ⏰ '+o.slot:''}</div>
       ${o.gps?`<div style="margin-bottom:3px"><a class="maps-link" href="https://maps.google.com/?q=${o.gps}" target="_blank">📍 Ver en Google Maps</a></div>`:''}
       ${o.obs?`<div class="obs-note">📝 ${o.obs}</div>`:''}
       <div class="order-delivery">💳 ${'efectivo'===o.payment?'Efectivo':'transferencia'===o.payment?'Transferencia':'Mercado Pago'}</div>
@@ -1963,9 +1963,17 @@ function waOrderLink(o){
   var itemLines=o.items.map(function(it){
     return '  - '+it.qty+'x '+it.name;
   }).join(nl);
+  var fechaWa='';
+  if(o.fecha){
+    var today=new Date().toISOString().slice(0,10);
+    if(o.fecha>today){
+      var fd=new Date(o.fecha+'T12:00:00');
+      fechaWa=' el '+fd.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    }
+  }
   var entregaTxt=o.delivery==='delivery'
-    ?'Te lo entregamos en tu domicilio'+(o.slot?' en el horario '+o.slot:'')+'.'
-    :'Lo podes retirar en Malvinas Argentinas 297'+(o.slot?' en el horario '+o.slot:'')+'.';
+    ?'Te lo entregamos en tu domicilio'+fechaWa+(o.slot?' en el horario '+o.slot:'')+'.'
+    :'Lo podes retirar en Malvinas Argentinas 297'+fechaWa+(o.slot?' en el horario '+o.slot:'')+'.';
   var pagoTxt='';
   if(o.payment==='transferencia'){
     pagoTxt='Alias de transferencia: '+(cfg.alias||'churros.local')+nl
