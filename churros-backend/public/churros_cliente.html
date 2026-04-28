@@ -666,11 +666,14 @@ function renderCart(){
   const locHtml=delivery!=='delivery'?'':(`
     <div style="height:8px"></div>
     <label class="flabel">Tu dirección de entrega <span class="req">*</span></label>
-    <div class="field-wrap" style="margin-bottom:0">
+    <div class="field-wrap" style="margin-bottom:6px">
       <input class="finput" id="f-addr" placeholder="Calle, número, piso..." oninput="checkForm()">
       <div class="field-error" id="f-addr-err">Ingresá tu dirección de entrega</div>
     </div>
-    <button class="locbtn" id="loc-btn" onclick="getLocation()">📍 Compartir mi ubicación GPS (más exacto)</button>`);
+    <div style="background:var(--cream-dark);border-radius:9px;padding:10px;margin-bottom:4px">
+      <div style="font-size:12px;color:var(--brown-light);margin-bottom:6px;font-style:italic">📍 ¿Querés que la entrega sea más exacta? Podés compartir tu ubicación GPS (opcional)</div>
+      <button class="locbtn" id="loc-btn" onclick="getLocation()" style="margin-bottom:0">📍 Compartir ubicación GPS</button>
+    </div>`);
 
   // Apply coupon FIRST so totalFinal is available for payExtra
   let descuento=0;
@@ -754,7 +757,7 @@ function renderCart(){
 // ── VALIDATION ─────────────────────────────────────────────────────────
 function validateForm(){
   const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
-  const addr=delivery==='delivery'?getFieldVal('f-addr'):'ok';
+  const addr=delivery==='delivery'?getFieldVal('f-addr').trim():'ok';
   const availSlots=getAvailableSlots(delivery);
   const slotOk=availSlots.length===0||selectedSlot!=='';
   markField('f-name',!name,'Ingresá tu nombre completo');
@@ -851,8 +854,7 @@ function getLocation(){
   const btn=document.getElementById('loc-btn');if(btn){btn.textContent='📍 Obteniendo...';btn.disabled=true;}
   navigator.geolocation.getCurrentPosition(pos=>{
     geoLocation={lat:pos.coords.latitude,lng:pos.coords.longitude};
-    const addrField=document.getElementById('f-addr');
-    if(addrField&&!addrField.value.trim())addrField.value='Ubicación GPS compartida';
+    // Don't overwrite address field with GPS - they are independent
     const b=document.getElementById('loc-btn');
     if(b){b.className='locbtn ok';b.disabled=false;b.textContent='✓ Ubicación obtenida ('+geoLocation.lat.toFixed(5)+', '+geoLocation.lng.toFixed(5)+')';}
     validateForm();
