@@ -754,7 +754,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 <script>
 // ── API ────────────────────────────────────────────────────────────────
 const API='';
-let _adminUser='',_adminPass='';
+let _adminUser=sessionStorage.getItem('au')||'',_adminPass=sessionStorage.getItem('ap')||'';
 let _cfg={},_orders=[],_products=[],_slots=[];
 let orderFilter='all', editId=null, currentImg='', _compOrderId=null;
 
@@ -781,6 +781,8 @@ async function doLogin(){
   _adminUser=user;_adminPass=pass;
   const result=await apiFetch('/api/cfg');
   if(result!==null){
+    sessionStorage.setItem('au',user);
+    sessionStorage.setItem('ap',pass);
     document.getElementById('login-screen').style.display='none';
     document.getElementById('admin-app').style.display='block';
     initAdmin(result);
@@ -792,6 +794,7 @@ async function doLogin(){
 }
 function doLogout(){
   _adminUser='';_adminPass='';
+  sessionStorage.removeItem('au');sessionStorage.removeItem('ap');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('admin-app').style.display='none';
   document.getElementById('login-pass').value='';
