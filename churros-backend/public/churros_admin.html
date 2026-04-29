@@ -696,14 +696,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     </div>
     <label class="flabel">Nombre</label><input class="finput field-mb" id="m-name" placeholder="Ej: Churros con chocolate">
     <label class="flabel">Descripción</label><input class="finput field-mb" id="m-desc" placeholder="Porción de 6 churros...">
-    <div class="row2" style="margin-bottom:10px">
-      <div style="margin-bottom:10px;border:1px solid var(--kraft);border-radius:9px;overflow:hidden">
-        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="cursor:pointer;background:var(--cream-dark);padding:9px 13px;font-family:'Playfair Display',serif;font-size:13px;color:var(--brown-light);display:flex;justify-content:space-between;align-items:center">
-          <span>⚙ Opciones avanzadas (estadísticas)</span><span>▾</span>
-        </div>
-        <div style="display:none;padding:10px 13px">
-      <div><label class="flabel">Grupo estadístico <small>para agrupar en stats</small></label><input class="finput" id="m-grupo" placeholder="Ej: Churros clásicos"></div>
-      <div><label class="flabel">Churros que equivale <small>para contar unidades reales</small></label><input class="finput" id="m-uds" type="number" placeholder="Ej: 6" min="1"></div>
+    <div style="margin-bottom:10px;border:1px solid var(--kraft);border-radius:9px;overflow:hidden">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="cursor:pointer;background:var(--cream-dark);padding:9px 13px;font-family:'Playfair Display',serif;font-size:13px;color:var(--brown-light);display:flex;justify-content:space-between;align-items:center">
+        <span>⚙ Opciones avanzadas (estadísticas)</span><span>▾</span>
+      </div>
+      <div style="display:none;padding:10px 13px">
+        <div><label class="flabel">Grupo estadístico <small>para agrupar en stats</small></label><input class="finput" id="m-grupo" placeholder="Ej: Churros clásicos"></div>
+        <div style="margin-top:8px"><label class="flabel">Churros que equivale <small>para contar unidades reales</small></label><input class="finput" id="m-uds" type="number" placeholder="Ej: 6" min="1"></div>
+      </div>
     </div>
     <div class="row2" style="margin-bottom:10px">
       <div><label class="flabel">Precio ($)</label><input class="finput" id="m-price" type="number" placeholder="1500"></div>
