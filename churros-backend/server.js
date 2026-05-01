@@ -1,4 +1,13 @@
 const express = require('express');
+const webpush = require('web-push');
+
+// ── VAPID KEYS (generate once with: npx web-push generate-vapid-keys) ──
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC || '';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
+if(VAPID_PUBLIC && VAPID_PRIVATE){
+  webpush.setVapidDetails('mailto:churroslaesquina@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
+}
+let pushSubscriptions = []; // in-memory, better to store in DB
 const cors = require('cors');
 const path = require('path');
 const { Pool } = require('pg');
@@ -207,7 +216,15 @@ app.post('/api/orders', async (req, res) => {
     }
     const orderData = { ...body, status: 'new', ts: Date.now() };
     const r = await pool.query('INSERT INTO orders(data) VALUES($1) RETURNING id', [JSON.stringify(orderData)]);
-    res.json({ id: r.rows[0].id });
+    const orderId = r.rows[0].id;
+    res.json({ id: orderId });
+    // Push notification to all admins
+    const items = (orderData.items||[]).map(i=>i.qty+'x '+i.name).join(', ');
+    sendPushToAll(
+      '🥐 Nuevo pedido #'+orderId,
+      (orderData.customer||'Cliente')+' · '+items+' · $'+(orderData.total||0),
+      '/churros_admin.html'
+    );
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -302,7 +319,44 @@ app.get('*', (req, res) => {
 
 // ── Start ───────────────────────────────────────────────────────────
 initDB().then(() => {
-  app.listen(PORT, () => {
+  // ── PUSH SUBSCRIPTIONS ──────────────────────────────────────────────
+app.get('/api/push/vapid', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC || null });
+});
+
+app.post('/api/push/subscribe', requireAdmin, async (req, res) => {
+  try {
+    const sub = req.body;
+    // Avoid duplicates
+    const exists = pushSubscriptions.find(s => s.endpoint === sub.endpoint);
+    if (!exists) pushSubscriptions.push(sub);
+    res.json({ ok: true, total: pushSubscriptions.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/push/unsubscribe', requireAdmin, async (req, res) => {
+  const { endpoint } = req.body;
+  pushSubscriptions = pushSubscriptions.filter(s => s.endpoint !== endpoint);
+  res.json({ ok: true });
+});
+
+async function sendPushToAll(title, body, url='/churros_admin.html') {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  const payload = JSON.stringify({ title, body, url });
+  const failed = [];
+  for (const sub of [...pushSubscriptions]) {
+    try {
+      await webpush.sendNotification(sub, payload);
+    } catch(e) {
+      if (e.statusCode === 410 || e.statusCode === 404) {
+        // Subscription expired — remove it
+        pushSubscriptions = pushSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+      }
+    }
+  }
+}
+
+app.listen(PORT, () => {
     console.log(`✅ Churros La Esquina server running on port ${PORT}`);
   });
 }).catch(err => {
