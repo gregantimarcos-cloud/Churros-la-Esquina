@@ -5,6 +5,8 @@ try { webpush = require('web-push'); } catch(e) { console.log('web-push not inst
 // ── VAPID KEYS ──
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC || '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
+console.log('VAPID_PUBLIC:', VAPID_PUBLIC ? 'SET ('+VAPID_PUBLIC.length+' chars)' : 'NOT SET');
+console.log('VAPID_PRIVATE:', VAPID_PRIVATE ? 'SET' : 'NOT SET');
 if(webpush && VAPID_PUBLIC && VAPID_PRIVATE){
   webpush.setVapidDetails('mailto:churroslaesquina@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
 }
@@ -322,6 +324,7 @@ app.get('*', (req, res) => {
 initDB().then(() => {
   // ── PUSH SUBSCRIPTIONS ──────────────────────────────────────────────
 app.get('/api/push/vapid', (req, res) => {
+  console.log('VAPID requested, key:', VAPID_PUBLIC ? 'present' : 'missing');
   res.json({ publicKey: VAPID_PUBLIC || null });
 });
 
