@@ -635,7 +635,7 @@ function renderCart(){
       const ds=d.toISOString().slice(0,10);
       const today2=new Date();
       const diffDays=Math.round((d-today2)/(1000*60*60*24));
-      const label=diffDays===0?'Hoy':diffDays===1?'Mañana':d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+      const label=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
       // Auto-select first available date if none selected
       if(!_selectedDate&&idx===0) _selectedDate=ds;
       const sel=_selectedDate===ds?'selected':'';
