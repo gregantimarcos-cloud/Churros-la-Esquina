@@ -1,13 +1,14 @@
 const express = require('express');
-const webpush = require('web-push');
+let webpush = null;
+try { webpush = require('web-push'); } catch(e) { console.log('web-push not installed, push notifications disabled'); }
 
-// ── VAPID KEYS (generate once with: npx web-push generate-vapid-keys) ──
+// ── VAPID KEYS ──
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC || '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
-if(VAPID_PUBLIC && VAPID_PRIVATE){
+if(webpush && VAPID_PUBLIC && VAPID_PRIVATE){
   webpush.setVapidDetails('mailto:churroslaesquina@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
 }
-let pushSubscriptions = []; // in-memory, better to store in DB
+let pushSubscriptions = [];
 const cors = require('cors');
 const path = require('path');
 const { Pool } = require('pg');
@@ -341,7 +342,7 @@ app.delete('/api/push/unsubscribe', requireAdmin, async (req, res) => {
 });
 
 async function sendPushToAll(title, body, url='/churros_admin.html') {
-  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  if (!webpush || !VAPID_PUBLIC || !VAPID_PRIVATE) return;
   const payload = JSON.stringify({ title, body, url });
   const failed = [];
   for (const sub of [...pushSubscriptions]) {
