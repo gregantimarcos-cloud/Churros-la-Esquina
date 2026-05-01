@@ -2057,9 +2057,15 @@ async function toggleNotifications(){
       alert('Permiso de notificaciones denegado. Habilitalo en la configuración del navegador.');
       return;
     }
-    // Use plain fetch for public endpoint (no auth needed)
-    const vapidRes = await fetch('/api/push/vapid');
-    const cfg = await vapidRes.json();
+    // Get VAPID key - use API variable which points to backend directly
+    const vapidUrl = (typeof API !== 'undefined' ? API : '') + '/api/push/vapid';
+    const vapidRes = await fetch(vapidUrl, {cache: 'no-store', headers: {'Accept': 'application/json'}});
+    const vapidText = await vapidRes.text();
+    let cfg;
+    try { cfg = JSON.parse(vapidText); } catch(e) {
+      console.error('VAPID response:', vapidText.slice(0,200));
+      throw new Error('El servidor no devolvió JSON válido para /api/push/vapid');
+    }
     if(!cfg || !cfg.publicKey){
       alert('Las notificaciones push no están configuradas todavía.\nAgregá VAPID_PUBLIC y VAPID_PRIVATE en Railway.');
       return;
