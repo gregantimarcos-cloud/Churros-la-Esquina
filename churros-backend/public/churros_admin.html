@@ -2043,6 +2043,49 @@ function waOrderLink(o){
   if(!phone)return null;
   return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
 }
+
+// ── PUSH NOTIFICATIONS ──────────────────────────────────────────────
+async function toggleNotifications(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    alert('Tu navegador no soporta notificaciones push. Usá Chrome en Android.');
+    return;
+  }
+  try{
+    const reg = await navigator.serviceWorker.register('/sw-admin.js');
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      alert('Permiso de notificaciones denegado. Habilitalo en la configuración del navegador.');
+      return;
+    }
+    const cfg = await apiFetch('/api/push/vapid');
+    if(!cfg || !cfg.publicKey){
+      alert('Las notificaciones push no están configuradas todavía.\nAgregá VAPID_PUBLIC y VAPID_PRIVATE en Railway.');
+      return;
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(cfg.publicKey)
+    });
+    await apiFetch('/api/push/subscribe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(sub)
+    });
+    const btn=document.getElementById('notif-btn');
+    if(btn){btn.textContent='🔔 Activo';btn.style.background='#16a34a';}
+    alert('✅ Notificaciones activadas. Te avisamos cuando llegue un pedido nuevo.');
+  } catch(e){
+    console.error('Push error:',e);
+    alert('Error: '+e.message);
+  }
+}
+
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=window.atob(base64);
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
 </script>
 </body>
 </html>
