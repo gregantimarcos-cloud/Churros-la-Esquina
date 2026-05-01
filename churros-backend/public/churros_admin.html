@@ -1,3 +1,15 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Admin — Churros La Esquina</title>
+<link rel="manifest" href="/manifest-admin.json">
+<meta name="theme-color" content="#1e293b">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@400;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 
@@ -250,7 +262,7 @@ body::before{display:none}
         <div class="admin-title">⚙ Administración</div>
         <div class="admin-sub" id="admin-sub-name">Churros La Esquina</div>
       </div>
-      <button id="notif-btn" onclick="toggleNotif()" title="Notificaciones" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;position:relative;">🔔<span id="notif-dot" style="display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:#ef4444;border-radius:50%;"></span></button>
+      <button id="notif-btn" onclick="toggleNotifications()" title="Notificaciones" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;position:relative;">🔔<span id="notif-dot" style="display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:#ef4444;border-radius:50%;"></span></button>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
     <div class="nav-tabs">
