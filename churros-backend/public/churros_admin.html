@@ -2057,7 +2057,9 @@ async function toggleNotifications(){
       alert('Permiso de notificaciones denegado. Habilitalo en la configuración del navegador.');
       return;
     }
-    const cfg = await apiFetch('/api/push/vapid');
+    // Use plain fetch for public endpoint (no auth needed)
+    const vapidRes = await fetch('/api/push/vapid');
+    const cfg = await vapidRes.json();
     if(!cfg || !cfg.publicKey){
       alert('Las notificaciones push no están configuradas todavía.\nAgregá VAPID_PUBLIC y VAPID_PRIVATE en Railway.');
       return;
