@@ -354,6 +354,25 @@ body::before{display:none}
       </div>
       <div class="sec-label">Franjas configuradas</div>
       <div id="slots-list"></div>
+
+      <div class="sec-label" style="margin-top:14px">Bloquear franja por fecha específica</div>
+      <div class="fbox">
+        <div style="font-size:13px;color:var(--brown-light);font-style:italic;margin-bottom:10px">
+          Bloqueá una franja puntual sin afectar otros días. Ej: mañana a la mañana, pero no el domingo.
+        </div>
+        <div class="row2" style="margin-bottom:8px">
+          <div><label class="flabel">Fecha</label><input class="finput" type="date" id="block-date"></div>
+          <div><label class="flabel">Franja</label>
+            <select class="finput" id="block-slot-sel">
+              <option value="">— Elegí una franja —</option>
+            </select>
+          </div>
+        </div>
+        <button class="savebtn" style="margin-bottom:0" onclick="addSlotBlock()">🔒 Bloquear esta franja</button>
+      </div>
+      <div class="sec-label">Bloqueos activos</div>
+      <div id="blocks-list"></div>
+
       <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
     </div>
   </div>
@@ -1341,6 +1360,12 @@ async function loadSlots(){
   renderSlots();
 }
 function renderSlots(){
+  renderBlockSlotSelect();
+  renderBlocksList();
+  // Set default date to today
+  const bd = document.getElementById('block-date');
+  if(bd && !bd.value) bd.value = new Date().toISOString().slice(0,10);
+
   const tl={both:'Retiro y envío',pickup:'Solo retiro',delivery:'Solo envío'};
   document.getElementById('slots-list').innerHTML=_slots.length?_slots.map(s=>{
     const limitLabel=s.maxPedidos>0?`<span style="font-size:10px;background:var(--cream-dark);border:1px solid var(--kraft);border-radius:10px;padding:2px 7px;margin-left:4px;">máx. ${s.maxPedidos} ped.</span>`:'';
@@ -1459,6 +1484,7 @@ async function saveCfg(){
     whatsapp:gv('cfg-whatsapp'),
     gaId:gv('cfg-ga'),
     cupones:_cfg.cupones!==false,
+    slotBlocks:_cfg.slotBlocks||[],
     waTemplate:gv('cfg-wa-template'),
     confirmTemplate:gv('cfg-confirm-template'),
     pagosHabilitados:_cfg.pagosHabilitados||{efectivo:true,transferencia:true,mp:true},
@@ -2041,6 +2067,68 @@ function waOrderLink(o){
   var phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
   if(!phone)return null;
   return 'https://wa.me/549'+phone+'?text='+encodeURIComponent(msg);
+}
+
+// ── SLOT BLOCKS BY DATE ──────────────────────────────────────────────
+// Stored as array of {slotId, date, from, to} in cfg.slotBlocks
+
+function renderBlockSlotSelect(){
+  const sel = document.getElementById('block-slot-sel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Elegí una franja —</option>' +
+    _slots.filter(s=>s.active).map(s=>
+      `<option value="${s.id}">${s.from} – ${s.to}</option>`
+    ).join('');
+}
+
+function renderBlocksList(){
+  const list = document.getElementById('blocks-list');
+  if(!list) return;
+  const blocks = _cfg.slotBlocks || [];
+  if(!blocks.length){
+    list.innerHTML = '<div style="color:var(--brown-light);font-style:italic;font-size:13px;padding:6px 0">No hay bloqueos activos.</div>';
+    return;
+  }
+  const today = new Date().toISOString().slice(0,10);
+  // Sort by date
+  const sorted = [...blocks].sort((a,b)=>a.date.localeCompare(b.date));
+  list.innerHTML = sorted.map((b,i) => {
+    const fd = new Date(b.date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
+    const isPast = b.date < today;
+    return `<div class="slot-item" style="${isPast?'opacity:0.5':''}">
+      <div class="slot-text">
+        <div style="font-weight:700;color:var(--brown)">🔒 ${b.from} – ${b.to}</div>
+        <div class="slot-type-lbl">${fd}${isPast?' (pasado)':''}</div>
+      </div>
+      <button onclick="removeSlotBlock(${i})" style="background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer">✕ Quitar</button>
+    </div>`;
+  }).join('');
+}
+
+async function addSlotBlock(){
+  const date = document.getElementById('block-date').value;
+  const slotId = document.getElementById('block-slot-sel').value;
+  if(!date){ alert('Elegí una fecha'); return; }
+  if(!slotId){ alert('Elegí una franja horaria'); return; }
+  const slot = _slots.find(s=>String(s.id)===String(slotId));
+  if(!slot){ alert('Franja no encontrada'); return; }
+  if(!_cfg.slotBlocks) _cfg.slotBlocks = [];
+  // Check if already blocked
+  const exists = _cfg.slotBlocks.find(b=>b.date===date&&String(b.slotId)===String(slotId));
+  if(exists){ alert('Esa franja ya está bloqueada para esa fecha'); return; }
+  _cfg.slotBlocks.push({slotId: slot.id, date, from: slot.from, to: slot.to});
+  await saveCfg();
+  renderBlocksList();
+  document.getElementById('block-date').value = '';
+  document.getElementById('block-slot-sel').value = '';
+  alert('✅ Franja bloqueada para el ' + new Date(date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}));
+}
+
+async function removeSlotBlock(idx){
+  if(!_cfg.slotBlocks) return;
+  _cfg.slotBlocks.splice(idx, 1);
+  await saveCfg();
+  renderBlocksList();
 }
 
 // ── PUSH NOTIFICATIONS ──────────────────────────────────────────────

@@ -560,9 +560,14 @@ function getAvailableSlots(deliveryType){
 }
 
 function slotStatus(s){
-  // Returns: 'ok', 'pasado', 'pronto', 'full'
+  // Returns: 'ok', 'pasado', 'pronto', 'full', 'bloqueado'
   if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
-  // If ordering for a future date, all slots are available
+  // Check if this slot is blocked for the selected date
+  const checkDate=_selectedDate||new Date().toISOString().slice(0,10);
+  const blocks=cfg.slotBlocks||[];
+  const isBlocked=blocks.some(b=>b.date===checkDate&&String(b.slotId)===String(s.id));
+  if(isBlocked)return'bloqueado';
+  // If ordering for a future date, all slots are available (except blocked)
   const today=new Date().toISOString().slice(0,10);
   if(_selectedDate&&_selectedDate>today)return'ok';
   const buffer=cfg.slotBuffer||15;
@@ -654,8 +659,8 @@ function renderCart(){
         <option value="">⏰ Elegí un horario...</option>
         ${availSlotsFiltered.map(s=>{
           const st=slotStatus(s);
-          const blocked=st==='full'||st==='pronto';
-          const label=st==='full'?' — Completo':st==='pronto'?' — Cerrando':'';
+          const blocked=st==='full'||st==='pronto'||st==='bloqueado';
+          const label=st==='full'?' — Completo':st==='pronto'?' — Cerrando':st==='bloqueado'?' — No disponible':'';
           const sel=selectedSlot===String(s.id)?'selected':'';
           return `<option value="${blocked?'':''+s.id}" ${sel} ${blocked?'disabled':''}>⏰ ${s.from} – ${s.to}${label}</option>`;
         }).join('')}
