@@ -567,11 +567,11 @@ function slotStatus(s){
   const checkDate=_selectedDate||todayDate;
   const blocks=cfg.slotBlocks||[];
   // Remove expired blocks (past dates) from check
-  const isBlocked=blocks.some(b=>
-    b.date>=todayDate && // only check current/future blocks
-    b.date===checkDate &&
-    String(b.slotId)===String(s.id)
-  );
+  const isBlocked=blocks.some(b=>{
+    const match = b.date>=todayDate && b.date===checkDate && String(b.slotId)===String(s.id);
+    if(blocks.length>0) console.log('Block check:', {bDate:b.date, checkDate, bSlotId:String(b.slotId), sId:String(s.id), match});
+    return match;
+  });
   if(isBlocked)return'bloqueado';
   // If ordering for a future date, all slots are available (except blocked)
   const today=new Date().toISOString().slice(0,10);
@@ -783,13 +783,14 @@ function validateForm(){
   const availSlots=getAvailableSlots(delivery);
   const today=new Date().toISOString().slice(0,10);
   const isFutureDate=_selectedDate&&_selectedDate>today;
-  const slotOk=availSlots.length===0||selectedSlot!==''||isFutureDate;
+  const availNonBlocked=availSlots.filter(s=>slotStatus(s)!=='pasado'&&slotStatus(s)!=='bloqueado');
+  const slotOk=availNonBlocked.length===0||selectedSlot!=='';
   markField('f-name',!name,'Ingresá tu nombre');
   markField('f-apellido',!apellido,'Ingresá tu apellido');
   markField('f-phone',!phone,'Ingresá tu teléfono');
   if(delivery==='delivery')markField('f-addr',!addr.trim(),'Ingresá tu dirección de entrega');
   const slotErr=document.getElementById('slot-error');
-  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0&&!isFutureDate);
+  if(slotErr)slotErr.classList.toggle('show',!slotOk&&availNonBlocked.length>0);
   const valid=!!(name&&apellido&&phone&&addr.trim()&&slotOk);
   const summary=document.getElementById('form-errors');
   if(summary&&triedSubmit&&!valid){
@@ -798,7 +799,7 @@ function validateForm(){
     if(!apellido)errors.push('Apellido');
     if(!phone)errors.push('Teléfono');
     if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
-    if(!slotOk&&availSlots.length>0&&!isFutureDate)errors.push('Franja horaria');
+    if(!slotOk&&availNonBlocked.length>0)errors.push('Franja horaria');
     if(errors.length){summary.classList.add('show');summary.innerHTML=`<div class="fe-title">⚠ Completá los siguientes campos:</div>${errors.map(e=>`<p>• ${e}</p>`).join('')}`;}
     else summary.classList.remove('show');
   } else if(summary)summary.classList.remove('show');
