@@ -566,12 +566,13 @@ function slotStatus(s){
   const todayDate=new Date().toISOString().slice(0,10);
   const checkDate=_selectedDate||todayDate;
   const blocks=cfg.slotBlocks||[];
-  // Remove expired blocks (past dates) from check
-  const isBlocked=blocks.some(b=>{
-    const match = b.date>=todayDate && b.date===checkDate && String(b.slotId)===String(s.id);
-    if(blocks.length>0) console.log('Block check:', {bDate:b.date, checkDate, bSlotId:String(b.slotId), sId:String(s.id), match});
-    return match;
-  });
+  // Match by date AND from/to time (not by ID which can change)
+  const isBlocked=blocks.some(b=>
+    b.date>=todayDate &&
+    b.date===checkDate &&
+    b.from===s.from &&
+    b.to===s.to
+  );
   if(isBlocked)return'bloqueado';
   // If ordering for a future date, all slots are available (except blocked)
   const today=new Date().toISOString().slice(0,10);
