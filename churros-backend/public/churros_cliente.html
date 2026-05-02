@@ -562,10 +562,16 @@ function getAvailableSlots(deliveryType){
 function slotStatus(s){
   // Returns: 'ok', 'pasado', 'pronto', 'full', 'bloqueado'
   if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
-  // Check if this slot is blocked for the selected date
-  const checkDate=_selectedDate||new Date().toISOString().slice(0,10);
+  // Check if this slot is blocked for the selected date or today
+  const todayDate=new Date().toISOString().slice(0,10);
+  const checkDate=_selectedDate||todayDate;
   const blocks=cfg.slotBlocks||[];
-  const isBlocked=blocks.some(b=>b.date===checkDate&&String(b.slotId)===String(s.id));
+  // Remove expired blocks (past dates) from check
+  const isBlocked=blocks.some(b=>
+    b.date>=todayDate && // only check current/future blocks
+    b.date===checkDate &&
+    String(b.slotId)===String(s.id)
+  );
   if(isBlocked)return'bloqueado';
   // If ordering for a future date, all slots are available (except blocked)
   const today=new Date().toISOString().slice(0,10);
