@@ -552,9 +552,20 @@ function renderMenu(){
 
 // ── CART RENDER ────────────────────────────────────────────────────────
 function getAvailableSlots(deliveryType){
+  const todayDate=new Date().toISOString().slice(0,10);
+  const checkDate=_selectedDate||todayDate;
+  const blocks=cfg.slotBlocks||[];
   return slots.filter(s=>{
     if(!s.active)return false;
     if(s.type!=='both'&&s.type!==deliveryType)return false;
+    // Exclude blocked slots for selected date
+    const isBlocked=blocks.some(b=>
+      b.date>=todayDate &&
+      b.date===checkDate &&
+      b.from===s.from &&
+      b.to===s.to
+    );
+    if(isBlocked)return false;
     return true;
   });
 }
@@ -659,11 +670,7 @@ function renderCart(){
       ${dateOptions}
     </select>`:'';
   const availSlots=getAvailableSlots(delivery);
-  const availSlotsFiltered=availSlots.filter(s=>{
-    const st=slotStatus(s);
-    console.log('Slot',s.from,'-',s.to,'status:',st,'blocks:',cfg.slotBlocks?.length||0);
-    return st!=='pasado'&&st!=='bloqueado';
-  });
+  const availSlotsFiltered=availSlots.filter(s=>slotStatus(s)!=='pasado');
   const slotsHtml=availSlotsFiltered.length
     ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label>
       <select class="finput" id="slot-select" onchange="selectSlotFromSelect(this.value)" style="margin-top:4px">
