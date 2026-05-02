@@ -744,10 +744,15 @@ function renderCart(){
     </div>
     <div class="sec-label">Tus datos</div>
     <div class="fbox">
-      <label class="flabel">Nombre completo <span class="req">*</span></label>
+      <label class="flabel">Nombre <span class="req">*</span></label>
+      <div class="field-wrap" style="margin-bottom:8px">
+        <input class="finput" id="f-name" placeholder="Ej: María" oninput="checkForm()">
+        <div class="field-error" id="f-name-err">Ingresá tu nombre</div>
+      </div>
+      <label class="flabel">Apellido <span class="req">*</span></label>
       <div class="field-wrap">
-        <input class="finput" id="f-name" placeholder="Ej: María González" oninput="checkForm()">
-        <div class="field-error" id="f-name-err">Ingresá tu nombre completo</div>
+        <input class="finput" id="f-apellido" placeholder="Ej: González" oninput="checkForm()">
+        <div class="field-error" id="f-apellido-err">Ingresá tu apellido</div>
       </div>
       <label class="flabel">Teléfono <span class="req">*</span></label>
       <div class="field-wrap">
@@ -767,22 +772,24 @@ function renderCart(){
 
 // ── VALIDATION ─────────────────────────────────────────────────────────
 function validateForm(){
-  const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
+  const name=getFieldVal('f-name'),apellido=getFieldVal('f-apellido'),phone=getFieldVal('f-phone');
   const addr=delivery==='delivery'?getFieldVal('f-addr').trim():'ok';
   const availSlots=getAvailableSlots(delivery);
   const today=new Date().toISOString().slice(0,10);
   const isFutureDate=_selectedDate&&_selectedDate>today;
   const slotOk=availSlots.length===0||selectedSlot!==''||isFutureDate;
-  markField('f-name',!name,'Ingresá tu nombre completo');
+  markField('f-name',!name,'Ingresá tu nombre');
+  markField('f-apellido',!apellido,'Ingresá tu apellido');
   markField('f-phone',!phone,'Ingresá tu teléfono');
   if(delivery==='delivery')markField('f-addr',!addr.trim(),'Ingresá tu dirección de entrega');
   const slotErr=document.getElementById('slot-error');
   if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0&&!isFutureDate);
-  const valid=!!(name&&phone&&addr.trim()&&slotOk);
+  const valid=!!(name&&apellido&&phone&&addr.trim()&&slotOk);
   const summary=document.getElementById('form-errors');
   if(summary&&triedSubmit&&!valid){
     const errors=[];
-    if(!name)errors.push('Nombre completo');
+    if(!name)errors.push('Nombre');
+    if(!apellido)errors.push('Apellido');
     if(!phone)errors.push('Teléfono');
     if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
     if(!slotOk&&availSlots.length>0&&!isFutureDate)errors.push('Franja horaria');
@@ -833,6 +840,7 @@ function setDelivery(d){
   delivery=d;selectedSlot='';triedSubmit=false;
   renderCart();
   const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const apl=document.getElementById('f-apellido');if(apl&&savedApellido)apl.value=savedApellido;
   const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
   const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
   const cup=document.getElementById('f-cupon');if(cup&&savedCupon)cup.value=savedCupon;
@@ -842,6 +850,7 @@ function selectDate(v){_selectedDate=v;renderCart();}
 function setPayment(p){
   // Save form state before re-render
   const savedName=getFieldVal('f-name');
+  const savedApellido=getFieldVal('f-apellido');
   const savedPhone=getFieldVal('f-phone');
   const savedAddr=getFieldVal('f-addr');
   const savedObs=getFieldVal('f-obs');
@@ -851,6 +860,7 @@ function setPayment(p){
   renderCart();
   // Restore form state after re-render
   const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const apl=document.getElementById('f-apellido');if(apl&&savedApellido)apl.value=savedApellido;
   const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
   const addr=document.getElementById('f-addr');if(addr&&savedAddr)addr.value=savedAddr;
   const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
@@ -891,6 +901,7 @@ function tryConfirm(){
 async function confirmOrder(){
   if(!cfg.open&&!cfg.anticipado){alert('El local está cerrado. Podés hacer tu pedido cuando estemos abiertos.');return;}
   const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
+  const apellido=getFieldVal('f-apellido');
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
   const ship=delivery==='delivery'?(cfg.envio||0):0;
   let sub=0;
@@ -931,7 +942,7 @@ async function confirmOrder(){
     else descuento=Math.min(_cuponAplicado.valor,sub+ship);
   }
   const totalFinal=Math.max(0,total-descuento);
-  const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:_selectedDate||new Date().toISOString().slice(0,10)};
+  const orderData={customer:name+(apellido?' '+apellido:''),phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:_selectedDate||new Date().toISOString().slice(0,10)};
   gaEvent('purchase',{currency:'ARS',value:totalFinal,items:items.map(i=>({item_name:i.name,quantity:i.qty,price:i.price}))});
 
   let orderId=null;
