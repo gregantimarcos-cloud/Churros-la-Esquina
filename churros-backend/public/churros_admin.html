@@ -1136,7 +1136,53 @@ function renderOrders(){
     }
     // Slot header within date
     if(slotLabel!==lastSlot){
-      html+=`<div class="slot-label">⏰ ${slotLabel}</div>`;
+      // Calculate countdown to slot end
+      let countdownHtml='';
+      if(slotLabel&&slotLabel!=='Sin franja horaria'){
+        const slotParts=slotLabel.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
+        if(slotParts){
+          const [,fromT,toT]=slotParts;
+          const now=new Date();
+          const [toH,toM]=toT.split(':').map(Number);
+          const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
+          const diffMs=slotEnd-now;
+          if(diffMs>0){
+            const diffMin=Math.floor(diffMs/60000);
+            const urgent=diffMin<=30;
+            const txt=diffMin>=60?`${Math.floor(diffMin/60)}h ${diffMin%60}min`:diffMin+'min';
+            countdownHtml=`<span style="background:${urgent?'rgba(192,57,43,0.25)':'rgba(200,169,110,0.15)'};border:1px solid ${urgent?'rgba(192,57,43,0.4)':'rgba(200,169,110,0.25)'};border-radius:6px;padding:2px 8px;font-size:11px;color:${urgent?'#f87171':'rgba(200,169,110,0.8)'}">⏳ ${txt}</span>`;
+          } else {
+            countdownHtml=`<span style="background:rgba(100,116,139,0.2);border-radius:6px;padding:2px 8px;font-size:11px;color:#888">Terminado</span>`;
+          }
+        }
+      }
+      // Production summary for this slot
+      const slotOrders=orders.filter(o=>(o.slot||'Sin franja horaria')===slotLabel&&(o.fecha||new Date(o.ts).toISOString().slice(0,10))===(lastFecha||new Date().toISOString().slice(0,10)));
+      const prodCount={};
+      slotOrders.forEach(o=>{
+        (o.items||[]).forEach(it=>{
+          const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
+          const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
+          const uds=it.uds||(prod?.uds)||1;
+          prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
+        });
+      });
+      const totalChurros=Object.values(prodCount).reduce((a,b)=>a+b,0);
+      const prodChips=Object.entries(prodCount).map(([g,n])=>
+        `<span style="background:#fff;border:1px solid var(--cream-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--brown)">${g}: <b style="color:var(--red-warm);font-family:'Playfair Display',serif">${n}</b></span>`
+      ).join('');
+      const prodSummary=totalChurros>0?`
+        <div style="background:var(--paper);border:1.5px solid var(--kraft);border-top:none;padding:8px 12px">
+          <div style="font-size:10px;color:var(--kraft);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px">🥐 Para preparar</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+            ${prodChips}
+            <span style="background:var(--brown);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--kraft)">Total: <b style="color:#fff;font-family:'Playfair Display',serif">${totalChurros}</b></span>
+          </div>
+        </div>`:'';
+      html+=`<div style="background:var(--brown);color:var(--kraft);font-family:'Playfair Display',serif;font-size:12px;padding:7px 12px;border-radius:8px 8px 0 0;margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <span>⏰ ${slotLabel} · ${slotOrders.length} pedido${slotOrders.length!==1?'s':''}</span>
+        ${countdownHtml}
+      </div>${prodSummary}`;
       lastSlot=slotLabel;
     }
     const items=(o.items||[]).map(it=>{
@@ -2181,6 +2227,101 @@ function urlBase64ToUint8Array(base64String){
   const raw=window.atob(base64);
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
+</script>
+
+<!-- VISTA COCINA -->
+<button onclick="abrirCocina()" style="position:fixed;bottom:20px;right:16px;background:var(--brown);color:var(--kraft);border:2px solid var(--kraft);border-radius:50px;padding:10px 18px;font-family:'Playfair Display',serif;font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:50;display:none" id="cocina-btn">👨‍🍳 Cocina</button>
+
+<div id="cocina-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--brown);border:2px solid var(--kraft);border-radius:14px;padding:20px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto">
+    <div style="font-family:'Playfair Display',serif;color:var(--kraft);font-size:18px;margin-bottom:14px;border-bottom:1px solid rgba(200,169,110,0.3);padding-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      <span>👨‍🍳 Vista de Cocina</span>
+      <button onclick="cerrarCocina()" style="background:none;border:none;color:rgba(200,169,110,0.5);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div id="cocina-content" style="color:#e8e8e8;font-size:14px"></div>
+    <div style="font-size:11px;color:rgba(200,169,110,0.3);text-align:center;margin-top:12px;font-style:italic">Solo pedidos activos (no entregados)</div>
+  </div>
+</div>
+
+<script>
+function abrirCocina(){
+  const modal=document.getElementById('cocina-modal');
+  modal.style.display='flex';
+  renderCocina();
+}
+function cerrarCocina(){
+  document.getElementById('cocina-modal').style.display='none';
+}
+
+function renderCocina(){
+  const orders=_orders.filter(o=>o.status!=='done');
+  if(!orders.length){
+    document.getElementById('cocina-content').innerHTML='<div style="color:rgba(200,169,110,0.4);text-align:center;padding:20px;font-style:italic">No hay pedidos activos</div>';
+    return;
+  }
+  // Group by slot
+  const bySlot={};
+  orders.forEach(o=>{
+    const key=o.slot||'Sin franja';
+    if(!bySlot[key])bySlot[key]=[];
+    bySlot[key].push(o);
+  });
+  // Sort slots
+  const sortedSlots=Object.keys(bySlot).sort();
+  let html='';
+  sortedSlots.forEach(slot=>{
+    const slotOrders=bySlot[slot];
+    // Count churros by group
+    const prodCount={};
+    let totalChurros=0;
+    slotOrders.forEach(o=>{
+      (o.items||[]).forEach(it=>{
+        const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
+        const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
+        const uds=it.uds||(prod?.uds)||1;
+        const cant=it.qty*uds;
+        prodCount[grupo]=(prodCount[grupo]||0)+cant;
+        totalChurros+=cant;
+      });
+    });
+    // Countdown
+    let countdownTxt='';
+    const slotParts=slot.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
+    if(slotParts){
+      const [,fromT,toT]=slotParts;
+      const now=new Date();
+      const [toH,toM]=toT.split(':').map(Number);
+      const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
+      const diffMs=slotEnd-now;
+      if(diffMs>0){
+        const diffMin=Math.floor(diffMs/60000);
+        countdownTxt=diffMin>=60?` · ${Math.floor(diffMin/60)}h ${diffMin%60}min`:` · ${diffMin}min`;
+      }
+    }
+    html+=`<div style="margin-bottom:16px">
+      <div style="font-size:10px;color:rgba(200,169,110,0.6);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">⏰ ${slot}${countdownTxt} · ${slotOrders.length} pedido${slotOrders.length!==1?'s':''}</div>
+      ${Object.entries(prodCount).map(([g,n])=>`
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(200,169,110,0.1)">
+          <span style="color:#ddd">${g}</span>
+          <span style="color:var(--kraft);font-family:'Playfair Display',serif;font-size:20px;font-weight:700">${n} 🥐</span>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;margin-top:4px">
+        <span style="color:var(--kraft);font-weight:700">TOTAL franja</span>
+        <span style="color:#fff;font-family:'Playfair Display',serif;font-size:22px;font-weight:700">${totalChurros} 🥐</span>
+      </div>
+    </div>`;
+  });
+  document.getElementById('cocina-content').innerHTML=html;
+}
+
+// Show cocina button when in pedidos panel
+document.addEventListener('click', function(e){
+  const btn=document.getElementById('cocina-btn');
+  if(!btn)return;
+  const panel=document.getElementById('panel-orders');
+  if(panel&&panel.classList.contains('active')) btn.style.display='block';
+  else btn.style.display='none';
+});
 </script>
 </body>
 </html>
