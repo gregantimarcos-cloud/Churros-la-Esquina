@@ -1223,7 +1223,7 @@ function renderOrders(){
         const delivery=o.delivery==='pickup'?'🏪 Retiro':'🛵 Envío';
         const phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
         const waUrl=phone?`https://wa.me/549${phone}`:'';
-        return `<div class="kcard ${statusClass}" id="order-${o.id}">
+        return `<div class="kcard ${statusClass}" id="order-${o.id}" draggable="true" ondragstart="dragStart(event,${o.id})">
           <div class="kcard-id">#${o.id} · ${new Date(o.ts||Date.now()).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</div>
           <div class="kcard-name">${o.customer||'Sin nombre'}</div>
           <div class="kcard-items">${items}</div>
@@ -1232,9 +1232,9 @@ function renderOrders(){
             <span class="kcard-del">${delivery}</span>
           </div>
           <div class="kcard-actions">
-            ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrder(${o.id},'prep')">▶ Preparando</button>`:''}
-            ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrder(${o.id},'ready')">✓ Listo</button>`:''}
-            ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrder(${o.id},'done')">✓ Entregado</button>`:''}
+            ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparando</button>`:''}
+            ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
+            ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
             ${waUrl?`<a href="${waUrl}" target="_blank" class="btn-sm" style="background:#25D366;color:#fff;border:none;text-decoration:none">💬</a>`:''}
             <button class="btn-sm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="printOrder(${o.id})">🖨️</button>
           </div>
@@ -1246,15 +1246,15 @@ function renderOrders(){
       <div class="kanban-wrap" style="margin:0 0 14px">
         <div>
           <div class="kanban-col-head kch-new">🟡 Nuevos <span>${sg.new.length}</span></div>
-          <div class="kanban-cards">${sg.new.map(o=>buildCard(o,'knew')).join('')||'<div class="kcard-empty">—</div>'}</div>
+          <div class="kanban-cards" ondragover="event.preventDefault()" ondrop="dropCard(event,'new')">${sg.new.map(o=>buildCard(o,'knew')).join('')||'<div class="kcard-empty">—</div>'}</div>
         </div>
         <div>
           <div class="kanban-col-head kch-prep">🔵 Preparando <span>${sg.prep.length}</span></div>
-          <div class="kanban-cards">${sg.prep.map(o=>buildCard(o,'kprep')).join('')||'<div class="kcard-empty">—</div>'}</div>
+          <div class="kanban-cards" ondragover="event.preventDefault()" ondrop="dropCard(event,'prep')">${sg.prep.map(o=>buildCard(o,'kprep')).join('')||'<div class="kcard-empty">—</div>'}</div>
         </div>
         <div>
           <div class="kanban-col-head kch-ready">🟢 Listos <span>${sg.ready.length}</span></div>
-          <div class="kanban-cards">${[...sg.ready,...sg.done.slice(-1)].map(o=>buildCard(o,'kready')).join('')||'<div class="kcard-empty">—</div>'}</div>
+          <div class="kanban-cards" ondragover="event.preventDefault()" ondrop="dropCard(event,'ready')">${[...sg.ready,...sg.done.slice(-1)].map(o=>buildCard(o,'kready')).join('')||'<div class="kcard-empty">—</div>'}</div>
         </div>
       </div>`;
     });
@@ -2217,6 +2217,25 @@ async function removeSlotBlock(idx){
   _cfg.slotBlocks.splice(idx, 1);
   await saveCfg();
   renderBlocksList();
+}
+
+// ── DRAG & DROP KANBAN ──────────────────────────────────────────────
+let _dragOrderId = null;
+
+function dragStart(event, orderId){
+  _dragOrderId = orderId;
+  event.dataTransfer.effectAllowed = 'move';
+  event.target.style.opacity = '0.5';
+}
+
+async function dropCard(event, newStatus){
+  event.preventDefault();
+  if(!_dragOrderId) return;
+  // Restore opacity
+  const card = document.getElementById('order-'+_dragOrderId);
+  if(card) card.style.opacity = '1';
+  await setOrderStatus(_dragOrderId, newStatus);
+  _dragOrderId = null;
 }
 
 // ── PUSH NOTIFICATIONS ──────────────────────────────────────────────
