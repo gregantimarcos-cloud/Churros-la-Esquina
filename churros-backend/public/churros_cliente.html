@@ -37,8 +37,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .hero-divider::before,.hero-divider::after{content:'';flex:1;height:1px;background:var(--kraft-dark)}
 .sec-label{font-family:'IM Fell English SC',serif;font-size:11px;letter-spacing:.12em;color:var(--brown-light);padding:12px 16px 5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
 .sec-label::after{content:'';flex:1;height:1px;background:var(--kraft);opacity:.4;}
-.app-wrap{max-width:700px;margin:0 auto;position:relative;z-index:1;padding-bottom:40px;}
+.app-wrap{max-width:100%;margin:0 auto;position:relative;z-index:1;padding-bottom:40px;}
 .menu-grid{display:flex;flex-direction:column;gap:14px;padding:0 14px 14px;}
+@media(min-width:700px){.products-grid{grid-template-columns:1fr 1fr;}}
 @media(min-width:600px){.menu-grid{grid-template-columns:repeat(3,1fr)}}
 .pcard{background:var(--paper);border:1px solid rgba(200,169,110,0.2);border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(61,31,14,0.1);transition:transform .15s;}
 .pcard:active{transform:scale(0.99);}
@@ -161,10 +162,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 <body>
 
 <!-- PWA Splash Screen -->
-<div id="splash-screen" style="position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;transition:opacity .5s;">
+<div id="splash-screen" style="position:fixed;inset:0;background:#3d1f0e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;transition:opacity .5s;">
   <div style="font-size:80px">🥐</div alt="Churros La Esquina" style="width:180px;height:180px;border-radius:50%;margin-bottom:24px;box-shadow:0 4px 24px rgba(61,28,2,.15);">
-  <div style="font-family:'IM Fell English SC',Georgia,serif;font-size:22px;color:#1a1a1a;letter-spacing:.06em;margin-bottom:6px;">Churros La Esquina</div>
-  <div style="font-family:Georgia,serif;font-size:13px;color:#888;font-style:italic;letter-spacing:.04em;">Artesanales desde siempre</div>
+  <div style="font-family:'IM Fell English SC',Georgia,serif;font-size:22px;color:#c8a96e;letter-spacing:.06em;margin-bottom:6px;">Churros La Esquina</div>
+  <div style="font-family:Georgia,serif;font-size:13px;color:rgba(200,169,110,0.6);font-style:italic;letter-spacing:.04em;">Artesanales desde siempre</div>
   <div style="margin-top:28px;width:36px;height:3px;background:#1a1a1a;border-radius:2px;animation:sload 1.4s ease-in-out infinite;"></div>
 </div>
 <style>
@@ -172,6 +173,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 </style>
 <script>
 window.addEventListener('load',function(){
+  // Start loading bar animation
+  setTimeout(()=>{
+    const bar = document.getElementById('splash-bar');
+    if(bar) bar.style.width='90%';
+  }, 100);
   setTimeout(function(){
     var s=document.getElementById('splash-screen');
     if(s){s.style.opacity='0';setTimeout(function(){s.remove();},500);}
@@ -300,6 +306,16 @@ function applyProductOrder(raw, cfgData){
   const rest = raw.filter(p=>!savedOrder.includes(String(p.id)));
   return [...ordered, ...rest];
 }
+
+// Update splash message if loading takes time
+let _splashTimer = setTimeout(()=>{
+  const msg = document.getElementById('splash-msg');
+  if(msg) msg.textContent = 'Despertando el servidor, un momento...';
+}, 3000);
+let _splashTimer2 = setTimeout(()=>{
+  const msg = document.getElementById('splash-msg');
+  if(msg) msg.textContent = 'Ya casi está listo...';
+}, 7000);
 
 async function init(){
   // Load config, products and slots in parallel
@@ -1166,7 +1182,10 @@ function showAddedToast(){
 
 function resetApp(){
   cart={};delivery='pickup';payment='efectivo';geoLocation=null;selectedSlot='';triedSubmit=false;_comprobanteFile=null;_pendingOrderId=null;_cuponAplicado=null;
-  updBadge();goTab('menu');renderMenu();showView('v-customer');
+  updBadge();goTab('menu');renderMenu();clearTimeout(_splashTimer);clearTimeout(_splashTimer2);
+  const bar = document.getElementById('splash-bar');
+  if(bar) bar.style.width='100%';
+  showView('v-customer');
 }
 
 init();
