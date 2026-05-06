@@ -40,9 +40,9 @@ body::before{display:none}
 .login-btn{width:100%;background:#c8a96e;color:var(--kraft);border:none;border-radius:9px;padding:12px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
 .login-btn:hover{background:var(--brown-mid);}
 .login-error{color:var(--red-warm);font-size:12px;font-style:italic;margin-top:8px;min-height:18px;}
-.app-wrap{max-width:800px;margin:0 auto;position:relative;z-index:1;padding-bottom:40px;}
+.app-wrap{max-width:100%;margin:0 auto;position:relative;z-index:1;padding-bottom:40px;}
 .admin-header{background:#1e293b;padding:0;position:sticky;top:0;z-index:100;border-bottom:1px solid #334155;box-shadow:0 2px 12px rgba(0,0,0,0.15);}
-.admin-header-inner{display:flex;align-items:center;gap:10px;padding:10px 14px;max-width:800px;margin:0 auto;}
+.admin-header-inner{display:flex;align-items:center;gap:10px;padding:10px 20px;}
 .admin-logo{width:42px;height:42px;border-radius:50%;border:1.5px solid #e2e8f0;object-fit:cover;flex-shrink:0;background:var(--brown-mid);}
 .admin-title-wrap{flex:1}
 .admin-title{font-family:'Inter',sans-serif;font-size:17px;color:#fff;letter-spacing:.03em;}
@@ -52,7 +52,7 @@ body::before{display:none}
 .nav-tabs::-webkit-scrollbar{display:none;}
 .nav-tab{flex-shrink:0;padding:10px 13px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:rgba(0,0,0,0.6);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-3px;transition:all .2s;}
 .nav-tab.on{color:#fff;border-color:#c8a96e;}
-.panel{display:none;padding:12px;background:var(--bg);}.panel.active{display:block;}
+.panel{display:none;padding:16px;background:var(--bg);}.panel.active{display:block;}
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
 @media(min-width:560px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
 .stat-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
@@ -227,7 +227,7 @@ body::before{display:none}
 .sf-active{background:#c8a96e!important;color:var(--kraft)!important;border-color:#111827!important}
 
 /* ── KANBAN PEDIDOS ── */
-.kanban-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+.kanban-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;width:100%;}
 @media(max-width:600px){.kanban-wrap{grid-template-columns:1fr;}}
 .kanban-col-head{
   padding:7px 12px;border-radius:8px 8px 0 0;
@@ -1262,6 +1262,9 @@ function renderOrders(){
   document.getElementById('orders-list').innerHTML=html||'<div class="empty-state">No hay pedidos con este filtro.</div>';
 }
 async function setOrderStatus(id,status){
+  // Optimistic update — update UI immediately
+  const order = _orders.find(o=>o.id===id);
+  if(order){ order.status=status; renderOrders(); }
   const statusTimes={new:'Recibido',prep:'En preparación',ready:'Listo',done:'Entregado'};
   const timeLabel=statusTimes[status]||status;
   const now=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
