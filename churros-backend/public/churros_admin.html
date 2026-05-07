@@ -285,6 +285,7 @@ body::before{display:none}
     <div class="nav-tabs">
       <div class="nav-tab on" onclick="showPanel('stats')" id="ntab-stats">📊 Stats</div>
       <div class="nav-tab" onclick="showPanel('orders')" id="ntab-orders">📋 Pedidos</div>
+      <div class="nav-tab" onclick="showPanel('historial')" id="ntab-historial">📁 Historial</div>
       <div class="nav-tab" onclick="showPanel('products')" id="ntab-products">🥐 Productos</div>
       <div class="nav-tab" onclick="showPanel('slots')" id="ntab-slots">🕐 Horarios</div>
       <div class="nav-tab" onclick="showPanel('config')" id="ntab-config">⚙ Config</div>
@@ -294,7 +295,21 @@ body::before{display:none}
     </div>
   </div>
 
-  <div class="panel active" id="panel-stats">
+  <div class="panel" id="panel-historial">
+  <div style="padding-top:8px">
+    <div class="ornament">· · · ✦ · · ·</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <input class="finput" type="date" id="hist-from" style="max-width:150px">
+      <span style="color:var(--brown-light);font-size:13px">al</span>
+      <input class="finput" type="date" id="hist-to" style="max-width:150px">
+      <button class="btn-sm badge-new" onclick="loadHistorial()" style="padding:7px 14px">🔍 Buscar</button>
+      <button class="btn-sm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;padding:7px 14px" onclick="clearHistorial()">✕ Limpiar</button>
+    </div>
+    <div id="historial-list"><div style="color:var(--brown-light);font-style:italic;font-size:13px;padding:20px;text-align:center">Seleccioná un rango de fechas y buscá</div></div>
+  </div>
+</div>
+
+<div class="panel active" id="panel-stats">
     <div style="padding-top:8px">
       <div class="ornament">· · · ✦ · · ·</div>
       <div style="background:var(--cream-dark);border-radius:11px;padding:12px;margin-bottom:14px">
@@ -1237,6 +1252,7 @@ function renderOrders(){
             ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
             ${waUrl?`<a href="${waUrl}" target="_blank" class="btn-sm" style="background:#25D366;color:#fff;border:none;text-decoration:none">💬</a>`:''}
             <button class="btn-sm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="printOrder(${o.id})">🖨️</button>
+            <button class="btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;margin-left:auto" onclick="deleteOrder(${o.id})">✕</button>
           </div>
         </div>`;
       };
@@ -2220,6 +2236,78 @@ async function removeSlotBlock(idx){
   _cfg.slotBlocks.splice(idx, 1);
   await saveCfg();
   renderBlocksList();
+}
+
+// ── HISTORIAL DE ENTREGADOS ──────────────────────────────────────────
+async function loadHistorial(){
+  const from = document.getElementById('hist-from').value;
+  const to = document.getElementById('hist-to').value;
+  if(!from||!to){alert('Elegí un rango de fechas');return;}
+  const list = document.getElementById('historial-list');
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--brown-light);font-style:italic">Buscando...</div>';
+  const orders = await apiFetch('/api/orders')||[];
+  // Filter done orders in range
+  const filtered = orders.filter(o=>{
+    if(o.status!=='done')return false;
+    const fecha = o.fecha||(o.ts?new Date(o.ts).toISOString().slice(0,10):'');
+    return fecha>=from && fecha<=to;
+  });
+  if(!filtered.length){
+    list.innerHTML='<div style="text-align:center;padding:30px;color:var(--brown-light);font-style:italic">No hay pedidos entregados en ese período</div>';
+    return;
+  }
+  // Group by date
+  const byDate={};
+  filtered.forEach(o=>{
+    const fecha=o.fecha||(o.ts?new Date(o.ts).toISOString().slice(0,10):'');
+    if(!byDate[fecha])byDate[fecha]=[];
+    byDate[fecha].push(o);
+  });
+  let html='';
+  Object.keys(byDate).sort().reverse().forEach(fecha=>{
+    const fd=new Date(fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    const dayOrders=byDate[fecha];
+    const dayTotal=dayOrders.reduce((a,o)=>a+o.total,0);
+    html+=`<div style="background:#1e293b;color:#c8a96e;border-radius:8px;padding:7px 14px;margin:10px 0 6px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center">
+      <span>📅 ${fd} · ${dayOrders.length} pedido${dayOrders.length!==1?'s':''}</span>
+      <span>${fmt(dayTotal)}</span>
+    </div>`;
+    dayOrders.sort((a,b)=>b.id-a.id).forEach(o=>{
+      const items=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(' · ');
+      const delivery=o.delivery==='pickup'?'🏪 Retiro':'🛵 Envío';
+      const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+      html+=`<div class="order-card" style="opacity:0.85;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="color:#9ca3af;font-size:11px;font-family:monospace">#${o.id}</span>
+        <span style="font-weight:700;color:#111827;flex:1;min-width:80px">${o.customer||'Sin nombre'}</span>
+        <span style="font-size:12px;color:#6b7280;flex:2;min-width:120px">${items}</span>
+        <span style="font-size:11px;color:#9ca3af">${delivery} · ${hora}</span>
+        <span style="font-weight:700;color:#dc2626">${fmt(o.total||0)}</span>
+        <button class="btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5" onclick="deleteOrder(${o.id})">✕</button>
+      </div>`;
+    });
+  });
+  // Total summary
+  const grandTotal=filtered.reduce((a,o)=>a+o.total,0);
+  html=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-weight:700;color:#166534">✓ ${filtered.length} pedidos entregados</span>
+    <span style="font-weight:700;color:#166534;font-size:16px">${fmt(grandTotal)}</span>
+  </div>`+html;
+  list.innerHTML=html;
+}
+
+function clearHistorial(){
+  document.getElementById('hist-from').value='';
+  document.getElementById('hist-to').value='';
+  document.getElementById('historial-list').innerHTML='<div style="color:var(--brown-light);font-style:italic;font-size:13px;padding:20px;text-align:center">Seleccioná un rango de fechas y buscá</div>';
+}
+
+// Init historial with current month by default
+function initHistorial(){
+  const now=new Date();
+  const y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0');
+  const lastDay=new Date(y,now.getMonth()+1,0).getDate();
+  document.getElementById('hist-from').value=`${y}-${m}-01`;
+  document.getElementById('hist-to').value=`${y}-${m}-${lastDay}`;
 }
 
 // ── DRAG & DROP KANBAN ──────────────────────────────────────────────
