@@ -778,6 +778,16 @@ body::before{display:none}
       <div style="display:none;padding:10px 13px">
         <div><label class="flabel">Grupo estadístico <small>para agrupar en stats</small></label><input class="finput" id="m-grupo" placeholder="Ej: Churros clásicos"></div>
         <div style="margin-top:8px"><label class="flabel">Churros que equivale <small>para contar unidades reales</small></label><input class="finput" id="m-uds" type="number" placeholder="Ej: 6" min="1"></div>
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+          <label class="flabel">Composición del combo <small>para desglosar por tipo en producción</small></label>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;font-style:italic">Completá solo si el producto es un combo con distintos tipos de churros</div>
+          <div id="comp-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:6px">
+            <input class="finput" id="comp-tipo" placeholder="Tipo (ej: Nutella)" style="flex:2">
+            <input class="finput" id="comp-cant" type="number" placeholder="Cant." min="1" style="flex:1">
+            <button onclick="addComp()" style="background:var(--brown);color:#c8a96e;border:none;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:13px;white-space:nowrap">+ Agregar</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="row2" style="margin-bottom:10px">
@@ -1218,22 +1228,26 @@ function renderOrders(){
       allOrders.forEach(o=>{
         (o.items||[]).forEach(it=>{
           const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
-          const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
-          // uds priority: saved in item > product config > parse from name > 1
-          let uds=1;
-          if(it.uds&&Number(it.uds)>0){
-            uds=Number(it.uds);
-          } else if(prod?.uds&&Number(prod.uds)>0){
-            uds=Number(prod.uds);
+          const composicion=prod?.composicion||(it.composicion)||null;
+          if(composicion&&composicion.length>0){
+            // Desglosar por tipo de churro
+            composicion.forEach(c=>{
+              prodCount[c.tipo]=(prodCount[c.tipo]||0)+(it.qty*c.cant);
+            });
           } else {
-            // Try to infer from presentation name
-            const presName=(it.name||'').toLowerCase();
-            if(presName.includes('docena')&&!presName.includes('media'))uds=12;
-            else if(presName.includes('media docena'))uds=6;
-            else if(presName.includes('unidad'))uds=1;
+            // Sin composición — contar como bloque
+            const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
+            let uds=1;
+            if(it.uds&&Number(it.uds)>0){uds=Number(it.uds);}
+            else if(prod?.uds&&Number(prod.uds)>0){uds=Number(prod.uds);}
+            else{
+              const pn=(it.name||'').toLowerCase();
+              if(pn.includes('docena')&&!pn.includes('media'))uds=12;
+              else if(pn.includes('media docena'))uds=6;
+              else if(pn.includes('unidad'))uds=1;
+            }
+            prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
           }
-          console.log('CHURROS:',it.name,'qty:',it.qty,'uds:',uds,'it.uds:',it.uds,'prod.uds:',prod?.uds,'total:',it.qty*uds);
-          prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
         });
       });
       const totalChurros=Object.values(prodCount).reduce((a,b)=>a+b,0);
@@ -2106,12 +2120,16 @@ function printOrder(id){
   if(!o)return;
   const items=(o.items||[]).map(it=>`<tr><td>${it.qty}x ${it.name}</td><td style="text-align:right">${fmt(it.price*it.qty)}</td></tr>`).join('');
   const fecha=o.fecha?`<br>Fecha: ${new Date(o.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}`:'';
-  const w=window.open('','_blank','width=400,height=600');
+  const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>Pedido #${o.id}</title>
-  <style>body{font-family:Arial,sans-serif;padding:20px;max-width:300px;margin:0 auto}
-  h2{text-align:center;border-bottom:2px dashed #000;padding-bottom:10px}
-  table{width:100%;border-collapse:collapse}td{padding:4px 2px}
-  .total{font-weight:bold;font-size:16px;border-top:2px dashed #000;padding-top:8px}
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;padding:16px;max-width:400px;margin:0 auto;font-size:15px}
+  h2{text-align:center;border-bottom:2px dashed #000;padding-bottom:10px;margin-bottom:12px;font-size:18px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:6px 4px;font-size:14px;line-height:1.4}
+  .total{font-weight:bold;font-size:18px;border-top:2px dashed #000;padding-top:8px}
   .info{font-size:12px;color:#555;margin:4px 0}
   @media print{button{display:none}}</style></head><body>
   <h2>🥐 Churros La Esquina<br><small>Pedido #${o.id}</small></h2>
@@ -2249,6 +2267,41 @@ async function removeSlotBlock(idx){
   _cfg.slotBlocks.splice(idx, 1);
   await saveCfg();
   renderBlocksList();
+}
+
+// ── COMPOSICIÓN DE COMBOS ──────────────────────────────────────────
+let _editComp = [];
+
+function renderCompList(){
+  const list = document.getElementById('comp-list');
+  if(!list) return;
+  if(!_editComp.length){
+    list.innerHTML='<div style="font-size:12px;color:var(--text-4);font-style:italic;padding:4px 0">Sin composición definida</div>';
+    return;
+  }
+  list.innerHTML = _editComp.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:7px;padding:5px 10px">
+      <span style="flex:1;font-size:13px;color:var(--text)">${c.tipo}</span>
+      <span style="font-weight:700;color:var(--text-2);font-size:14px">${c.cant} 🥐</span>
+      <button onclick="removeComp(${i})" style="background:var(--red-light);border:1px solid var(--red-border);color:var(--red);border-radius:5px;padding:2px 7px;font-size:12px;cursor:pointer">✕</button>
+    </div>`
+  ).join('');
+}
+
+function addComp(){
+  const tipo = document.getElementById('comp-tipo').value.trim();
+  const cant = Number(document.getElementById('comp-cant').value);
+  if(!tipo){alert('Ingresá el tipo de churro');return;}
+  if(!cant||cant<1){alert('Ingresá una cantidad válida');return;}
+  _editComp.push({tipo,cant});
+  document.getElementById('comp-tipo').value='';
+  document.getElementById('comp-cant').value='';
+  renderCompList();
+}
+
+function removeComp(i){
+  _editComp.splice(i,1);
+  renderCompList();
 }
 
 // ── HISTORIAL DE ENTREGADOS ──────────────────────────────────────────
@@ -2443,13 +2496,21 @@ function renderCocina(){
       (o.items||[]).forEach(it=>{
         const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
         const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
-        let uds=1;
-        if(it.uds&&Number(it.uds)>0){uds=Number(it.uds);}
-        else if(prod?.uds&&Number(prod.uds)>0){uds=Number(prod.uds);}
-        else{const pn=(it.name||'').toLowerCase();if(pn.includes('docena')&&!pn.includes('media'))uds=12;else if(pn.includes('media docena'))uds=6;}
-        const cant=it.qty*uds;
-        prodCount[grupo]=(prodCount[grupo]||0)+cant;
-        totalChurros+=cant;
+        const comp=prod?.composicion||null;
+        if(comp&&comp.length>0){
+          comp.forEach(c=>{
+            prodCount[c.tipo]=(prodCount[c.tipo]||0)+(it.qty*c.cant);
+            totalChurros+=it.qty*c.cant;
+          });
+        } else {
+          let uds=1;
+          if(it.uds&&Number(it.uds)>0){uds=Number(it.uds);}
+          else if(prod?.uds&&Number(prod.uds)>0){uds=Number(prod.uds);}
+          else{const pn=(it.name||'').toLowerCase();if(pn.includes('docena')&&!pn.includes('media'))uds=12;else if(pn.includes('media docena'))uds=6;}
+          const cant=it.qty*uds;
+          prodCount[grupo]=(prodCount[grupo]||0)+cant;
+          totalChurros+=cant;
+        }
       });
     });
     // Countdown
