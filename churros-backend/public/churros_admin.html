@@ -1219,7 +1219,19 @@ function renderOrders(){
         (o.items||[]).forEach(it=>{
           const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
           const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
-          const uds=it.uds||(prod?.uds)||1;
+          // uds priority: saved in item > product config > parse from name > 1
+          let uds=1;
+          if(it.uds&&Number(it.uds)>0){
+            uds=Number(it.uds);
+          } else if(prod?.uds&&Number(prod.uds)>0){
+            uds=Number(prod.uds);
+          } else {
+            // Try to infer from presentation name
+            const presName=(it.name||'').toLowerCase();
+            if(presName.includes('docena')&&!presName.includes('media'))uds=12;
+            else if(presName.includes('media docena'))uds=6;
+            else if(presName.includes('unidad'))uds=1;
+          }
           prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
         });
       });
@@ -2430,7 +2442,10 @@ function renderCocina(){
       (o.items||[]).forEach(it=>{
         const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
         const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
-        const uds=it.uds||(prod?.uds)||1;
+        let uds=1;
+        if(it.uds&&Number(it.uds)>0){uds=Number(it.uds);}
+        else if(prod?.uds&&Number(prod.uds)>0){uds=Number(prod.uds);}
+        else{const pn=(it.name||'').toLowerCase();if(pn.includes('docena')&&!pn.includes('media'))uds=12;else if(pn.includes('media docena'))uds=6;}
         const cant=it.qty*uds;
         prodCount[grupo]=(prodCount[grupo]||0)+cant;
         totalChurros+=cant;

@@ -961,7 +961,22 @@ async function confirmOrder(){
       itemName=varNombre?p.name+' ('+varNombre+')':p.name;
     }
     sub+=unitPrice*cart[k];
-    return{name:itemName,qty:cart[k],price:unitPrice,id:p.id};
+    // uds = churros this item represents (from presentation or product config)
+    let uds=1;
+    if(isPres){
+      const sepIdx2=k.indexOf('__');
+      const pid2=k.substring(0,sepIdx2);
+      const presNombre2=cart[k+'__n']||k.substring(sepIdx2+2);
+      const prod2=products.find(x=>String(x.id)===pid2);
+      if(prod2&&prod2.presentaciones){
+        const pres=prod2.presentaciones.find(pr=>pr.nombre===presNombre2);
+        if(pres&&pres.uds)uds=Number(pres.uds);
+      }
+      if(uds===1&&prod2&&prod2.uds)uds=Number(prod2.uds);
+    } else {
+      if(p.uds)uds=Number(p.uds);
+    }
+    return{name:itemName,qty:cart[k],price:unitPrice,id:p.id,uds};
   }).filter(Boolean);
   const total=sub+ship;
   let slotLabel='';
