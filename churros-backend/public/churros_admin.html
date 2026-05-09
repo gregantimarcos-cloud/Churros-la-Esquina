@@ -1232,6 +1232,7 @@ function renderOrders(){
             else if(presName.includes('media docena'))uds=6;
             else if(presName.includes('unidad'))uds=1;
           }
+          console.log('CHURROS:',it.name,'qty:',it.qty,'uds:',uds,'it.uds:',it.uds,'prod.uds:',prod?.uds,'total:',it.qty*uds);
           prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
         });
       });
