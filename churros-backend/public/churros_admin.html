@@ -1438,6 +1438,9 @@ function openModal(id){
   document.getElementById('pres-nombre').value='';
   document.getElementById('pres-precio').value='';
   document.getElementById('pres-uds').value='';
+  // Load composicion
+  _editComp = (p && p.composicion) ? JSON.parse(JSON.stringify(p.composicion)) : [];
+  renderCompList();
   document.getElementById('modal-overlay').classList.add('open');
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editId=null;currentImg='';_editPresentaciones=[];}
