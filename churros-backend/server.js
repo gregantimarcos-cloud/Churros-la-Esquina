@@ -202,7 +202,36 @@ app.post('/api/orders', async (req, res) => {
     const body = req.body;
     if (body.slot) {
       const slots = await getSlots();
+      const cfg = await getCfg();
       const slotMatch = slots.find(s => `${s.from} – ${s.to}` === body.slot && s.active);
+
+      // ── Validar que la franja no haya vencido (buffer del servidor) ──
+      if (slotMatch) {
+        const orderDate = body.fecha || new Date().toISOString().slice(0, 10);
+        const today = new Date().toISOString().slice(0, 10);
+        if (orderDate === today) {
+          // Solo validar horario si es para hoy
+          const buffer = cfg.slotBuffer || 15;
+          const now = new Date();
+          const [toH, toM] = slotMatch.to.split(':').map(Number);
+          const slotEnd = new Date();
+          slotEnd.setHours(toH, toM, 0, 0);
+          if (now >= new Date(slotEnd - buffer * 60 * 1000)) {
+            return res.status(409).json({ error: 'Esta franja horaria ya está cerrada. Por favor elegí otra.' });
+          }
+          // Validar bloqueos por fecha
+          const blocks = cfg.slotBlocks || [];
+          const isBlocked = blocks.some(b =>
+            b.date === today &&
+            b.from === slotMatch.from &&
+            b.to === slotMatch.to
+          );
+          if (isBlocked) {
+            return res.status(409).json({ error: 'Esta franja horaria no está disponible para hoy.' });
+          }
+        }
+      }
+
       if (slotMatch && slotMatch.maxPedidos > 0) {
         const today = new Date().toDateString();
         const orders = await getOrders();
@@ -323,6 +352,9 @@ app.get('*', (req, res) => {
 // ── Start ───────────────────────────────────────────────────────────
 initDB().then(() => {
   // ── PUSH SUBSCRIPTIONS ──────────────────────────────────────────────
+// ── Health check / ping (para UptimeRobot) ──────────────────────────
+app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 app.get('/api/push/vapid', (req, res) => {
   console.log('VAPID requested, key:', VAPID_PUBLIC ? 'present' : 'missing');
   res.json({ publicKey: VAPID_PUBLIC || null });

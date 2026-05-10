@@ -1168,7 +1168,6 @@ function renderOrders(){
   let orders=[..._orders];
   if(orderFilter!=='all')orders=orders.filter(o=>o.status===orderFilter);
 
-  // Sort by fecha, then slot, then id
   orders.sort((a,b)=>{
     const fechaA=a.fecha||new Date(a.ts).toISOString().slice(0,10);
     const fechaB=b.fecha||new Date(b.ts).toISOString().slice(0,10);
@@ -1182,128 +1181,117 @@ function renderOrders(){
   const sb=s=>({new:'badge-new',prep:'badge-prep',ready:'badge-ready',done:'badge-done'}[s]||'');
   if(!orders.length){document.getElementById('orders-list').innerHTML='<div class="empty-state">No hay pedidos con este filtro.</div>';return;}
 
-  // Group by date AND slot
-  // Group by fecha → slot → status for kanban
-  const groups={}; // {fecha: {slot: {new:[], prep:[], ready:[], done:[]}}}
+  // Helper: calculate production for a list of orders
+  function calcProd(ords){
+    const prodCount={};
+    ords.forEach(o=>{
+      (o.items||[]).forEach(it=>{
+        const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
+        const comp=prod?.composicion||null;
+        if(comp&&comp.length>0){
+          comp.forEach(c=>{prodCount[c.tipo]=(prodCount[c.tipo]||0)+(it.qty*c.cant);});
+        } else {
+          const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
+          let uds=1;
+          if(it.uds&&Number(it.uds)>0){uds=Number(it.uds);}
+          else if(prod?.uds&&Number(prod.uds)>0){uds=Number(prod.uds);}
+          else{const pn=(it.name||''). toLowerCase();if(pn.includes('docena')&&!pn.includes('media'))uds=12;else if(pn.includes('media docena'))uds=6;}
+          prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
+        }
+      });
+    });
+    return prodCount;
+  }
+
+  let html='';
+  let lastFecha=null, lastSlot=null;
+  let slotOrders=[];
+
+  const flushSlot=()=>{
+    if(!lastSlot||!slotOrders.length)return;
+    // Countdown
+    let countdownHtml='';
+    const sp=lastSlot.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
+    if(sp){
+      const [,fromT,toT]=sp;
+      const now=new Date();
+      const [toH,toM]=toT.split(':').map(Number);
+      const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
+      const diffMs=slotEnd-now;
+      if(diffMs>0){
+        const diffMin=Math.floor(diffMs/60000);
+        const urgent=diffMin<=30;
+        const txt=diffMin>=60?`${Math.floor(diffMin/60)}h ${diffMin%60}min`:diffMin+'min';
+        countdownHtml=`<span style="background:${urgent?'rgba(220,38,38,0.15)':' rgba(200,169,110,0.12)'};border:1px solid ${urgent?'rgba(220,38,38,0.4)':' rgba(200,169,110,0.25)'};border-radius:6px;padding:2px 8px;font-size:11px;color:${urgent?'#f87171':'#c8a96e'}">⏳ ${txt}</span>`;
+      }
+    }
+    // Production summary
+    const prod=calcProd(slotOrders);
+    const total=Object.values(prod).reduce((a,b)=>a+b,0);
+    const chips=Object.entries(prod).map(([g,n])=>
+      `<span style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--text-2)">${g}: <b style="color:var(--red-warm)">${n}</b></span>`
+    ).join('');
+    const prodBar=total>0?`<div style="background:#fff8ed;border:1.5px solid #fde68a;border-top:none;padding:7px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:1px">🥐 Preparar:</span>${chips}
+      <span style="background:var(--brown);border-radius:20px;padding:3px 10px;font-size:12px;color:#c8a96e">Total: <b style="color:#fff">${total}</b></span>
+    </div>`:'';
+    html+=`<div style="background:var(--brown);color:#c8a96e;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px 8px 0 0;margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+      <span>⏰ ${lastSlot} · ${slotOrders.length} pedido${slotOrders.length!==1?'s':''}</span>${countdownHtml}</div>${prodBar}`;
+  };
+
   orders.forEach(o=>{
     const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
-    const slot=o.slot||'Sin franja';
-    if(!groups[fecha])groups[fecha]={};
-    if(!groups[fecha][slot])groups[fecha][slot]={new:[],prep:[],ready:[],done:[]};
-    const st=o.status==='new'?'new':o.status==='prep'?'prep':o.status==='ready'?'ready':'done';
-    groups[fecha][slot][st].push(o);
-  });
+    const slotLabel=o.slot||'Sin franja horaria';
 
-  // Build kanban HTML per fecha/slot
-  let html='';
-  const sortedFechas=Object.keys(groups).sort();
-  sortedFechas.forEach(fecha=>{
-    const fd=new Date(fecha+'T12:00:00');
-    const today=new Date().toISOString().slice(0,10);
-    const fechaTxt=fd.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-    const esFecha=fecha===today?' (hoy)':'';
-    html+=`<div style="background:#1e293b;color:#c8a96e;border-radius:8px;padding:7px 14px;margin:10px 0 8px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📅 ${fechaTxt}${esFecha}</div>`;
-    const sortedSlots=Object.keys(groups[fecha]).sort();
-    sortedSlots.forEach(slot=>{
-      const sg=groups[fecha][slot];
-      const allOrders=[...sg.new,...sg.prep,...sg.ready,...sg.done];
-      // Countdown
-      let countdownHtml='';
-      const slotParts=slot.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
-      if(slotParts){
-        const [,fromT,toT]=slotParts;
-        const now=new Date();
-        const [toH,toM]=toT.split(':').map(Number);
-        const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
-        const diffMs=slotEnd-now;
-        if(diffMs>0){
-          const diffMin=Math.floor(diffMs/60000);
-          const urgent=diffMin<=30;
-          const txt=diffMin>=60?`${Math.floor(diffMin/60)}h ${diffMin%60}min`:diffMin+'min';
-          countdownHtml=`<span style="background:${urgent?'rgba(220,38,38,0.2)':'rgba(200,169,110,0.15)'};border:1px solid ${urgent?'rgba(220,38,38,0.4)':'rgba(200,169,110,0.25)'};border-radius:6px;padding:2px 8px;font-size:11px;color:${urgent?'#f87171':'#c8a96e'}">⏳ ${txt}</span>`;
-        }
-      }
-      // Production summary
-      const prodCount={};
-      allOrders.forEach(o=>{
-        (o.items||[]).forEach(it=>{
-          const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
-          const composicion=prod?.composicion||(it.composicion)||null;
-          if(composicion&&composicion.length>0){
-            // Desglosar por tipo de churro
-            composicion.forEach(c=>{
-              prodCount[c.tipo]=(prodCount[c.tipo]||0)+(it.qty*c.cant);
-            });
-          } else {
-            // Sin composición — contar como bloque
-            const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
-            let uds=1;
-            if(it.uds&&Number(it.uds)>0){uds=Number(it.uds);}
-            else if(prod?.uds&&Number(prod.uds)>0){uds=Number(prod.uds);}
-            else{
-              const pn=(it.name||'').toLowerCase();
-              if(pn.includes('docena')&&!pn.includes('media'))uds=12;
-              else if(pn.includes('media docena'))uds=6;
-              else if(pn.includes('unidad'))uds=1;
-            }
-            prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
-          }
-        });
-      });
-      const totalChurros=Object.values(prodCount).reduce((a,b)=>a+b,0);
-      const prodChips=Object.entries(prodCount).map(([g,n])=>
-        `<span style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:2px 10px;font-size:12px;color:#374151">${g}: <b style="color:#dc2626">${n}</b></span>`
-      ).join('');
-      const prodBar=totalChurros>0?`<div style="background:#fff8ed;border:1px solid #fde68a;border-top:none;padding:7px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <span style="font-size:10px;color:#92400e;font-weight:700">🥐</span>${prodChips}
-        <span style="background:#1e293b;border-radius:20px;padding:2px 10px;font-size:12px;color:#c8a96e">Total: <b style="color:#fff">${totalChurros}</b></span>
-      </div>`:'';
-      // Card builder
-      const buildCard=(o,statusClass)=>{
-        const items=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join('<br>');
-        const total=fmt(o.total||0);
-        const delivery=o.delivery==='pickup'?'🏪 Retiro':'🛵 Envío';
-        const phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
-        const waUrl=phone?`https://wa.me/549${phone}`:'';
-        return `<div class="kcard ${statusClass}" id="order-${o.id}" draggable="true" ondragstart="dragStart(event,${o.id})">
-          <div class="kcard-id">#${o.id} · ${new Date(o.ts||Date.now()).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</div>
-          <div class="kcard-name">${o.customer||'Sin nombre'}</div>
-          <div class="kcard-items">${items}</div>
-          <div class="kcard-footer">
-            <span class="kcard-total">${total}</span>
-            <span class="kcard-del">${delivery}</span>
-          </div>
-          <div class="kcard-actions">
-            ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparando</button>`:''}
-            ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
-            ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
-            ${waUrl?`<a href="${waUrl}" target="_blank" class="btn-sm" style="background:#25D366;color:#fff;border:none;text-decoration:none">💬</a>`:''}
-            <button class="btn-sm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="printOrder(${o.id})">🖨️</button>
-            <button class="btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;margin-left:auto" onclick="deleteOrder(${o.id})">✕</button>
-          </div>
-        </div>`;
-      };
-      html+=`<div style="background:#1e293b;color:#c8a96e;padding:7px 12px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
-        <span>⏰ ${slot} · ${allOrders.length} pedido${allOrders.length!==1?'s':''}</span>${countdownHtml}</div>
-      ${prodBar}
-      <div class="kanban-wrap" style="margin:0 0 14px">
-        <div>
-          <div class="kanban-col-head kch-new">🟡 Nuevos <span>${sg.new.length}</span></div>
-          <div class="kanban-cards" ondragover="event.preventDefault()" ondrop="dropCard(event,'new')">${sg.new.map(o=>buildCard(o,'knew')).join('')||'<div class="kcard-empty">—</div>'}</div>
-        </div>
-        <div>
-          <div class="kanban-col-head kch-prep">🔵 Preparando <span>${sg.prep.length}</span></div>
-          <div class="kanban-cards" ondragover="event.preventDefault()" ondrop="dropCard(event,'prep')">${sg.prep.map(o=>buildCard(o,'kprep')).join('')||'<div class="kcard-empty">—</div>'}</div>
-        </div>
-        <div>
-          <div class="kanban-col-head kch-ready">🟢 Listos <span>${sg.ready.length}</span></div>
-          <div class="kanban-cards" ondragover="event.preventDefault()" ondrop="dropCard(event,'ready')">${[...sg.ready,...sg.done.slice(-1)].map(o=>buildCard(o,'kready')).join('')||'<div class="kcard-empty">—</div>'}</div>
-        </div>
-      </div>`;
-    });
+    // Date header
+    if(fecha!==lastFecha){
+      flushSlot(); slotOrders=[]; lastSlot=null;
+      const fd=new Date(fecha+'T12:00:00');
+      const today=new Date().toISOString().slice(0,10);
+      const fechaTxt=fd.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+      html+=`<div style="background:#1e293b;color:#c8a96e;border-radius:8px;padding:7px 14px;margin:14px 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📅 ${fechaTxt}${fecha===today?' (hoy)':''}</div>`;
+      lastFecha=fecha;
+    }
+
+    // Slot header
+    if(slotLabel!==lastSlot){
+      flushSlot(); slotOrders=[];
+      lastSlot=slotLabel;
+    }
+    slotOrders.push(o);
+
+    // Order card
+    const items=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(' · ');
+    const delivery=o.delivery==='pickup'?'🏪 Retiro':'🛵 Envío';
+    const addr=o.address?`<div class="order-delivery">${delivery} · ${o.address}</div>`:`<div class="order-delivery">${delivery}</div>`;
+    const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+    const phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
+    const waConfUrl=phone?`https://wa.me/549${phone}?text=${encodeURIComponent('Hola '+( o.customer||'')+', tu pedido en Churros La Esquina está confirmado ✓')}`:'#';
+    const waCamUrl=phone?`https://wa.me/549${phone}?text=${encodeURIComponent('Hola '+( o.customer||'')+', tu pedido está en camino 🛵')}`:'#';
+    html+=`<div class="order-card" id="order-${o.id}">
+      <div class="order-header">
+        <span class="order-id">#${o.id} · ${hora}</span>
+        <span class="order-name">${o.customer||'Sin nombre'}</span>
+        <span class="order-total">${fmt(o.total||0)}</span>
+        <span class="badge ${sb(o.status)}">${{new:'Nuevo',prep:'Preparando',ready:'Listo',done:'Entregado'}[o.status]||o.status}</span>
+      </div>
+      ${addr}
+      <div class="order-items">${items}</div>
+      <div class="order-actions" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
+        ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparando</button>`:''}
+        ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
+        ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
+        ${phone?`<a href="${waConfUrl}" target="_blank" class="btn-sm wa-btn">💬 Confirmar</a>`:''}
+        ${o.delivery!=='pickup'&&phone?`<a href="${waCamUrl}" target="_blank" class="btn-sm wa-btn">🛵 En camino</a>`:''}
+        <button class="btn-sm" style="background:var(--cream-dark);color:var(--brown);border:1px solid var(--kraft)" onclick="printOrder(${o.id})">🖨️ Ticket</button>
+        <button class="btn-sm" style="background:#fee2e2;color:var(--red-warm);border:1px solid #fca5a5;margin-left:auto" onclick="deleteOrder(${o.id})">✕ Eliminar</button>
+      </div>
+    </div>`;
   });
+  flushSlot();
   document.getElementById('orders-list').innerHTML=html||'<div class="empty-state">No hay pedidos con este filtro.</div>';
 }
+
 async function setOrderStatus(id,status){
   // Optimistic update — update UI immediately
   const order = _orders.find(o=>o.id===id);
