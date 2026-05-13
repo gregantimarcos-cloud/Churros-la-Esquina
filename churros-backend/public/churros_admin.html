@@ -1179,10 +1179,27 @@ function renderOrders(){
   });
 
   const sb=s=>({new:'badge-new',prep:'badge-prep',ready:'badge-ready',done:'badge-done'}[s]||'');
-  if(!orders.length){document.getElementById('orders-list').innerHTML='<div class="empty-state">No hay pedidos con este filtro.</div>';return;}
+  const statusLabel=s=>({new:'Nuevo',prep:'Preparando',ready:'Listo',done:'Entregado'}[s]||s);
 
-  // Helper: calculate production for a list of orders
-  function calcProd(ords){
+  if(!orders.length){
+    document.getElementById('orders-list').innerHTML='<div class="empty-state">No hay pedidos con este filtro.</div>';
+    return;
+  }
+
+  // Group orders by fecha → slot
+  const groups={};
+  const fechaOrder=[];
+  const slotOrder={};
+  orders.forEach(o=>{
+    const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
+    const slot=o.slot||'Sin franja horaria';
+    if(!groups[fecha]){groups[fecha]={};fechaOrder.push(fecha);}
+    if(!groups[fecha][slot]){groups[fecha][slot]=[];if(!slotOrder[fecha])slotOrder[fecha]=[];slotOrder[fecha].push(slot);}
+    groups[fecha][slot].push(o);
+  });
+
+  // Build production summary chips
+  function buildProdBar(ords){
     const prodCount={};
     ords.forEach(o=>{
       (o.items||[]).forEach(it=>{
@@ -1193,103 +1210,89 @@ function renderOrders(){
         } else {
           const grupo=prod?.grupo||it.name.split(' — ')[0].trim();
           let uds=1;
-          if(it.uds&&Number(it.uds)>0){uds=Number(it.uds);}
-          else if(prod?.uds&&Number(prod.uds)>0){uds=Number(prod.uds);}
-          else{const pn=(it.name||''). toLowerCase();if(pn.includes('docena')&&!pn.includes('media'))uds=12;else if(pn.includes('media docena'))uds=6;}
+          if(it.uds&&Number(it.uds)>0)uds=Number(it.uds);
+          else if(prod?.uds&&Number(prod.uds)>0)uds=Number(prod.uds);
+          else{const pn=(it.name||'').toLowerCase();if(pn.includes('docena')&&!pn.includes('media'))uds=12;else if(pn.includes('media docena'))uds=6;}
           prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
         }
       });
     });
-    return prodCount;
+    const total=Object.values(prodCount).reduce((a,b)=>a+b,0);
+    if(!total)return '';
+    const chips=Object.entries(prodCount).map(([g,n])=>
+      `<span style="background:#fff;border:1px solid var(--cream-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--brown)">${g}: <b style="color:var(--red-warm);font-family:'Playfair Display',serif">${n}</b></span>`
+    ).join('');
+    return `<div style="background:#fff8ed;border:1.5px solid #fde68a;border-top:none;padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:1px">🥐 Preparar:</span>${chips}
+      <span style="background:var(--brown);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--kraft)">Total: <b style="color:#fff">${total}</b></span>
+    </div>`;
   }
 
   let html='';
-  let lastFecha=null, lastSlot=null;
-  let slotOrders=[];
+  const today=new Date().toISOString().slice(0,10);
 
-  const flushSlot=()=>{
-    if(!lastSlot||!slotOrders.length)return;
-    // Countdown
-    let countdownHtml='';
-    const sp=lastSlot.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
-    if(sp){
-      const [,fromT,toT]=sp;
-      const now=new Date();
-      const [toH,toM]=toT.split(':').map(Number);
-      const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
-      const diffMs=slotEnd-now;
-      if(diffMs>0){
-        const diffMin=Math.floor(diffMs/60000);
-        const urgent=diffMin<=30;
-        const txt=diffMin>=60?`${Math.floor(diffMin/60)}h ${diffMin%60}min`:diffMin+'min';
-        countdownHtml=`<span style="background:${urgent?'rgba(220,38,38,0.15)':' rgba(200,169,110,0.12)'};border:1px solid ${urgent?'rgba(220,38,38,0.4)':' rgba(200,169,110,0.25)'};border-radius:6px;padding:2px 8px;font-size:11px;color:${urgent?'#f87171':'#c8a96e'}">⏳ ${txt}</span>`;
+  fechaOrder.forEach(fecha=>{
+    const fd=new Date(fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    html+=`<div style="background:var(--brown);color:var(--kraft);border-radius:8px;padding:7px 14px;margin:12px 0 0;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase">📅 ${fd}${fecha===today?' (hoy)':''}</div>`;
+
+    slotOrder[fecha].forEach(slot=>{
+      const slotOrds=groups[fecha][slot];
+
+      // Countdown
+      let cdHtml='';
+      const sp=slot.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
+      if(sp&&fecha===today){
+        const [,fromT,toT]=sp;
+        const now=new Date();
+        const [toH,toM]=toT.split(':').map(Number);
+        const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
+        const diff=slotEnd-now;
+        if(diff>0){
+          const min=Math.floor(diff/60000);
+          const urgent=min<=30;
+          const txt=min>=60?`${Math.floor(min/60)}h ${min%60}min`:min+'min';
+          cdHtml=`<span style="background:${urgent?'rgba(139,0,0,0.15)':'rgba(200,169,110,0.12)'};border:1px solid ${urgent?'rgba(139,0,0,0.4)':'rgba(200,169,110,0.3)'};border-radius:6px;padding:2px 8px;font-size:11px;color:${urgent?'#c0392b':'var(--kraft)'}">⏳ ${txt}</span>`;
+        }
       }
-    }
-    // Production summary
-    const prod=calcProd(slotOrders);
-    const total=Object.values(prod).reduce((a,b)=>a+b,0);
-    const chips=Object.entries(prod).map(([g,n])=>
-      `<span style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--text-2)">${g}: <b style="color:var(--red-warm)">${n}</b></span>`
-    ).join('');
-    const prodBar=total>0?`<div style="background:#fff8ed;border:1.5px solid #fde68a;border-top:none;padding:7px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:1px">🥐 Preparar:</span>${chips}
-      <span style="background:var(--brown);border-radius:20px;padding:3px 10px;font-size:12px;color:#c8a96e">Total: <b style="color:#fff">${total}</b></span>
-    </div>`:'';
-    html+=`<div style="background:var(--brown);color:#c8a96e;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px 8px 0 0;margin-top:10px;display:flex;justify-content:space-between;align-items:center">
-      <span>⏰ ${lastSlot} · ${slotOrders.length} pedido${slotOrders.length!==1?'s':''}</span>${countdownHtml}</div>${prodBar}`;
-  };
 
-  orders.forEach(o=>{
-    const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
-    const slotLabel=o.slot||'Sin franja horaria';
+      html+=`<div style="background:var(--brown);color:var(--kraft);font-family:'Playfair Display',serif;font-size:13px;font-weight:700;padding:8px 13px;border-radius:8px 8px 0 0;margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+        <span>⏰ ${slot} · ${slotOrds.length} pedido${slotOrds.length!==1?'s':''}</span>${cdHtml}
+      </div>`;
+      html+=buildProdBar(slotOrds);
 
-    // Date header
-    if(fecha!==lastFecha){
-      flushSlot(); slotOrders=[]; lastSlot=null;
-      const fd=new Date(fecha+'T12:00:00');
-      const today=new Date().toISOString().slice(0,10);
-      const fechaTxt=fd.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-      html+=`<div style="background:#1e293b;color:#c8a96e;border-radius:8px;padding:7px 14px;margin:14px 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">📅 ${fechaTxt}${fecha===today?' (hoy)':''}</div>`;
-      lastFecha=fecha;
-    }
+      slotOrds.forEach(o=>{
+        const waConf=waOrderLink(o);
+        const phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
+        const nombre=(o.customer||'').split(' ')[0];
+        const waCam=phone?`https://wa.me/549${phone}?text=${encodeURIComponent('Hola '+nombre+'! Tu pedido de Churros La Esquina está listo y en camino 🛵')}`:null;
+        const itemLines=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(' · ');
+        const delivery=o.delivery==='pickup'?'🏪 Retiro en local':'🛵 Envío a domicilio';
+        const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
 
-    // Slot header
-    if(slotLabel!==lastSlot){
-      flushSlot(); slotOrders=[];
-      lastSlot=slotLabel;
-    }
-    slotOrders.push(o);
-
-    // Order card
-    const items=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(' · ');
-    const delivery=o.delivery==='pickup'?'🏪 Retiro':'🛵 Envío';
-    const addr=o.address?`<div class="order-delivery">${delivery} · ${o.address}</div>`:`<div class="order-delivery">${delivery}</div>`;
-    const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-    const phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
-    const waConfUrl=phone?`https://wa.me/549${phone}?text=${encodeURIComponent('Hola '+( o.customer||'')+', tu pedido en Churros La Esquina está confirmado ✓')}`:'#';
-    const waCamUrl=phone?`https://wa.me/549${phone}?text=${encodeURIComponent('Hola '+( o.customer||'')+', tu pedido está en camino 🛵')}`:'#';
-    html+=`<div class="order-card" id="order-${o.id}">
-      <div class="order-header">
-        <span class="order-id">#${o.id} · ${hora}</span>
-        <span class="order-name">${o.customer||'Sin nombre'}</span>
-        <span class="order-total">${fmt(o.total||0)}</span>
-        <span class="badge ${sb(o.status)}">${{new:'Nuevo',prep:'Preparando',ready:'Listo',done:'Entregado'}[o.status]||o.status}</span>
-      </div>
-      ${addr}
-      <div class="order-items">${items}</div>
-      <div class="order-actions" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
-        ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparando</button>`:''}
-        ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
-        ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
-        ${phone?`<a href="${waConfUrl}" target="_blank" class="btn-sm wa-btn">💬 Confirmar</a>`:''}
-        ${o.delivery!=='pickup'&&phone?`<a href="${waCamUrl}" target="_blank" class="btn-sm wa-btn">🛵 En camino</a>`:''}
-        <button class="btn-sm" style="background:var(--cream-dark);color:var(--brown);border:1px solid var(--kraft)" onclick="printOrder(${o.id})">🖨️ Ticket</button>
-        <button class="btn-sm" style="background:#fee2e2;color:var(--red-warm);border:1px solid #fca5a5;margin-left:auto" onclick="deleteOrder(${o.id})">✕ Eliminar</button>
-      </div>
-    </div>`;
+        html+=`<div class="order-card" id="order-${o.id}">
+          <div class="order-header">
+            <span class="order-id">#${o.id} · ${hora}</span>
+            <span class="order-name">${o.customer||'Sin nombre'}</span>
+            <span class="order-total">${fmt(o.total||0)}</span>
+            <span class="badge ${sb(o.status)}">${statusLabel(o.status)}</span>
+          </div>
+          <div class="order-delivery">${delivery}${o.address?' · '+o.address:''}</div>
+          <div class="order-items">${itemLines}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
+            ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparando</button>`:''}
+            ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
+            ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
+            ${waConf?`<a href="${waConf}" target="_blank" class="wa-btn">💬 Confirmar</a>`:''}
+            ${waCam&&o.delivery!=='pickup'?`<a href="${waCam}" target="_blank" class="wa-btn">🛵 En camino</a>`:''}
+            <button class="btn-sm" style="background:var(--cream-dark);color:var(--brown);border:1px solid var(--kraft)" onclick="printOrder(${o.id})">🖨️ Ticket</button>
+            <button class="btn-sm" style="background:#fee2e2;color:var(--red-warm);border:1px solid #fca5a5;margin-left:auto" onclick="deleteOrder(${o.id})">✕</button>
+          </div>
+        </div>`;
+      });
+    });
   });
-  flushSlot();
-  document.getElementById('orders-list').innerHTML=html||'<div class="empty-state">No hay pedidos con este filtro.</div>';
+
+  document.getElementById('orders-list').innerHTML=html;
 }
 
 async function setOrderStatus(id,status){
