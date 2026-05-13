@@ -373,6 +373,13 @@ body::before{display:none}
         <button onclick="loadOrders()" style="background:none;border:1.5px solid var(--kraft);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--brown-light)">↻ Actualizar</button>
         <button onclick="openManualOrder()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-family:'Playfair Display',serif;font-weight:700;">+ Cargar pedido manual</button>
       </div>
+      <!-- Filtro de fecha -->
+      <div id="date-filter-row" style="display:none;background:var(--paper);border:1.5px solid var(--kraft);border-radius:9px;padding:8px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--brown-light);font-weight:600">📅 Buscar por fecha:</span>
+        <input type="date" id="order-date-filter" class="finput" style="max-width:160px;padding:5px 9px" onchange="filterOrdersByDateInput()">
+        <button onclick="clearDateFilter()" style="background:var(--cream-dark);border:1px solid var(--kraft);border-radius:7px;padding:4px 10px;font-size:12px;color:var(--brown);cursor:pointer">✕ Limpiar</button>
+        <span id="date-filter-count" style="font-size:12px;color:var(--brown-light);font-style:italic"></span>
+      </div>
       <div id="orders-list"></div>
       <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
     </div>
@@ -841,7 +848,7 @@ body::before{display:none}
 const API='';
 let _adminUser=sessionStorage.getItem('au')||'',_adminPass=sessionStorage.getItem('ap')||'';
 let _cfg={},_orders=[],_products=[],_slots=[];
-let orderFilter='all', editId=null, currentImg='', _compOrderId=null;
+let orderFilter='all', orderDateFilter=null, editId=null, currentImg='', _compOrderId=null;
 
 function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR')}
 function gv(id){const el=document.getElementById(id);return el?el.value:'';}
@@ -1139,6 +1146,15 @@ async function loadOrders(){
 }
 function filterOrders(f){
   orderFilter=f;
+  // Show date filter only for entregados
+  const dateRow=document.getElementById('date-filter-row');
+  if(dateRow)dateRow.style.display=f==='done'?'flex':'none';
+  if(f!=='done'){
+    // Clear date filter when switching away
+    const di=document.getElementById('order-date-filter');
+    if(di)di.value='';
+    orderDateFilter=null;
+  }
   const activeStyles={
     all:{background:'var(--brown)',color:'var(--kraft)',border:'1.5px solid var(--brown)'},
     new:{background:'#92400e',color:'#fef3c7',border:'1px solid #92400e'},
@@ -1167,6 +1183,15 @@ function filterOrders(f){
 function renderOrders(){
   let orders=[..._orders];
   if(orderFilter!=='all')orders=orders.filter(o=>o.status===orderFilter);
+  // Apply date filter if set
+  if(orderDateFilter){
+    orders=orders.filter(o=>{
+      const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
+      return fecha===orderDateFilter;
+    });
+    const count=document.getElementById('date-filter-count');
+    if(count)count.textContent=orders.length+' pedido'+(orders.length!==1?'s':'');
+  }
 
   orders.sort((a,b)=>{
     const fechaA=a.fecha||new Date(a.ts).toISOString().slice(0,10);
@@ -2296,6 +2321,22 @@ function addComp(){
 function removeComp(i){
   _editComp.splice(i,1);
   renderCompList();
+}
+
+// ── DATE FILTER IN ORDERS ──────────────────────────────────────────
+function filterOrdersByDateInput(){
+  const val=document.getElementById('order-date-filter').value;
+  orderDateFilter=val||null;
+  const count=document.getElementById('date-filter-count');
+  if(count)count.textContent='';
+  renderOrders();
+}
+
+function clearDateFilter(){
+  document.getElementById('order-date-filter').value='';
+  orderDateFilter=null;
+  document.getElementById('date-filter-count').textContent='';
+  renderOrders();
 }
 
 // ── HISTORIAL DE ENTREGADOS ──────────────────────────────────────────
