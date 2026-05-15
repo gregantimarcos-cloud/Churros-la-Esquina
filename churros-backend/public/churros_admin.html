@@ -254,6 +254,7 @@ body::before{display:none}
 .kcard-del{font-size:11px;color:#9ca3af;}
 .kcard-actions{display:flex;gap:4px;flex-wrap:wrap;}
 .kcard-empty{padding:16px;text-align:center;color:#9ca3af;font-size:12px;font-style:italic;background:#fafafa;border-radius:0 0 8px 8px;border:1px solid #f1f5f9;border-top:none;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(192,57,43,0.7)}70%{box-shadow:0 0 0 12px rgba(192,57,43,0)}100%{box-shadow:0 0 0 0 rgba(192,57,43,0)}}
 </style>
 </head>
 <body>
@@ -379,6 +380,21 @@ body::before{display:none}
         <input type="date" id="order-date-filter" class="finput" style="max-width:160px;padding:5px 9px" onchange="filterOrdersByDateInput()">
         <button onclick="clearDateFilter()" style="background:var(--cream-dark);border:1px solid var(--kraft);border-radius:7px;padding:4px 10px;font-size:12px;color:var(--brown);cursor:pointer">✕ Limpiar</button>
         <span id="date-filter-count" style="font-size:12px;color:var(--brown-light);font-style:italic"></span>
+      </div>
+      <!-- Vista rápida: Nuevos + Preparando siempre visibles -->
+      <div id="quick-view" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <div style="background:#92400e;color:#fef9c3;border-radius:8px 8px 0 0;padding:7px 12px;font-size:12px;font-weight:700;display:flex;justify-content:space-between">
+            <span>🟡 Nuevos</span><span id="qv-new-count">0</span>
+          </div>
+          <div id="qv-new" style="background:#fff;border:1px solid #fde068;border-top:none;border-radius:0 0 8px 8px;min-height:60px;padding:8px"></div>
+        </div>
+        <div>
+          <div style="background:#1e3a8a;color:#dbeafe;border-radius:8px 8px 0 0;padding:7px 12px;font-size:12px;font-weight:700;display:flex;justify-content:space-between">
+            <span>🔵 Preparando</span><span id="qv-prep-count">0</span>
+          </div>
+          <div id="qv-prep" style="background:#fff;border:1px solid #93c5fd;border-top:none;border-radius:0 0 8px 8px;min-height:60px;padding:8px"></div>
+        </div>
       </div>
       <div id="orders-list"></div>
       <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
@@ -912,6 +928,23 @@ async function initAdmin(cfg){
   await Promise.all([loadStats(),loadProducts(),loadSlots()]);
   // Start notifications polling after login
   _lastOrderCount=0;
+  // Start polling for new orders every 20 seconds
+  if(_notifInterval)clearInterval(_notifInterval);
+  _notifInterval=setInterval(async()=>{
+    const orders=await apiFetch('/api/orders')||[];
+    const newCount=orders.filter(o=>o.status==='new').length;
+    const prevCount=_lastOrderCount;
+    // Detect new orders
+    const prevNewIds=new Set((_orders||[]).filter(o=>o.status==='new').map(o=>o.id));
+    const reallyNew=orders.filter(o=>o.status==='new'&&!prevNewIds.has(o.id));
+    _orders=orders;
+    _lastOrderCount=newCount;
+    if(reallyNew.length>0){
+      playBeep();
+      showNewOrderBanner(reallyNew.length);
+      renderOrders();
+    }
+  },20000);
 }
 
 function fillConfigForm(c){
@@ -1294,6 +1327,9 @@ function renderOrders(){
         const delivery=o.delivery==='pickup'?'🏪 Retiro en local':'🛵 Envío a domicilio';
         const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
 
+        // Payment info
+        const pagoLabel=o.payment==='transferencia'?'📲 Transferencia':o.payment==='mercadopago'?'💳 Mercado Pago':'💵 Efectivo';
+        const comprobante=o.comprobante?`<a href="${o.comprobante}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:#dbeafe;color:#1e3a8a;border:1px solid #93c5fd;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600;text-decoration:none;margin-top:4px">📎 Ver comprobante</a>`:'';
         html+=`<div class="order-card" id="order-${o.id}">
           <div class="order-header">
             <span class="order-id">#${o.id} · ${hora}</span>
@@ -1303,13 +1339,16 @@ function renderOrders(){
           </div>
           <div class="order-delivery">${delivery}${o.address?' · '+o.address:''}</div>
           <div class="order-items">${itemLines}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--brown-light)">${pagoLabel}</span>
+            ${comprobante}
+          </div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
             ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparando</button>`:''}
             ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
             ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
             ${waConf?`<a href="${waConf}" target="_blank" class="wa-btn">💬 Confirmar</a>`:''}
             ${waCam&&o.delivery!=='pickup'?`<a href="${waCam}" target="_blank" class="wa-btn">🛵 En camino</a>`:''}
-            <button class="btn-sm" style="background:var(--cream-dark);color:var(--brown);border:1px solid var(--kraft)" onclick="printOrder(${o.id})">🖨️ Ticket</button>
             <button class="btn-sm" style="background:#fee2e2;color:var(--red-warm);border:1px solid #fca5a5;margin-left:auto" onclick="deleteOrder(${o.id})">✕</button>
           </div>
         </div>`;
@@ -1901,18 +1940,33 @@ let _audioCtx=null;
 function playBeep(){
   try{
     if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    // Play 3 ascending tones
-    [0, 0.25, 0.5].forEach((delay, i) => {
+    // Play 3 loud ascending tones x2
+    const tones=[520,660,800,520,660,800];
+    tones.forEach((freq,i)=>{
       const osc=_audioCtx.createOscillator();
       const gain=_audioCtx.createGain();
       osc.connect(gain);gain.connect(_audioCtx.destination);
-      osc.frequency.value=440+(i*220);osc.type='sine';
-      const t=_audioCtx.currentTime+delay;
-      gain.gain.setValueAtTime(0.5,t);
-      gain.gain.exponentialRampToValueAtTime(0.01,t+0.3);
+      osc.frequency.value=freq;osc.type='triangle';
+      const t=_audioCtx.currentTime+(i*0.18);
+      gain.gain.setValueAtTime(0,t);
+      gain.gain.linearRampToValueAtTime(1.0,t+0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.25);
       osc.start(t);osc.stop(t+0.3);
     });
-  }catch(e){}
+  }catch(e){console.log('Audio error:',e);}
+}
+
+function showNewOrderBanner(count){
+  // Remove existing
+  const ex=document.getElementById('new-order-banner');
+  if(ex)ex.remove();
+  const b=document.createElement('div');
+  b.id='new-order-banner';
+  b.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:#c0392b;color:#fff;padding:10px 20px;border-radius:30px;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.4);cursor:pointer;animation:pulse 1s infinite';
+  b.textContent='🥐 '+count+' pedido'+(count!==1?'s':'')+' nuevo'+(count!==1?'s':'')+' — tocá para ver';
+  b.onclick=()=>{showPanel('orders');loadOrders();b.remove();};
+  document.body.appendChild(b);
+  setTimeout(()=>{if(b.parentNode)b.remove();},15000);
 }
 
 
