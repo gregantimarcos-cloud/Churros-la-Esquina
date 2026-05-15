@@ -319,6 +319,27 @@ let _splashTimer2 = setTimeout(()=>{
 }, 7000);
 
 async function init(){
+  // Check if there's a recent pending order (within last 2 hours)
+  try{
+    const saved=localStorage.getItem('churros_last_order');
+    if(saved){
+      const o=JSON.parse(saved);
+      const age=(Date.now()-o.ts)/1000/60; // minutes
+      if(age<120){ // less than 2 hours
+        // Show recovery banner
+        const banner=document.createElement('div');
+        banner.id='recovery-banner';
+        banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#3d1f0e;color:#c8a96e;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+        banner.innerHTML=`
+          <span style="flex:1">📦 Tenés un pedido reciente #${o.id} — <b>${o.customer}</b> · $${o.total?.toLocaleString('es-AR')}</span>
+          <button onclick="verPedidoReciente()" style="background:#c8a96e;color:#3d1f0e;border:none;border-radius:7px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">Ver mi pedido</button>
+          <button onclick="cerrarRecovery()" style="background:none;border:1px solid rgba(200,169,110,0.4);color:rgba(200,169,110,0.7);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px">✕</button>
+        `;
+        document.body.prepend(banner);
+        window._lastOrder=o;
+      }
+    }
+  }catch(e){}
   // Load config, products and slots in parallel
   const [cfgData, productsData, slotsData] = await Promise.all([
     apiFetch('/api/cfg'),
@@ -731,7 +752,12 @@ function renderCart(){
 
   let payExtra='';
   if(payment==='efectivo')payExtra=`<div class="pay-efectivo"><div class="pt">💵 Pago en efectivo</div><div class="ps">Tené listos ${fmt(totalFinal)} al ${delivery==='delivery'?'recibir el pedido':'retirar'}.</div></div>`;
-  if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:600">${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(totalFinal)}</span></div></div>`;
+  if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div>
+<div style="background:#3d1f0e;border-radius:10px;padding:12px;text-align:center;margin:10px 0">
+  <div style="font-size:11px;color:rgba(200,169,110,0.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Alias de transferencia</div>
+  <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#c8a96e;letter-spacing:2px">${cfg.alias||'churros.local'}</div>
+</div>
+<div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(totalFinal)}</span></div></div>`;
   if(payment==='mercadopago')payExtra=`<div class="pay-mp"><div class="pt">💳 Mercado Pago</div><div class="ps">Al confirmar, Mercado Pago se abrirá automáticamente.</div></div>`;
 
   const isClosed=!cfg.open&&!cfg.anticipado;
@@ -1118,6 +1144,18 @@ async function confirmOrder(){
 
 
 
+  // Save order to localStorage to prevent duplicates
+  try{
+    localStorage.setItem('churros_last_order', JSON.stringify({
+      id: orderId,
+      ts: Date.now(),
+      total: totalFinal,
+      customer: name,
+      payment: payment,
+      items: items.map(i=>({name:i.name,qty:i.qty}))
+    }));
+  }catch(e){}
+
   showView('v-success');
 }
 
@@ -1205,6 +1243,34 @@ function resetApp(){
 }
 
 init();
+// ── RECOVERY FUNCIONES ──────────────────────────────────────────────
+function verPedidoReciente(){
+  const o=window._lastOrder;
+  if(!o)return;
+  // Show a simple modal with order details
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(61,31,14,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const items=(o.items||[]).map(i=>`${i.qty}x ${i.name}`).join('<br>');
+  modal.innerHTML=`<div style="background:#faf6ed;border-radius:16px;padding:24px;max-width:360px;width:100%;text-align:center;border:2px solid #c8a96e">
+    <div style="font-size:32px;margin-bottom:8px">🥐</div>
+    <div style="font-family:'Playfair Display',serif;font-size:18px;color:#3d1f0e;font-weight:700;margin-bottom:4px">Pedido #${o.id}</div>
+    <div style="font-size:13px;color:#8b5e3c;margin-bottom:12px">${o.customer}</div>
+    <div style="background:#fff;border-radius:9px;padding:12px;text-align:left;margin-bottom:12px;font-size:13px;color:#3d1f0e;line-height:1.8">${items}</div>
+    <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#c0392b;margin-bottom:16px">Total: $${o.total?.toLocaleString('es-AR')}</div>
+    <div style="font-size:12px;color:#8b5e3c;font-style:italic;margin-bottom:16px">Este pedido ya fue registrado. Si necesitás hacer un pedido nuevo, cerrá esta ventana.</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9px;padding:10px;font-size:13px;cursor:pointer;color:#64748b">Cerrar</button>
+      <button onclick="cerrarRecovery();localStorage.removeItem('churros_last_order');this.closest('div[style*=fixed]').remove()" style="flex:1;background:#3d1f0e;color:#c8a96e;border:none;border-radius:9px;padding:10px;font-size:13px;cursor:pointer;font-weight:700">Hacer nuevo pedido</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function cerrarRecovery(){
+  const b=document.getElementById('recovery-banner');
+  if(b)b.remove();
+}
+
 </script>
 </body>
 </html>
