@@ -1214,19 +1214,28 @@ function filterOrders(f){
   renderOrders();
 }
 function renderOrders(){
-  let orders=[..._orders];
-  if(orderFilter!=='all')orders=orders.filter(o=>o.status===orderFilter);
-  // Apply date filter if set
-  if(orderDateFilter){
-    orders=orders.filter(o=>{
-      const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
-      return fecha===orderDateFilter;
-    });
-    const count=document.getElementById('date-filter-count');
-    if(count)count.textContent=orders.length+' pedido'+(orders.length!==1?'s':'');
+  // Show only active orders (not done) unless date filter is set
+  let allActive=_orders.filter(o=>o.status!=='done');
+  let filtered=[...allActive];
+
+  // Apply status filter
+  if(orderFilter!=='all'&&orderFilter!=='done'){
+    filtered=filtered.filter(o=>o.status===orderFilter);
+  } else if(orderFilter==='done'){
+    // Entregados: show from date filter only
+    filtered=_orders.filter(o=>o.status==='done');
+    if(orderDateFilter){
+      filtered=filtered.filter(o=>{
+        const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
+        return fecha===orderDateFilter;
+      });
+      const count=document.getElementById('date-filter-count');
+      if(count)count.textContent=filtered.length+' pedido'+(filtered.length!==1?'s':'');
+    }
   }
 
-  orders.sort((a,b)=>{
+  // Sort by fecha → slot → id
+  filtered.sort((a,b)=>{
     const fechaA=a.fecha||new Date(a.ts).toISOString().slice(0,10);
     const fechaB=b.fecha||new Date(b.ts).toISOString().slice(0,10);
     if(fechaA!==fechaB)return fechaA.localeCompare(fechaB);
@@ -1239,24 +1248,7 @@ function renderOrders(){
   const sb=s=>({new:'badge-new',prep:'badge-prep',ready:'badge-ready',done:'badge-done'}[s]||'');
   const statusLabel=s=>({new:'Nuevo',prep:'Preparando',ready:'Listo',done:'Entregado'}[s]||s);
 
-  if(!orders.length){
-    document.getElementById('orders-list').innerHTML='<div class="empty-state">No hay pedidos con este filtro.</div>';
-    return;
-  }
-
-  // Group orders by fecha → slot
-  const groups={};
-  const fechaOrder=[];
-  const slotOrder={};
-  orders.forEach(o=>{
-    const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
-    const slot=o.slot||'Sin franja horaria';
-    if(!groups[fecha]){groups[fecha]={};fechaOrder.push(fecha);}
-    if(!groups[fecha][slot]){groups[fecha][slot]=[];if(!slotOrder[fecha])slotOrder[fecha]=[];slotOrder[fecha].push(slot);}
-    groups[fecha][slot].push(o);
-  });
-
-  // Build production summary chips
+  // Production summary helper
   function buildProdBar(ords){
     const prodCount={};
     ords.forEach(o=>{
@@ -1278,114 +1270,140 @@ function renderOrders(){
     const total=Object.values(prodCount).reduce((a,b)=>a+b,0);
     if(!total)return '';
     const chips=Object.entries(prodCount).map(([g,n])=>
-      `<span style="background:#fff;border:1px solid var(--cream-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--brown)">${g}: <b style="color:var(--red-warm);font-family:'Playfair Display',serif">${n}</b></span>`
+      '<span style="background:#fff;border:1px solid var(--cream-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--brown)">'+g+': <b style="color:var(--red-warm)">'+n+'</b></span>'
     ).join('');
-    return `<div style="background:#fff8ed;border:1.5px solid #fde68a;border-top:none;padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:1px">🥐 Preparar:</span>${chips}
-      <span style="background:var(--brown);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--kraft)">Total: <b style="color:#fff">${total}</b></span>
-    </div>`;
+    return '<div style="background:#fff8ed;border:1.5px solid #fde68a;border-top:none;padding:7px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+      +'<span style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:1px">Preparar:</span>'+chips
+      +'<span style="background:var(--brown);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--kraft)">Total: <b style="color:#fff">'+total+'</b></span>'
+      +'</div>';
   }
 
-  let html='';
-  const today=new Date().toISOString().slice(0,10);
+  // Kanban view: group by fecha → slot, then 3 columns (new/prep/ready)
+  if(orderFilter==='all'||orderFilter==='new'||orderFilter==='prep'||orderFilter==='ready'){
+    const groups={};
+    const fechaOrder=[];
+    const slotOrder={};
+    allActive.forEach(o=>{
+      const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
+      const slot=o.slot||'Sin franja horaria';
+      if(!groups[fecha]){groups[fecha]={};fechaOrder.push(fecha);}
+      if(!groups[fecha][slot]){groups[fecha][slot]={new:[],prep:[],ready:[]};if(!slotOrder[fecha])slotOrder[fecha]=[];slotOrder[fecha].push(slot);}
+      const st=o.status;
+      if(groups[fecha][slot][st])groups[fecha][slot][st].push(o);
+    });
 
-  fechaOrder.forEach(fecha=>{
-    const fd=new Date(fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-    html+=`<div style="background:var(--brown);color:var(--kraft);border-radius:8px;padding:7px 14px;margin:12px 0 0;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase">📅 ${fd}${fecha===today?' (hoy)':''}</div>`;
+    const buildCard=o=>{
+      const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+      const items=(o.items||[]).map(it=>it.qty+'x '+it.name.split(' — ')[0]).join(', ');
+      const delivery=o.delivery==='pickup'?'🏪':'🛵';
+      const pagoIcon=o.payment==='transferencia'?'📲':o.payment==='mercadopago'?'💳':'💵';
+      const waConf=waOrderLink(o);
+      const phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
+      const nombre=(o.customer||'').split(' ')[0];
+      const waCam=phone?'https://wa.me/549'+phone+'?text='+encodeURIComponent('Hola '+nombre+'! Tu pedido de Churros La Esquina está listo y en camino 🛵'):'';
+      const comprobante=o.comprobante?'<a href="'+o.comprobante+'" target="_blank" style="font-size:10px;color:#1e3a8a;text-decoration:underline">📎 Comprobante</a>':'';
+      return '<div class="order-card" id="order-'+o.id+'" style="margin-bottom:6px;padding:9px 11px">'
+        +'<div style="font-size:12px;font-weight:700;color:var(--brown);display:flex;justify-content:space-between;gap:4px;margin-bottom:3px">'
+        +'<span>#'+o.id+' '+(o.customer||'Sin nombre')+'</span>'
+        +'<span style="color:var(--brown-light);white-space:nowrap;font-weight:400">'+delivery+' '+hora+'</span></div>'
+        +'<div style="font-size:12px;color:var(--brown-light);margin-bottom:4px">'+items+'</div>'
+        +(o.address?'<div style="font-size:11px;color:var(--brown-light);margin-bottom:4px">'+o.address+'</div>':'')
+        +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-top:4px">'
+        +'<span style="font-size:11px">'+pagoIcon+' <b style="color:var(--red-warm)">'+fmt(o.total||0)+'</b> '+comprobante+'</span>'
+        +'<div style="display:flex;gap:4px">'
+        +(o.status==='new'?'<button onclick="setOrderStatus('+o.id+',\'prep\')" class="btn-sm badge-prep">▶ Prep</button>':'')
+        +(o.status==='prep'?'<button onclick="setOrderStatus('+o.id+',\'ready\')" class="btn-sm badge-ready">✓ Listo</button>':'')
+        +(o.status==='ready'?'<button onclick="setOrderStatus('+o.id+',\'done\')" class="btn-sm badge-done">Entregar</button>':'')
+        +(waConf?'<a href="'+waConf+'" target="_blank" class="wa-btn" style="font-size:11px;padding:3px 7px">💬</a>':'')
+        +(waCam&&o.delivery!=='pickup'?'<a href="'+waCam+'" target="_blank" class="wa-btn" style="font-size:11px;padding:3px 7px">🛵</a>':'')
+        +'<button onclick="deleteOrder('+o.id+')" class="btn-sm" style="background:#fee2e2;color:var(--red-warm);border:1px solid #fca5a5">✕</button>'
+        +'</div></div></div>';
+    };
 
-    slotOrder[fecha].forEach(slot=>{
-      const slotOrds=groups[fecha][slot];
-
-      // Countdown
-      let cdHtml='';
-      const sp=slot.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
-      if(sp&&fecha===today){
-        const [,fromT,toT]=sp;
-        const now=new Date();
-        const [toH,toM]=toT.split(':').map(Number);
-        const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
-        const diff=slotEnd-now;
-        if(diff>0){
-          const min=Math.floor(diff/60000);
-          const urgent=min<=30;
-          const txt=min>=60?`${Math.floor(min/60)}h ${min%60}min`:min+'min';
-          cdHtml=`<span style="background:${urgent?'rgba(139,0,0,0.15)':'rgba(200,169,110,0.12)'};border:1px solid ${urgent?'rgba(139,0,0,0.4)':'rgba(200,169,110,0.3)'};border-radius:6px;padding:2px 8px;font-size:11px;color:${urgent?'#c0392b':'var(--kraft)'}">⏳ ${txt}</span>`;
+    let html='';
+    const today=new Date().toISOString().slice(0,10);
+    fechaOrder.sort().forEach(fecha=>{
+      const fd=new Date(fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+      html+='<div style="background:var(--brown);color:var(--kraft);border-radius:8px;padding:6px 14px;margin:12px 0 6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase">📅 '+fd+(fecha===today?' (hoy)':'')+'</div>';
+      (slotOrder[fecha]||[]).forEach(slot=>{
+        const sg=groups[fecha][slot];
+        const allSlotOrds=[...sg.new,...sg.prep,...sg.ready];
+        // Countdown
+        let cdHtml='';
+        const sp=slot.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
+        if(sp&&fecha===today){
+          const [,fromT,toT]=sp;
+          const now=new Date();
+          const [toH,toM]=toT.split(':').map(Number);
+          const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
+          const diff=slotEnd-now;
+          if(diff>0){
+            const min=Math.floor(diff/60000);
+            const urgent=min<=30;
+            const txt=min>=60?Math.floor(min/60)+'h '+min%60+'min':min+'min';
+            cdHtml='<span style="background:'+( urgent?'rgba(139,0,0,0.15)':'rgba(200,169,110,0.12)')+';border:1px solid '+(urgent?'rgba(139,0,0,0.4)':'rgba(200,169,110,0.3)')+';border-radius:6px;padding:2px 8px;font-size:11px;color:'+(urgent?'#c0392b':'var(--kraft)')+'">⏳ '+txt+'</span>';
+          }
         }
-      }
-
-      html+=`<div style="background:var(--brown);color:var(--kraft);font-family:'Playfair Display',serif;font-size:13px;font-weight:700;padding:8px 13px;border-radius:8px 8px 0 0;margin-top:8px;display:flex;justify-content:space-between;align-items:center">
-        <span>⏰ ${slot} · ${slotOrds.length} pedido${slotOrds.length!==1?'s':''}</span>${cdHtml}
-      </div>`;
-      html+=buildProdBar(slotOrds);
-
-      slotOrds.forEach(o=>{
-        const waConf=waOrderLink(o);
-        const phone=o.phone?o.phone.replace(/[^0-9]/g,''):'';
-        const nombre=(o.customer||'').split(' ')[0];
-        const waCam=phone?`https://wa.me/549${phone}?text=${encodeURIComponent('Hola '+nombre+'! Tu pedido de Churros La Esquina está listo y en camino 🛵')}`:null;
-        const itemLines=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(' · ');
-        const delivery=o.delivery==='pickup'?'🏪 Retiro en local':'🛵 Envío a domicilio';
-        const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-
-        // Payment info
-        const pagoLabel=o.payment==='transferencia'?'📲 Transferencia':o.payment==='mercadopago'?'💳 Mercado Pago':'💵 Efectivo';
-        const comprobante=o.comprobante?`<a href="${o.comprobante}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:#dbeafe;color:#1e3a8a;border:1px solid #93c5fd;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600;text-decoration:none;margin-top:4px">📎 Ver comprobante</a>`:'';
-        html+=`<div class="order-card" id="order-${o.id}">
-          <div class="order-header">
-            <span class="order-id">#${o.id} · ${hora}</span>
-            <span class="order-name">${o.customer||'Sin nombre'}</span>
-            <span class="order-total">${fmt(o.total||0)}</span>
-            <span class="badge ${sb(o.status)}">${statusLabel(o.status)}</span>
-          </div>
-          <div class="order-delivery">${delivery}${o.address?' · '+o.address:''}</div>
-          <div class="order-items">${itemLines}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">
-            <span style="font-size:12px;color:var(--brown-light)">${pagoLabel}</span>
-            ${comprobante}
-          </div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
-            ${o.status==='new'?`<button class="btn-sm badge-prep" onclick="setOrderStatus(${o.id},'prep')">▶ Preparando</button>`:''}
-            ${o.status==='prep'?`<button class="btn-sm badge-ready" onclick="setOrderStatus(${o.id},'ready')">✓ Listo</button>`:''}
-            ${o.status==='ready'?`<button class="btn-sm badge-done" onclick="setOrderStatus(${o.id},'done')">✓ Entregado</button>`:''}
-            ${waConf?`<a href="${waConf}" target="_blank" class="wa-btn">💬 Confirmar</a>`:''}
-            ${waCam&&o.delivery!=='pickup'?`<a href="${waCam}" target="_blank" class="wa-btn">🛵 En camino</a>`:''}
-            <button class="btn-sm" style="background:#fee2e2;color:var(--red-warm);border:1px solid #fca5a5;margin-left:auto" onclick="deleteOrder(${o.id})">✕</button>
-          </div>
-        </div>`;
+        html+='<div style="background:var(--brown);color:var(--kraft);font-size:13px;font-weight:700;padding:7px 13px;border-radius:8px 8px 0 0;margin-top:6px;display:flex;justify-content:space-between;align-items:center">'
+          +'<span>⏰ '+slot+' · '+allSlotOrds.length+' pedido'+(allSlotOrds.length!==1?'s':'')+'</span>'+cdHtml+'</div>';
+        html+=buildProdBar(allSlotOrds);
+        html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:var(--cream);padding:8px;border:1px solid var(--cream-dark);border-top:none;border-radius:0 0 8px 8px;margin-bottom:4px">';
+        // New column
+        html+='<div><div style="background:#fef9c3;color:#92400e;border-radius:6px 6px 0 0;padding:5px 9px;font-size:11px;font-weight:700;display:flex;justify-content:space-between"><span>🟡 Nuevos</span><span>'+sg.new.length+'</span></div>'
+          +'<div style="background:#fff;border:1px solid #fde047;border-top:none;border-radius:0 0 6px 6px;min-height:40px;padding:5px">'
+          +(sg.new.length?sg.new.map(buildCard).join(''):'<div style="color:#9ca3af;font-size:11px;padding:6px;text-align:center;font-style:italic">—</div>')
+          +'</div></div>';
+        // Prep column
+        html+='<div><div style="background:#dbeafe;color:#1e3a8a;border-radius:6px 6px 0 0;padding:5px 9px;font-size:11px;font-weight:700;display:flex;justify-content:space-between"><span>🔵 Preparando</span><span>'+sg.prep.length+'</span></div>'
+          +'<div style="background:#fff;border:1px solid #93c5fd;border-top:none;border-radius:0 0 6px 6px;min-height:40px;padding:5px">'
+          +(sg.prep.length?sg.prep.map(buildCard).join(''):'<div style="color:#9ca3af;font-size:11px;padding:6px;text-align:center;font-style:italic">—</div>')
+          +'</div></div>';
+        // Ready column
+        html+='<div><div style="background:#dcfce7;color:#166534;border-radius:6px 6px 0 0;padding:5px 9px;font-size:11px;font-weight:700;display:flex;justify-content:space-between"><span>🟢 Listos</span><span>'+sg.ready.length+'</span></div>'
+          +'<div style="background:#fff;border:1px solid #86efac;border-top:none;border-radius:0 0 6px 6px;min-height:40px;padding:5px">'
+          +(sg.ready.length?sg.ready.map(buildCard).join(''):'<div style="color:#9ca3af;font-size:11px;padding:6px;text-align:center;font-style:italic">—</div>')
+          +'</div></div>';
+        html+='</div>';
       });
     });
-  });
+    if(!fechaOrder.length)html='<div class="empty-state">No hay pedidos activos.</div>';
+    document.getElementById('orders-list').innerHTML=html;
+    // Hide quick-view when kanban is shown
+    const qv=document.getElementById('quick-view');
+    if(qv)qv.style.display='none';
+    return;
+  }
 
-  document.getElementById('orders-list').innerHTML=html;
-
-  // Update quick view columns (always show Nuevos + Preparando)
-  const allOrds=_orders||[];
-  const newOrds=allOrds.filter(o=>o.status==='new');
-  const prepOrds=allOrds.filter(o=>o.status==='prep');
-  const qvNew=document.getElementById('qv-new');
-  const qvPrep=document.getElementById('qv-prep');
-  const qvNC=document.getElementById('qv-new-count');
-  const qvPC=document.getElementById('qv-prep-count');
-  if(qvNC)qvNC.textContent=newOrds.length;
-  if(qvPC)qvPC.textContent=prepOrds.length;
-  const buildQVCard=o=>{
+  // Done filter: list view
+  if(!filtered.length){
+    document.getElementById('orders-list').innerHTML='<div class="empty-state">No hay pedidos entregados'+(orderDateFilter?' para esa fecha':'')+'. Usá el filtro de fecha para buscar.</div>';
+    const qv=document.getElementById('quick-view');if(qv)qv.style.display='none';
+    return;
+  }
+  let html='';
+  let lastFecha=null;
+  filtered.forEach(o=>{
+    const fecha=o.fecha||new Date(o.ts).toISOString().slice(0,10);
+    if(fecha!==lastFecha){
+      const fd=new Date(fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+      html+='<div style="background:var(--brown);color:var(--kraft);border-radius:8px;padding:6px 14px;margin:12px 0 6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase">📅 '+fd+'</div>';
+      lastFecha=fecha;
+    }
     const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-    const items=(o.items||[]).map(it=>it.qty+'x '+it.name.split(' — ')[0]).join(', ');
-    const delivery=o.delivery==='pickup'?'🏪':'🛵';
-    const pagoIcon=o.payment==='transferencia'?'📲':o.payment==='mercadopago'?'💳':'💵';
-    return '<div style="background:#fafafa;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px;margin-bottom:6px;font-size:12px">'
-      +'<div style="font-weight:700;color:#111;display:flex;justify-content:space-between;gap:4px">'
-      +'<span>#'+o.id+' '+(o.customer||'')+'</span>'
-      +'<span style="color:#6b7280;white-space:nowrap">'+delivery+' '+hora+'</span></div>'
-      +'<div style="color:#6b7280;margin:2px 0;font-size:11px">'+items+'</div>'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">'
-      +'<span style="font-size:11px">'+pagoIcon+' '+fmt(o.total||0)+'</span>'
-      +(o.status==='new'?'<button onclick="setOrderStatus('+o.id+',\'prep\')" style="background:#dbeafe;color:#1e3a8a;border:1px solid #93c5fd;border-radius:5px;padding:2px 10px;font-size:11px;cursor:pointer;font-weight:600">▶ Preparando</button>':'')
-      +(o.status==='prep'?'<button onclick="setOrderStatus('+o.id+',\'ready\')" style="background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:5px;padding:2px 10px;font-size:11px;cursor:pointer;font-weight:600">✓ Listo</button>':'')
+    const items=(o.items||[]).map(it=>it.qty+'x '+it.name).join(' · ');
+    const delivery=o.delivery==='pickup'?'🏪 Retiro':'🛵 Envío';
+    const pagoLabel=o.payment==='transferencia'?'📲 Transferencia':o.payment==='mercadopago'?'💳 Mercado Pago':'💵 Efectivo';
+    html+='<div class="order-card" style="opacity:0.8">'
+      +'<div class="order-header"><span class="order-id">#'+o.id+' · '+hora+'</span><span class="order-name">'+(o.customer||'Sin nombre')+'</span><span class="order-total">'+fmt(o.total||0)+'</span><span class="badge badge-done">Entregado</span></div>'
+      +'<div class="order-delivery">'+delivery+(o.address?' · '+o.address:'')+'</div>'
+      +'<div class="order-items">'+items+'</div>'
+      +'<div style="display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap">'
+      +'<span style="font-size:12px;color:var(--brown-light)">'+pagoLabel+'</span>'
+      +'<button onclick="deleteOrder('+o.id+')" class="btn-sm" style="background:#fee2e2;color:var(--red-warm);border:1px solid #fca5a5;margin-left:auto">✕</button>'
       +'</div></div>';
-  };
-  if(qvNew)qvNew.innerHTML=newOrds.length?newOrds.map(buildQVCard).join(''):'<div style="color:#9ca3af;font-size:12px;font-style:italic;padding:8px;text-align:center">Sin pedidos nuevos</div>';
-  if(qvPrep)qvPrep.innerHTML=prepOrds.length?prepOrds.map(buildQVCard).join(''):'<div style="color:#9ca3af;font-size:12px;font-style:italic;padding:8px;text-align:center">Sin pedidos</div>';
+  });
+  document.getElementById('orders-list').innerHTML=html;
+  const qv=document.getElementById('quick-view');if(qv)qv.style.display='none';
 }
 
 async function setOrderStatus(id,status){
