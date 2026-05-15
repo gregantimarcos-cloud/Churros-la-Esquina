@@ -1582,7 +1582,8 @@ async function saveProduct(){
   if(!name||!price){alert('Completá nombre y precio');return}
   const grupo=document.getElementById('m-grupo').value.trim();
   const uds=parseInt(document.getElementById('m-uds').value)||1;
-  const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds};
+  const composicion=(_editComp&&_editComp.length>0)?JSON.parse(JSON.stringify(_editComp)):null;
+  const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds,composicion};
   if(editId){await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
   else{await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
   closeModal();await loadProducts();
