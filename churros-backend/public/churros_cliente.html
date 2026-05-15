@@ -319,27 +319,8 @@ let _splashTimer2 = setTimeout(()=>{
 }, 7000);
 
 async function init(){
-  // Check if there's a recent pending order (within last 2 hours)
-  try{
-    const saved=localStorage.getItem('churros_last_order');
-    if(saved){
-      const o=JSON.parse(saved);
-      const age=(Date.now()-o.ts)/1000/60; // minutes
-      if(age<120){ // less than 2 hours
-        // Show recovery banner
-        const banner=document.createElement('div');
-        banner.id='recovery-banner';
-        banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#3d1f0e;color:#c8a96e;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
-        banner.innerHTML=`
-          <span style="flex:1">📦 Tenés un pedido reciente #${o.id} — <b>${o.customer}</b> · $${o.total?.toLocaleString('es-AR')}</span>
-          <button onclick="verPedidoReciente()" style="background:#c8a96e;color:#3d1f0e;border:none;border-radius:7px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">Ver mi pedido</button>
-          <button onclick="cerrarRecovery()" style="background:none;border:1px solid rgba(200,169,110,0.4);color:rgba(200,169,110,0.7);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px">✕</button>
-        `;
-        document.body.prepend(banner);
-        window._lastOrder=o;
-      }
-    }
-  }catch(e){}
+  // Check for recent order handled by checkRecovery()
+  checkRecovery();
   // Load config, products and slots in parallel
   const [cfgData, productsData, slotsData] = await Promise.all([
     apiFetch('/api/cfg'),
@@ -1270,6 +1251,37 @@ function cerrarRecovery(){
   const b=document.getElementById('recovery-banner');
   if(b)b.remove();
 }
+
+function checkRecovery(){
+  try{
+    // Remove existing banner first
+    const existing=document.getElementById('recovery-banner');
+    if(existing)existing.remove();
+    const saved=localStorage.getItem('churros_last_order');
+    if(!saved)return;
+    const o=JSON.parse(saved);
+    const age=(Date.now()-o.ts)/1000/60;
+    if(age>=120)return; // older than 2 hours, ignore
+    window._lastOrder=o;
+    const banner=document.createElement('div');
+    banner.id='recovery-banner';
+    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#3d1f0e;color:#c8a96e;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.3)';
+    banner.innerHTML=`
+      <span style="flex:1">📦 Tenés un pedido reciente #${o.id} — <b>${o.customer}</b> · $${(o.total||0).toLocaleString('es-AR')}</span>
+      <button onclick="verPedidoReciente()" style="background:#c8a96e;color:#3d1f0e;border:none;border-radius:7px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">Ver mi pedido</button>
+      <button onclick="cerrarRecovery()" style="background:none;border:1px solid rgba(200,169,110,0.4);color:rgba(200,169,110,0.7);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px">✕</button>
+    `;
+    document.body.prepend(banner);
+  }catch(e){}
+}
+
+// Detect back/forward navigation (bfcache) and re-check
+window.addEventListener('pageshow', function(e){
+  if(e.persisted){
+    // Page was restored from bfcache (back button)
+    checkRecovery();
+  }
+});
 
 </script>
 </body>
