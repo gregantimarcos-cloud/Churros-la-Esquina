@@ -1255,6 +1255,7 @@ function renderOrders(){
       (o.items||[]).forEach(it=>{
         const prod=_products.find(p=>String(p.id)===String(it.id)||p.name===it.name||it.name.startsWith(p.name));
         const comp=prod?.composicion||null;
+        console.log('ITEM:',it.name,'qty:',it.qty,'prod found:',prod?.name,'composicion:',comp);
         if(comp&&comp.length>0){
           comp.forEach(c=>{prodCount[c.tipo]=(prodCount[c.tipo]||0)+(it.qty*c.cant);});
         } else {
@@ -1263,6 +1264,7 @@ function renderOrders(){
           if(it.uds&&Number(it.uds)>0)uds=Number(it.uds);
           else if(prod?.uds&&Number(prod.uds)>0)uds=Number(prod.uds);
           else{const pn=(it.name||'').toLowerCase();if(pn.includes('docena')&&!pn.includes('media'))uds=12;else if(pn.includes('media docena'))uds=6;}
+          console.log('  → grupo:',grupo,'uds:',uds,'total:',it.qty*uds);
           prodCount[grupo]=(prodCount[grupo]||0)+(it.qty*uds);
         }
       });
