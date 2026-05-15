@@ -1586,7 +1586,7 @@ async function saveProduct(){
   const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds,composicion};
   if(editId){await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
   else{await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
-  closeModal();await loadProducts();
+  closeModal();await loadProducts();showToast('✅ Producto guardado correctamente');
 }
 async function deleteProduct(){
   if(!confirm('¿Eliminar este producto?'))return;
