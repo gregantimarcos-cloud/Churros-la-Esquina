@@ -44,6 +44,7 @@ async function initDB() {
       data JSONB NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
   `);
   console.log('✅ Database tables ready');
 }
@@ -66,8 +67,12 @@ async function getSlots() {
   const r = await pool.query('SELECT data FROM slots ORDER BY id');
   return r.rows.map(r => r.data);
 }
-async function getOrders() {
-  const r = await pool.query('SELECT id, data FROM orders ORDER BY id DESC');
+async function getOrders(days=60) {
+  // Only fetch recent orders for performance — historial queries can pass days=365
+  const r = await pool.query(
+    `SELECT id, data FROM orders WHERE created_at > NOW() - ($1 || ' days')::INTERVAL ORDER BY id DESC`,
+    [days]
+  );
   return r.rows.map(r => ({ id: r.id, ...r.data }));
 }
 
@@ -129,7 +134,7 @@ app.post('/api/cfg', async (req, res) => {
 
 // ── Products ────────────────────────────────────────────────────────
 app.get('/api/products', async (req, res) => {
-  try { res.json(await getProducts()); }
+  try { res.set('Cache-Control','public,max-age=30'); res.json(await getProducts()); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -161,7 +166,7 @@ app.delete('/api/products/:id', requireAdmin, async (req, res) => {
 
 // ── Slots ───────────────────────────────────────────────────────────
 app.get('/api/slots', async (req, res) => {
-  try { res.json(await getSlots()); }
+  try { res.set('Cache-Control','public,max-age=30'); res.json(await getSlots()); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -193,7 +198,7 @@ app.delete('/api/slots/:id', requireAdmin, async (req, res) => {
 
 // ── Orders ──────────────────────────────────────────────────────────
 app.get('/api/orders', requireAdmin, async (req, res) => {
-  try { res.json(await getOrders()); }
+  try { const days=parseInt(req.query.days)||60; res.json(await getOrders(days)); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
