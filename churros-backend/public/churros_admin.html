@@ -1588,17 +1588,24 @@ function agregarPresentacion(){
 function quitarPresentacion(i){_editPresentaciones.splice(i,1);renderPresTags();}
 
 async function saveProduct(){
-  const name=document.getElementById('m-name').value.trim(),desc=document.getElementById('m-desc').value.trim();
-  const price=parseInt(document.getElementById('m-price').value)||0,cat=document.getElementById('m-cat').value;
-  const unlimited=document.getElementById('m-unlimited').checked,stock=unlimited?0:(parseInt(document.getElementById('m-stock').value)||0);
-  if(!name||!price){alert('Completá nombre y precio');return}
-  const grupo=document.getElementById('m-grupo').value.trim();
-  const uds=parseInt(document.getElementById('m-uds').value)||1;
-  const composicion=(_editComp&&_editComp.length>0)?JSON.parse(JSON.stringify(_editComp)):null;
-  const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds,composicion};
-  if(editId){await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
-  else{await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
-  closeModal();await loadProducts();showToast('✅ Producto guardado correctamente');
+  try{
+    const name=document.getElementById('m-name').value.trim(),desc=document.getElementById('m-desc').value.trim();
+    const price=parseInt(document.getElementById('m-price').value)||0,cat=document.getElementById('m-cat').value;
+    const unlimited=document.getElementById('m-unlimited').checked,stock=unlimited?0:(parseInt(document.getElementById('m-stock').value)||0);
+    if(!name||!price){alert('Completá nombre y precio');return}
+    const grupo=document.getElementById('m-grupo').value.trim();
+    const uds=parseInt(document.getElementById('m-uds').value)||1;
+    const composicion=(_editComp&&_editComp.length>0)?JSON.parse(JSON.stringify(_editComp)):null;
+    const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds,composicion};
+    let result;
+    if(editId){result=await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
+    else{result=await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
+    if(result===null){alert('Error al guardar. Revisá tu conexión e intentá de nuevo.');return;}
+    closeModal();await loadProducts();showToast('✅ Producto guardado correctamente');
+  }catch(e){
+    console.error('saveProduct error:',e);
+    alert('Error al guardar: '+e.message);
+  }
 }
 async function deleteProduct(){
   if(!confirm('¿Eliminar este producto?'))return;
