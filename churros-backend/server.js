@@ -228,19 +228,26 @@ app.post('/api/orders', async (req, res) => {
           // Solo validar horario si es para hoy
           // Use slot-specific buffer if set, otherwise global buffer
           const buffer = slotMatch.buffer || cfg.slotBuffer || 0;
+          // Use Argentina timezone (UTC-3) for time comparisons
+          const tzOffset = cfg.tzOffset !== undefined ? cfg.tzOffset : -3;
           const now = new Date();
+          const nowAR = new Date(now.getTime() + tzOffset * 60 * 60 * 1000);
+          const nowH = nowAR.getUTCHours();
+          const nowM = nowAR.getUTCMinutes();
+          const nowMinutes = nowH * 60 + nowM;
           const [toH, toM] = slotMatch.to.split(':').map(Number);
-          const slotEnd = new Date();
-          slotEnd.setHours(toH, toM, 0, 0);
           const [frH, frM] = slotMatch.from.split(':').map(Number);
-          const slotStart = new Date();
-          slotStart.setHours(frH, frM, 0, 0);
-          // Block if slot already ended
-          if (now >= slotEnd) {
+          const slotEndMinutes = toH * 60 + toM;
+          const slotStartMinutes = frH * 60 + frM;
+          // Compare in minutes to avoid timezone issues
+          const slotEnd = new Date(); slotEnd.setHours(toH, toM, 0, 0);
+          const slotStart = new Date(); slotStart.setHours(frH, frM, 0, 0);
+          // Block if slot already ended (compare in AR time minutes)
+          if (nowMinutes >= slotEndMinutes) {
             return res.status(409).json({ error: 'Esta franja horaria ya pasó. Por favor elegí otra.' });
           }
           // Block if within buffer window BEFORE slot starts
-          if (buffer > 0 && now >= new Date(slotStart.getTime() - buffer * 60 * 1000) && now < slotStart) {
+          if (buffer > 0 && nowMinutes >= (slotStartMinutes - buffer) && nowMinutes < slotStartMinutes) {
             return res.status(409).json({ error: 'Esta franja horaria está cerrando. Por favor elegí otra.' });
           }
           // Validar bloqueos por fecha
