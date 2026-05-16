@@ -624,7 +624,8 @@ function slotStatus(s){
   // If ordering for a future date, all slots are available (except blocked)
   const today=new Date().toISOString().slice(0,10);
   if(_selectedDate&&_selectedDate>today)return'ok';
-  const buffer=cfg.slotBuffer||15;
+  // Use slot-specific buffer if set, otherwise global config buffer
+  const buffer=s.buffer||cfg.slotBuffer||0;
   const now=new Date();
   const [toH,toM]=s.to.split(':').map(Number);
   const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
@@ -632,8 +633,8 @@ function slotStatus(s){
   const slotStart=new Date();slotStart.setHours(fromH,fromM,0,0);
   const msBuffer=buffer*60*1000;
   if(now>=slotEnd)return'pasado';
-  // Block buffer minutes BEFORE slot START (not before end)
-  if(now>=new Date(slotStart-msBuffer))return'pronto';
+  // Block buffer minutes BEFORE slot START (not during the slot)
+  if(msBuffer>0&&now>=new Date(slotStart.getTime()-msBuffer)&&now<slotStart)return'pronto';
   return'ok';
 }
 

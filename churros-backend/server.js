@@ -226,7 +226,8 @@ app.post('/api/orders', async (req, res) => {
         const today = new Date().toISOString().slice(0, 10);
         if (orderDate === today) {
           // Solo validar horario si es para hoy
-          const buffer = cfg.slotBuffer || 15;
+          // Use slot-specific buffer if set, otherwise global buffer
+          const buffer = slotMatch.buffer || cfg.slotBuffer || 0;
           const now = new Date();
           const [toH, toM] = slotMatch.to.split(':').map(Number);
           const slotEnd = new Date();
@@ -234,12 +235,13 @@ app.post('/api/orders', async (req, res) => {
           const [frH, frM] = slotMatch.from.split(':').map(Number);
           const slotStart = new Date();
           slotStart.setHours(frH, frM, 0, 0);
-          // Block buffer minutes before START (not before end)
-          if (now >= new Date(slotStart - buffer * 60 * 1000) && now < slotEnd) {
-            return res.status(409).json({ error: 'Esta franja horaria ya está cerrada. Por favor elegí otra.' });
-          }
+          // Block if slot already ended
           if (now >= slotEnd) {
             return res.status(409).json({ error: 'Esta franja horaria ya pasó. Por favor elegí otra.' });
+          }
+          // Block if within buffer window BEFORE slot starts
+          if (buffer > 0 && now >= new Date(slotStart.getTime() - buffer * 60 * 1000) && now < slotStart) {
+            return res.status(409).json({ error: 'Esta franja horaria está cerrando. Por favor elegí otra.' });
           }
           // Validar bloqueos por fecha
           const blocks = cfg.slotBlocks || [];
