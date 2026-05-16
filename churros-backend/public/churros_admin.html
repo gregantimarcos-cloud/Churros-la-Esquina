@@ -1657,7 +1657,7 @@ function renderSlots(){
   document.getElementById('slots-list').innerHTML=_slots.length?_slots.map(s=>{
     const limitLabel=s.maxPedidos>0?`<span style="font-size:10px;background:var(--cream-dark);border:1px solid var(--kraft);border-radius:10px;padding:2px 7px;margin-left:4px;">máx. ${s.maxPedidos} ped.</span>`:'';
     const bufferLabel=s.buffer?`<span style="font-size:10px;background:#fefce8;border:1px solid #fde047;border-radius:10px;padding:2px 7px;margin-left:4px;">cierra ${s.buffer} min. antes</span>`:'';
-    return`<div class="slot-item"><div><div class="slot-text">⏰ ${s.from} – ${s.to}${limitLabel}${bufferLabel}</div><div class="slot-type-lbl">${tl[s.type]||s.type}</div></div><button class="slot-toggle ${s.active?'active':''}" onclick="toggleSlot(${s.id})">${s.active?'✓ Activo':'Inactivo'}</button><button class="slot-del" onclick="deleteSlot(${s.id})">✕</button></div>`;
+    return`<div class="slot-item"><div style="flex:1"><div class="slot-text">⏰ ${s.from} – ${s.to}${limitLabel}${bufferLabel}</div><div class="slot-type-lbl">${tl[s.type]||s.type}</div></div><button class="slot-toggle ${s.active?'active':''}" onclick="toggleSlot(${s.id})">${s.active?'✓ Activo':'Inactivo'}</button><button class="edit-btn" onclick="editSlot(${s.id})" style="font-size:12px;padding:5px 10px">✏️ Editar</button><button class="slot-del" onclick="deleteSlot(${s.id})">✕</button></div>`;
   }).join(''):'<div class="empty-state">No hay franjas. Agregá una arriba.</div>';
 }
 async function addSlot(){
@@ -2560,6 +2560,43 @@ function initHistorial(){
   document.getElementById('hist-to').value=`${y}-${m}-${lastDay}`;
 }
 
+// ── EDITAR FRANJA ──────────────────────────────────────────────
+let _editSlotId = null;
+
+function editSlot(id){
+  const s = _slots.find(x=>x.id===id);
+  if(!s) return;
+  _editSlotId = id;
+  document.getElementById('es-from').value = s.from;
+  document.getElementById('es-to').value = s.to;
+  document.getElementById('es-type').value = s.type||'both';
+  document.getElementById('es-max').value = s.maxPedidos||0;
+  document.getElementById('es-buffer').value = s.buffer||0;
+  document.getElementById('edit-slot-overlay').style.display='flex';
+}
+
+function closeEditSlot(){
+  document.getElementById('edit-slot-overlay').style.display='none';
+  _editSlotId = null;
+}
+
+async function saveEditSlot(){
+  if(!_editSlotId) return;
+  const from = document.getElementById('es-from').value;
+  const to = document.getElementById('es-to').value;
+  const type = document.getElementById('es-type').value;
+  const maxPedidos = parseInt(document.getElementById('es-max').value)||0;
+  const buffer = parseInt(document.getElementById('es-buffer').value)||0;
+  if(!from||!to){alert('Completá los horarios');return;}
+  const idx = _slots.findIndex(s=>s.id===_editSlotId);
+  if(idx<0) return;
+  _slots[idx] = {..._slots[idx], from, to, type, maxPedidos, buffer};
+  await apiFetch('/api/slots/'+_editSlotId, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_slots[idx])});
+  closeEditSlot();
+  await loadSlots();
+  showToast('✅ Franja actualizada');
+}
+
 // ── DRAG & DROP KANBAN ──────────────────────────────────────────────
 let _dragOrderId = null;
 
@@ -2735,5 +2772,28 @@ document.addEventListener('click', function(e){
   else btn.style.display='none';
 });
 </script>
+<!-- MODAL EDITAR FRANJA -->
+<div id="edit-slot-overlay" style="display:none;position:fixed;inset:0;background:rgba(61,28,2,.55);z-index:300;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">
+  <div class="modal-box" style="max-width:420px;margin-top:40px">
+    <h3>✏️ Editar franja horaria</h3>
+    <div class="row2" style="margin-bottom:10px">
+      <div><label class="flabel">Desde</label><input class="finput" type="time" id="es-from"></div>
+      <div><label class="flabel">Hasta</label><input class="finput" type="time" id="es-to"></div>
+    </div>
+    <label class="flabel">Tipo</label>
+    <select class="finput field-mb" id="es-type">
+      <option value="both">Retiro y envío</option>
+      <option value="pickup">Solo retiro</option>
+      <option value="delivery">Solo envío</option>
+    </select>
+    <div class="row2" style="margin-bottom:10px">
+      <div><label class="flabel">Máx. pedidos <small>(0=sin límite)</small></label><input class="finput" type="number" id="es-max" min="0" placeholder="0"></div>
+      <div><label class="flabel">Cierra X min. antes</label><input class="finput" type="number" id="es-buffer" min="0" placeholder="0"></div>
+    </div>
+    <button class="savebtn" onclick="saveEditSlot()">Guardar cambios</button>
+    <button class="cancelbtn" onclick="closeEditSlot()">Cancelar</button>
+  </div>
+</div>
+
 </body>
 </html>
