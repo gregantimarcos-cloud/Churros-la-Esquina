@@ -231,8 +231,15 @@ app.post('/api/orders', async (req, res) => {
           const [toH, toM] = slotMatch.to.split(':').map(Number);
           const slotEnd = new Date();
           slotEnd.setHours(toH, toM, 0, 0);
-          if (now >= new Date(slotEnd - buffer * 60 * 1000)) {
+          const [frH, frM] = slotMatch.from.split(':').map(Number);
+          const slotStart = new Date();
+          slotStart.setHours(frH, frM, 0, 0);
+          // Block buffer minutes before START (not before end)
+          if (now >= new Date(slotStart - buffer * 60 * 1000) && now < slotEnd) {
             return res.status(409).json({ error: 'Esta franja horaria ya está cerrada. Por favor elegí otra.' });
+          }
+          if (now >= slotEnd) {
+            return res.status(409).json({ error: 'Esta franja horaria ya pasó. Por favor elegí otra.' });
           }
           // Validar bloqueos por fecha
           const blocks = cfg.slotBlocks || [];

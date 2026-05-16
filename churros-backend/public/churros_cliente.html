@@ -607,7 +607,8 @@ function getAvailableSlots(deliveryType){
 
 function slotStatus(s){
   // Returns: 'ok', 'pasado', 'pronto', 'full', 'bloqueado'
-  if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
+  // Only mark as full if maxPedidos is set AND explicitly reached
+  if(s.maxPedidos>0&&s.pedidosActuales!=null&&s.pedidosActuales>=s.maxPedidos)return'full';
   // Check if this slot is blocked for the selected date or today
   const todayDate=new Date().toISOString().slice(0,10);
   const checkDate=_selectedDate||todayDate;
@@ -631,7 +632,8 @@ function slotStatus(s){
   const slotStart=new Date();slotStart.setHours(fromH,fromM,0,0);
   const msBuffer=buffer*60*1000;
   if(now>=slotEnd)return'pasado';
-  if(now>=new Date(slotEnd-msBuffer))return'pronto';
+  // Block buffer minutes BEFORE slot START (not before end)
+  if(now>=new Date(slotStart-msBuffer))return'pronto';
   return'ok';
 }
 
