@@ -134,7 +134,17 @@ app.post('/api/cfg', async (req, res) => {
 
 // ── Products ────────────────────────────────────────────────────────
 app.get('/api/products', async (req, res) => {
-  try { res.set('Cache-Control','public,max-age=30'); res.json(await getProducts()); }
+  try {
+    const products = await getProducts();
+    // Generate simple version hash based on count and last product id
+    const version = products.length + '_' + (products[products.length-1]?.id||0);
+    if(req.headers['if-none-match'] === version) {
+      return res.status(304).end();
+    }
+    res.set('ETag', version);
+    res.set('Cache-Control','public,max-age=60');
+    res.json(products);
+  }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
