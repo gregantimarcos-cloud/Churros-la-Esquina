@@ -1562,32 +1562,34 @@ document.getElementById('modal-overlay').addEventListener('click',function(e){if
 function toggleUnlimited(){const c=document.getElementById('m-unlimited').checked;document.getElementById('m-stock').disabled=c;if(c)document.getElementById('m-stock').value='';}
 function handleImgUpload(event){
   const file=event.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    // Compress image before saving
-    const img=new Image();
-    img.onload=function(){
-      const canvas=document.createElement('canvas');
-      // Max 800px wide, maintain aspect ratio
-      const MAX=800;
-      let w=img.width,h=img.height;
-      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-      canvas.width=w;canvas.height=h;
-      const ctx=canvas.getContext('2d');
-      ctx.drawImage(img,0,0,w,h);
-      // Compress to JPEG 70% quality
-      currentImg=canvas.toDataURL('image/jpeg',0.7);
-      const origKB=Math.round(e.target.result.length*0.75/1024);
-      const newKB=Math.round(currentImg.length*0.75/1024);
-      console.log('Imagen comprimida: '+origKB+'KB → '+newKB+'KB');
+  (async()=>{
+  const label=document.getElementById('img-upload-label');
+  const origText=label?label.textContent:'';
+  if(label)label.textContent='⏳ Subiendo...';
+  try{
+    // Upload to Cloudinary
+    const formData=new FormData();
+    formData.append('file',file);
+    formData.append('upload_preset','churros_productos');
+    formData.append('cloud_name','dn97ddnzg');
+    const res=await fetch('https://api.cloudinary.com/v1_1/dn97ddnzg/image/upload',{method:'POST',body:formData});
+    const data=await res.json();
+    if(data.secure_url){
+      currentImg=data.secure_url;
       document.getElementById('img-preview').src=currentImg;
       document.getElementById('img-preview').style.display='block';
-      document.getElementById('img-upload-label').style.display='none';
+      if(label)label.style.display='none';
       document.getElementById('img-remove-btn').style.display='inline-block';
-    };
-    img.src=e.target.result;
-  };
-  reader.readAsDataURL(file);
+      showToast('✅ Foto subida correctamente');
+    } else {
+      throw new Error(data.error?.message||'Error al subir');
+    }
+  }catch(e){
+    console.error('Cloudinary error:',e);
+    alert('Error al subir la foto: '+e.message);
+    if(label){label.textContent=origText;}
+  }
+  })();
 }
 function removeImg(e){e.preventDefault();e.stopPropagation();currentImg='';document.getElementById('img-preview').src='';document.getElementById('img-preview').style.display='none';document.getElementById('img-upload-label').style.display='block';document.getElementById('img-remove-btn').style.display='none';document.getElementById('img-file-input').value='';}
 let _editPresentaciones=[];
