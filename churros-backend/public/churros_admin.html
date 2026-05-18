@@ -1306,7 +1306,7 @@ function renderOrders(){
 
     const buildCard=o=>{
       const hora=o.ts?new Date(o.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-      const items=(o.items||[]).map(it=>it.qty+'x '+it.name.split(' — ')[0]).join(', ');
+      const items=(o.items||[]).map(it=>it.qty+'x '+it.name).join(', ');
       const delivery=o.delivery==='pickup'?'🏪':'🛵';
       const pagoIcon=o.payment==='transferencia'?'📲':o.payment==='mercadopago'?'💳':'💵';
       const waConf=waOrderLink(o);
