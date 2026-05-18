@@ -1626,6 +1626,7 @@ async function saveProduct(){
     const grupo=document.getElementById('m-grupo').value.trim();
     const uds=parseInt(document.getElementById('m-uds').value)||1;
     const composicion=(_editComp&&_editComp.length>0)?JSON.parse(JSON.stringify(_editComp)):null;
+    console.log('Guardando img:', currentImg?currentImg.slice(0,80):'vacío');
     const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds,composicion};
     let result;
     if(editId){result=await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
