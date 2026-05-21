@@ -1632,7 +1632,10 @@ async function saveProduct(){
     if(editId){result=await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
     else{result=await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
     if(result===null){alert('Error al guardar. Revisá tu conexión e intentá de nuevo.');return;}
-    closeModal();await loadProducts();showToast('✅ Producto guardado correctamente');
+    closeModal();await loadProducts();
+    // Invalidate client-side product cache so changes show immediately
+    try{localStorage.removeItem('churros_prods');localStorage.removeItem('churros_prods_ts');}catch(e){}
+    showToast('✅ Producto guardado correctamente');
   }catch(e){
     console.error('saveProduct error:',e);
     alert('Error al guardar: '+e.message);
