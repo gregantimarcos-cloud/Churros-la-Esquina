@@ -2647,23 +2647,23 @@ function applyCrop(){
   const container=document.getElementById('crop-container');
   const cropImg=document.getElementById('crop-img');
   const cW=container.offsetWidth, cH=container.offsetHeight;
-  // Render cropped area to canvas
-  const canvas=document.createElement('canvas');
-  canvas.width=800;canvas.height=600;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#000';ctx.fillRect(0,0,800,600);
-  // Calculate source rectangle
-  const scaleX=cropImg.naturalWidth/cW*_cropZoom;
-  const scaleY=cropImg.naturalHeight/cH*_cropZoom;
-  // Map container coords back to image coords
-  const srcX=(-_cropX)/(cW)*cropImg.naturalWidth/(_cropZoom/(_cropZoom)); 
-  const sX=Math.max(0,-_cropX/(_cropZoom));
-  const sY=Math.max(0,-_cropY/(_cropZoom));
-  const sW=cW/_cropZoom;
-  const sH=cH/_cropZoom;
-  ctx.drawImage(cropImg,sX,sY,sW,sH,0,0,800,600);
-  currentImg=canvas.toDataURL('image/jpeg',0.82);
-  // Update preview
+
+  // Use Cloudinary transformations to crop server-side (avoids CORS issues)
+  if(_cropUploadUrl&&_cropUploadUrl.includes('cloudinary.com')){
+    // Calculate crop in image coordinates
+    const imgW=cropImg.naturalWidth, imgH=cropImg.naturalHeight;
+    const sX=Math.max(0,Math.round(-_cropX/_cropZoom));
+    const sY=Math.max(0,Math.round(-_cropY/_cropZoom));
+    const sW=Math.min(imgW-sX,Math.round(cW/_cropZoom));
+    const sH=Math.min(imgH-sY,Math.round(cH/_cropZoom));
+    // Build Cloudinary crop URL: c_crop,x_,y_,w_,h_/c_fill,w_800,h_600
+    const baseUrl=_cropUploadUrl.replace('/upload/',`/upload/c_crop,x_${sX},y_${sY},w_${sW},h_${sH}/c_fill,w_800,h_600,q_82/`);
+    currentImg=baseUrl;
+  } else {
+    // Fallback: use URL as-is
+    currentImg=_cropUploadUrl||currentImg;
+  }
+
   document.getElementById('img-preview').src=currentImg;
   document.getElementById('img-preview').style.display='block';
   document.getElementById('img-upload-label').style.display='none';
