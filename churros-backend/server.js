@@ -136,13 +136,13 @@ app.post('/api/cfg', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   try {
     const products = await getProducts();
-    // Generate simple version hash based on count and last product id
-    const version = products.length + '_' + (products[products.length-1]?.id||0);
+    // Use timestamp-based version so cache busts after any update
+    const version = products.length + '_' + (products[products.length-1]?.id||0) + '_' + Math.max(...products.map(p=>p.updatedAt||0), 0);
     if(req.headers['if-none-match'] === version) {
       return res.status(304).end();
     }
     res.set('ETag', version);
-    res.set('Cache-Control','public,max-age=60');
+    res.set('Cache-Control','public,max-age=300');
     res.json(products);
   }
   catch (e) { res.status(500).json({ error: e.message }); }
@@ -176,7 +176,23 @@ app.delete('/api/products/:id', requireAdmin, async (req, res) => {
 
 // ── Slots ───────────────────────────────────────────────────────────
 app.get('/api/slots', async (req, res) => {
-  try { res.set('Cache-Control','public,max-age=30'); res.json(await getSlots()); }
+  try {
+    res.set('Cache-Control','no-store');
+    const slots = await getSlots();
+    // Calculate real pedidosActuales from active orders (not stored count)
+    const orders = await getOrders(1); // only today
+    const today = new Date().toISOString().slice(0, 10);
+    const slotsWithCount = slots.map(s => {
+      const slotLabel = `${s.from} – ${s.to}`;
+      const count = orders.filter(o =>
+        o.slot === slotLabel &&
+        o.status !== 'done' &&
+        (o.fecha || new Date(o.ts || 0).toISOString().slice(0,10)) === today
+      ).length;
+      return { ...s, pedidosActuales: count };
+    });
+    res.json(slotsWithCount);
+  }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
