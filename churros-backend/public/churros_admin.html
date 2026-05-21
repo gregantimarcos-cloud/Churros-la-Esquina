@@ -1575,12 +1575,10 @@ function handleImgUpload(event){
     const res=await fetch('https://api.cloudinary.com/v1_1/dn97ddnzg/image/upload',{method:'POST',body:formData});
     const data=await res.json();
     if(data.secure_url){
-      currentImg=data.secure_url;
-      document.getElementById('img-preview').src=currentImg;
-      document.getElementById('img-preview').style.display='block';
+      // Open crop editor instead of showing directly
       if(label)label.style.display='none';
       document.getElementById('img-remove-btn').style.display='inline-block';
-      showToast('✅ Foto subida correctamente');
+      openCrop(file, data.secure_url);
     } else {
       throw new Error(data.error?.message||'Error al subir');
     }
@@ -2566,6 +2564,114 @@ function initHistorial(){
   document.getElementById('hist-to').value=`${y}-${m}-${lastDay}`;
 }
 
+// ── RECORTADOR DE IMAGEN ──────────────────────────────────────────
+let _cropFile=null, _cropX=0, _cropY=0, _cropZoom=1, _cropDragging=false, _cropLastX=0, _cropLastY=0;
+let _cropUploadUrl=null; // store cloudinary URL after upload
+
+function openCrop(file, cloudinaryUrl){
+  _cropFile=file;
+  _cropUploadUrl=cloudinaryUrl;
+  _cropX=0;_cropY=0;_cropZoom=1;
+  const img=document.getElementById('crop-img');
+  img.src=cloudinaryUrl;
+  img.onload=function(){
+    // Auto-fit image to container
+    const container=document.getElementById('crop-container');
+    const scaleW=container.offsetWidth/img.naturalWidth;
+    const scaleH=container.offsetHeight/img.naturalHeight;
+    _cropZoom=Math.max(scaleW,scaleH);
+    document.getElementById('crop-zoom').min=Math.min(scaleW,scaleH)*0.8;
+    document.getElementById('crop-zoom').value=_cropZoom;
+    _cropX=(container.offsetWidth-img.naturalWidth*_cropZoom)/2;
+    _cropY=(container.offsetHeight-img.naturalHeight*_cropZoom)/2;
+    updateCropTransform();
+  };
+  document.getElementById('crop-overlay').style.display='flex';
+  setupCropEvents();
+}
+
+function closeCrop(){
+  document.getElementById('crop-overlay').style.display='none';
+  _cropFile=null;_cropUploadUrl=null;
+}
+
+function updateCropZoom(){
+  _cropZoom=parseFloat(document.getElementById('crop-zoom').value);
+  updateCropTransform();
+}
+
+function updateCropTransform(){
+  const img=document.getElementById('crop-img');
+  img.style.transform=`translate(${_cropX}px,${_cropY}px) scale(${_cropZoom})`;
+}
+
+function setupCropEvents(){
+  const container=document.getElementById('crop-container');
+  // Remove old listeners
+  container.onmousedown=null;container.ontouchstart=null;
+  // Mouse
+  container.onmousedown=e=>{
+    _cropDragging=true;_cropLastX=e.clientX;_cropLastY=e.clientY;
+    container.style.cursor='grabbing';e.preventDefault();
+  };
+  document.onmousemove=e=>{
+    if(!_cropDragging)return;
+    _cropX+=e.clientX-_cropLastX;_cropY+=e.clientY-_cropLastY;
+    _cropLastX=e.clientX;_cropLastY=e.clientY;
+    updateCropTransform();
+  };
+  document.onmouseup=()=>{_cropDragging=false;container.style.cursor='grab';};
+  // Touch
+  container.ontouchstart=e=>{
+    if(e.touches.length===1){
+      _cropDragging=true;_cropLastX=e.touches[0].clientX;_cropLastY=e.touches[0].clientY;
+    }
+    e.preventDefault();
+  };
+  container.ontouchmove=e=>{
+    if(!_cropDragging||e.touches.length!==1)return;
+    _cropX+=e.touches[0].clientX-_cropLastX;_cropY+=e.touches[0].clientY-_cropLastY;
+    _cropLastX=e.touches[0].clientX;_cropLastY=e.touches[0].clientY;
+    updateCropTransform();e.preventDefault();
+  };
+  container.ontouchend=()=>{_cropDragging=false;};
+  // Wheel zoom
+  container.onwheel=e=>{
+    _cropZoom=Math.max(0.5,Math.min(3,_cropZoom-(e.deltaY>0?0.1:-0.1)));
+    document.getElementById('crop-zoom').value=_cropZoom;
+    updateCropTransform();e.preventDefault();
+  };
+}
+
+function applyCrop(){
+  const container=document.getElementById('crop-container');
+  const cropImg=document.getElementById('crop-img');
+  const cW=container.offsetWidth, cH=container.offsetHeight;
+  // Render cropped area to canvas
+  const canvas=document.createElement('canvas');
+  canvas.width=800;canvas.height=600;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#000';ctx.fillRect(0,0,800,600);
+  // Calculate source rectangle
+  const scaleX=cropImg.naturalWidth/cW*_cropZoom;
+  const scaleY=cropImg.naturalHeight/cH*_cropZoom;
+  // Map container coords back to image coords
+  const srcX=(-_cropX)/(cW)*cropImg.naturalWidth/(_cropZoom/(_cropZoom)); 
+  const sX=Math.max(0,-_cropX/(_cropZoom));
+  const sY=Math.max(0,-_cropY/(_cropZoom));
+  const sW=cW/_cropZoom;
+  const sH=cH/_cropZoom;
+  ctx.drawImage(cropImg,sX,sY,sW,sH,0,0,800,600);
+  currentImg=canvas.toDataURL('image/jpeg',0.82);
+  // Update preview
+  document.getElementById('img-preview').src=currentImg;
+  document.getElementById('img-preview').style.display='block';
+  document.getElementById('img-upload-label').style.display='none';
+  document.getElementById('img-remove-btn').style.display='inline-block';
+  closeCrop();
+  showToast('✅ Imagen ajustada — guardá el producto para aplicar');
+}
+
 // ── EDITAR FRANJA ──────────────────────────────────────────────
 let _editSlotId = null;
 
@@ -2778,6 +2884,34 @@ document.addEventListener('click', function(e){
   else btn.style.display='none';
 });
 </script>
+<!-- MODAL RECORTAR IMAGEN -->
+<div id="crop-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#1e293b;border-radius:14px;padding:20px;width:100%;max-width:480px">
+    <div style="font-family:'Playfair Display',serif;color:#c8a96e;font-size:16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span>✂️ Ajustar imagen</span>
+      <span style="font-size:11px;color:#64748b">Mové y hacé zoom para encuadrar</span>
+    </div>
+    <!-- Crop canvas area -->
+    <div id="crop-container" style="position:relative;width:100%;height:300px;overflow:hidden;background:#0f172a;border-radius:10px;cursor:grab;touch-action:none">
+      <img id="crop-img" style="position:absolute;transform-origin:top left;user-select:none;-webkit-user-drag:none" draggable="false">
+      <!-- Crop frame overlay -->
+      <div style="position:absolute;inset:0;pointer-events:none">
+        <div style="position:absolute;inset:20px;border:2px dashed rgba(200,169,110,0.6);border-radius:6px"></div>
+      </div>
+    </div>
+    <!-- Zoom slider -->
+    <div style="margin:12px 0;display:flex;align-items:center;gap:10px">
+      <span style="font-size:12px;color:#94a3b8">🔍</span>
+      <input type="range" id="crop-zoom" min="0.5" max="3" step="0.05" value="1" style="flex:1;accent-color:#c8a96e" oninput="updateCropZoom()">
+      <span style="font-size:12px;color:#94a3b8">🔍+</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="applyCrop()" style="flex:1;background:#c8a96e;color:#1e293b;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:14px;cursor:pointer">✓ Usar esta imagen</button>
+      <button onclick="closeCrop()" style="background:#334155;color:#94a3b8;border:none;border-radius:8px;padding:11px 16px;cursor:pointer">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR FRANJA -->
 <div id="edit-slot-overlay" style="display:none;position:fixed;inset:0;background:rgba(61,28,2,.55);z-index:300;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">
   <div class="modal-box" style="max-width:420px;margin-top:40px">
