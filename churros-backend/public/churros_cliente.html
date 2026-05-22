@@ -192,7 +192,7 @@ window.addEventListener('load',function(){
 <div id="v-customer" class="view active">
   <div class="header">
     <div class="header-inner">
-      <img class="logo-img" id="logo-img" alt="Logo" onerror="this.style.display='none'">
+      <img class="logo-img" id="logo-img" alt="Logo" width="600" height="400" onerror="this.style.display='none'">
       <div class="header-text">
         <div class="header-title" id="hdr-title">Churros La Esquina</div>
         <div class="header-sub" id="hdr-sub">Cargando...</div>
@@ -566,7 +566,11 @@ function renderMenu(){
       const imgSrc=p.img&&p.img.includes('cloudinary.com')
         ?p.img.replace('/upload/','/upload/f_auto,q_auto,w_600,h_400,c_fill/')
         :p.img;
-      const imgHtml=p.img?`<img src="${imgSrc}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">`:`<div class="no-img">📷 Sin foto</div>`;
+      // First product gets priority loading for LCP
+      const isFirst=html.length<500;
+      const imgHtml=p.img
+        ?`<img src="${imgSrc}" alt="${p.name}" ${isFirst?'fetchpriority="high" loading="eager"':'loading="lazy"'} onerror="this.style.display='none'">`
+        :`<div class="no-img">📷 Sin foto</div>`;
       html+=`<div class="pcard${outOfStock?' out-of-stock':''}">
         <div class="pcard-img-wrap">${imgHtml}<div class="cat-badge">${p.cat||''}</div>${outOfStock?`<div class="out-badge">${sinStockTxt}</div>`:''}</div>
         <div class="pcard-body">
