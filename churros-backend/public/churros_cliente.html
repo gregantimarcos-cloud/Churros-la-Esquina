@@ -320,25 +320,40 @@ let _splashTimer2 = setTimeout(()=>{
 }, 7000);
 
 async function init(){
-  // Check for recent order handled by checkRecovery()
   checkRecovery();
-  // Load config, products and slots in parallel
-  // Fetch cfg and slots in parallel (fast — no images)
+
+  // STEP 1: Show cached products immediately (instant LCP)
+  try{
+    const cached=localStorage.getItem('churros_prods');
+    const cachedCfg=localStorage.getItem('churros_cfg_cache');
+    const cachedSlots=localStorage.getItem('churros_slots_cache');
+    if(cached&&cachedCfg){
+      cfg=JSON.parse(cachedCfg);
+      slots=cachedSlots?JSON.parse(cachedSlots):[];
+      products=applyProductOrder(JSON.parse(cached),cfg);
+      applyConfigToUI(cfg);
+      renderMenu();
+      showView('v-customer');
+      hideSplash();
+    }
+  }catch(e){}
+
+  // STEP 2: Fetch fresh data in background
   const [cfgData, slotsData] = await Promise.all([
     apiFetch('/api/cfg'),
     apiFetch('/api/slots'),
   ]);
-  cfg = cfgData || {};
-  slots = slotsData || [];
+  cfg = cfgData || cfg || {};
+  slots = slotsData || slots || [];
+  try{localStorage.setItem('churros_cfg_cache',JSON.stringify(cfg));localStorage.setItem('churros_slots_cache',JSON.stringify(slots));}catch(e){}
 
-  // Products cached in localStorage (images are heavy — avoid re-downloading)
+  // STEP 3: Products — use cache or fetch fresh
   let productsData = [];
   try{
     const cached=localStorage.getItem('churros_prods');
     const cachedTs=parseInt(localStorage.getItem('churros_prods_ts')||'0');
-    if(cached && (Date.now()-cachedTs)<120000){ // 2 min cache
+    if(cached && (Date.now()-cachedTs)<120000){
       productsData=JSON.parse(cached);
-      // Refresh silently in background
       apiFetch('/api/products').then(f=>{if(f){localStorage.setItem('churros_prods',JSON.stringify(f));localStorage.setItem('churros_prods_ts',String(Date.now()));}}).catch(()=>{});
     } else {
       productsData=await apiFetch('/api/products')||[];
@@ -347,7 +362,6 @@ async function init(){
     }
   }catch(e){productsData=await apiFetch('/api/products')||[];}
 
-  // Apply saved display order from cfg (saved by admin via API)
   const rawProducts = productsData || [];
   products = applyProductOrder(rawProducts, cfgData);
 
@@ -1257,6 +1271,26 @@ function resetApp(){
 }
 
 init();
+// ── HELPERS ──────────────────────────────────────────────────────────
+function hideSplash(){
+  clearTimeout(_splashTimer);clearTimeout(_splashTimer2);
+  const bar=document.getElementById('splash-bar');
+  if(bar)bar.style.width='100%';
+  setTimeout(function(){
+    const s=document.getElementById('splash-screen');
+    if(s){s.style.opacity='0';setTimeout(function(){s.remove();},300);}
+  },100);
+}
+
+function applyConfigToUI(c){
+  if(!c)return;
+  // Apply logo, name, colors etc from config
+  const logo=document.getElementById('header-logo');
+  if(logo&&c.logo)logo.src=c.logo;
+  const nameEl=document.getElementById('shop-name');
+  if(nameEl&&c.name)nameEl.textContent=c.name;
+}
+
 // ── RECOVERY FUNCIONES ──────────────────────────────────────────────
 function verPedidoReciente(){
   const o=window._lastOrder;
