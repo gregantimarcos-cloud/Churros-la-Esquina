@@ -335,7 +335,7 @@ async function init(){
   try{
     const cached=localStorage.getItem('churros_prods');
     const cachedTs=parseInt(localStorage.getItem('churros_prods_ts')||'0');
-    if(cached && (Date.now()-cachedTs)<600000){ // 10 min cache
+    if(cached && (Date.now()-cachedTs)<120000){ // 2 min cache
       productsData=JSON.parse(cached);
       // Refresh silently in background
       apiFetch('/api/products').then(f=>{if(f){localStorage.setItem('churros_prods',JSON.stringify(f));localStorage.setItem('churros_prods_ts',String(Date.now()));}}).catch(()=>{});
@@ -607,8 +607,11 @@ function getAvailableSlots(deliveryType){
 
 function slotStatus(s){
   // Returns: 'ok', 'pasado', 'pronto', 'full', 'bloqueado'
-  // Only mark as full if maxPedidos is set AND explicitly reached
-  if(s.maxPedidos>0&&s.pedidosActuales!=null&&s.pedidosActuales>=s.maxPedidos)return'full';
+  // Only mark as full if maxPedidos is set AND explicitly reached AND it's today
+  const checkDateFull=_selectedDate||new Date().toISOString().slice(0,10);
+  const todayFull=new Date();
+  const todayStrFull=todayFull.getFullYear()+'-'+String(todayFull.getMonth()+1).padStart(2,'0')+'-'+String(todayFull.getDate()).padStart(2,'0');
+  if(s.maxPedidos>0&&s.pedidosActuales!=null&&s.pedidosActuales>=s.maxPedidos&&checkDateFull===todayStrFull)return'full';
   // Check if this slot is blocked for the selected date or today
   const todayDate=new Date().toISOString().slice(0,10);
   const checkDate=_selectedDate||todayDate;
@@ -684,6 +687,7 @@ function renderCart(){
   let availableDates=[];
   if(anticipado){
     const today=new Date();
+    today.setHours(0,0,0,0); // Normalize to start of day in local time
     // Find next N available dates based on diasDisponibles
     for(let i=0;i<anticipadoDias&&availableDates.length<14;i++){
       const d=new Date(today);
@@ -693,7 +697,8 @@ function renderCart(){
       }
     }
     availableDates.forEach((d,idx)=>{
-      const ds=d.toISOString().slice(0,10);
+      // Use local date to avoid UTC offset issues (Argentina = UTC-3)
+      const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
       const today2=new Date();
       const diffDays=Math.round((d-today2)/(1000*60*60*24));
       const label=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
@@ -1020,7 +1025,7 @@ async function confirmOrder(){
     else descuento=Math.min(_cuponAplicado.valor,sub+ship);
   }
   const totalFinal=Math.max(0,total-descuento);
-  const orderData={customer:name+(apellido?' '+apellido:''),phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:_selectedDate||new Date().toISOString().slice(0,10)};
+  const orderData={customer:name+(apellido?' '+apellido:''),phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:(()=>{if(_selectedDate)return _selectedDate;const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})()};
   gaEvent('purchase',{currency:'ARS',value:totalFinal,items:items.map(i=>({item_name:i.name,quantity:i.qty,price:i.price}))});
 
   let orderId=null;

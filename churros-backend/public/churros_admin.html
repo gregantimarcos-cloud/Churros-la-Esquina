@@ -757,6 +757,8 @@ body::before{display:none}
     </select>
     <label class="flabel">Dirección <small>(solo si es envío)</small></label>
     <input class="finput field-mb" id="mo-address" placeholder="Calle y número">
+    <label class="flabel">Fecha del pedido</label>
+    <input class="finput field-mb" type="date" id="mo-fecha">
     <label class="flabel">Franja horaria</label>
     <select class="finput field-mb" id="mo-slot">
       <option value="">Sin franja</option>
@@ -2183,6 +2185,11 @@ async function toggleProductHidden(id){
 
 function openManualOrder(){
   _moItems=[];
+  // Set default date to today
+  const today=new Date();
+  const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  const fechaEl=document.getElementById('mo-fecha');
+  if(fechaEl)fechaEl.value=todayStr;
   // Populate slot select
   const sel=document.getElementById('mo-slot');
   sel.innerHTML='<option value="">Sin franja</option>'+_slots.filter(s=>s.active).map(s=>`<option value="${s.from} – ${s.to}">${s.from} – ${s.to}</option>`).join('');
