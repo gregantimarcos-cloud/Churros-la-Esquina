@@ -2273,6 +2273,7 @@ async function saveManualOrder(){
   if(!_moItems.length){alert('Agregá al menos un producto');return;}
   const total=_moItems.reduce((a,it)=>a+it.price*it.qty,0);
   const slot=gv('mo-slot');
+  const moFecha=document.getElementById('mo-fecha')?.value||new Date().toISOString().slice(0,10);
   const orderData={
     customer,phone:gv('mo-phone'),
     items:_moItems.map(it=>({name:it.name,qty:it.qty,price:it.price,id:it.id,uds:it.uds})),
@@ -2280,11 +2281,16 @@ async function saveManualOrder(){
     delivery:gv('mo-delivery'),
     address:gv('mo-address'),
     payment:gv('mo-payment'),
-    slot,obs:gv('mo-obs'),
+    slot,fecha:moFecha,obs:gv('mo-obs'),
     status:gv('mo-status'),
     manual:true,ts:Date.now()
   };
-  const result=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+  let result;
+  try{
+    result=await apiFetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderData)});
+  }catch(e){
+    alert('Error al guardar: '+e.message);return;
+  }
   if(result?.id){
     closeManualOrder();
     await loadOrders();loadStats();
