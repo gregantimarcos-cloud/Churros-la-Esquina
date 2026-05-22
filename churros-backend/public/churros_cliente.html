@@ -335,7 +335,7 @@ async function init(){
   try{
     const cached=localStorage.getItem('churros_prods');
     const cachedTs=parseInt(localStorage.getItem('churros_prods_ts')||'0');
-    if(cached && (Date.now()-cachedTs)<120000){ // 2 min cache
+    if(cached && (Date.now()-cachedTs)<600000){ // 10 min cache
       productsData=JSON.parse(cached);
       // Refresh silently in background
       apiFetch('/api/products').then(f=>{if(f){localStorage.setItem('churros_prods',JSON.stringify(f));localStorage.setItem('churros_prods_ts',String(Date.now()));}}).catch(()=>{});
