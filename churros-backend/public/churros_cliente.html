@@ -576,14 +576,12 @@ function renderMenu(){
       const outOfStock=!p.unlimited&&(p.stock||0)<=0&&q===0;
       const lowStock=!p.unlimited&&(p.stock||0)>0&&(p.stock||0)<=3;
       const lowTxt=(cfg.txtStockBajo||'Últimas {n} unidades').replace('{n}',p.stock);
-      // Optimize Cloudinary images for fast loading
-      const imgSrc=p.img&&p.img.includes('cloudinary.com')
-        ?p.img.includes('cloudinary.com')?p.img.replace('/upload/','/upload/f_auto,q_auto,w_800/'):p.img
-        :p.img;
       // First product gets priority loading for LCP
       const isFirst=html.length<500;
+      const imgSrc400=p.img&&p.img.includes('cloudinary.com')?p.img.replace('/upload/','/upload/f_auto,q_auto,w_400/'):p.img;
+      const imgSrc800=p.img&&p.img.includes('cloudinary.com')?p.img.replace('/upload/','/upload/f_auto,q_auto,w_800/'):p.img;
       const imgHtml=p.img
-        ?`<img src="${imgSrc}" alt="${p.name}" ${isFirst?'fetchpriority="high" loading="eager"':'loading="lazy"'} onerror="this.style.display='none'">`
+        ?`<img src="${imgSrc400}" srcset="${imgSrc400} 400w, ${imgSrc800} 800w" sizes="(max-width:600px) 400px, 800px" alt="${p.name}" width="800" height="600" ${isFirst?'fetchpriority="high" loading="eager"':'loading="lazy"'} onerror="this.style.display='none'">`
         :`<div class="no-img">📷 Sin foto</div>`;
       html+=`<div class="pcard${outOfStock?' out-of-stock':''}">
         <div class="pcard-img-wrap">${imgHtml}<div class="cat-badge">${p.cat||''}</div>${outOfStock?`<div class="out-badge">${sinStockTxt}</div>`:''}</div>
