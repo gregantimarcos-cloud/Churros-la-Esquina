@@ -546,20 +546,6 @@ body::before{display:none}
           <div style="font-size:11px;color:var(--brown-light);margin-top:4px;font-style:italic">Cuántos días hacia adelante buscar fechas disponibles</div>
         </div>
       </div>
-      <div class="fbox" style="margin-top:16px">
-        <div class="sec-label" style="padding-top:0">🔔 Sonido de nuevo pedido</div>
-        <label class="flabel">Elegí el sonido que querés escuchar cuando entra un pedido</label>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
-          <select class="finput" id="cfg-sonido" style="flex:1;min-width:180px">
-            <option value="alcancia">🪙 Alcancía</option>
-            <option value="caja">🛒 Caja registradora</option>
-            <option value="campanita">🔔 Campanita</option>
-            <option value="chime">✨ Chime suave</option>
-            <option value="original">📳 Original (beep)</option>
-          </select>
-          <button onclick="previewSonido()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:700">▶ Probar</button>
-        </div>
-      </div>
       <button class="savebtn" onclick="saveCfg()">Guardar toda la configuración</button>
       <div class="ornament" style="margin-top:16px">· · · ✦ · · ·</div>
     </div>
@@ -976,7 +962,6 @@ function fillConfigForm(c){
   fill('cfg-txt-msg-efectivo',c.txtMsgEfectivo||d.txtMsgEfectivo);fill('cfg-txt-msg-transferencia',c.txtMsgTransferencia||d.txtMsgTransferencia);fill('cfg-txt-msg-mp',c.txtMsgMP||d.txtMsgMP);
   fill('cfg-txt-retiro',c.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!');
   fill('cfg-whatsapp',c.whatsapp||'');
-  const selSonido=document.getElementById('cfg-sonido');if(selSonido&&c.sonido)selSonido.value=c.sonido;
   fill('cfg-ga',c.gaId||'');
   document.getElementById('cfg-open').classList.toggle('on',c.open!==false);
   document.getElementById('cfg-closed').classList.toggle('on',c.open===false);
@@ -1633,6 +1618,10 @@ function agregarPresentacion(){
 function quitarPresentacion(i){_editPresentaciones.splice(i,1);renderPresTags();}
 
 async function saveProduct(){
+  // Prevent double-save
+  const saveBtn=document.querySelector('.savebtn');
+  if(saveBtn&&saveBtn.disabled)return;
+  if(saveBtn)saveBtn.disabled=true;
   try{
     const name=document.getElementById('m-name').value.trim(),desc=document.getElementById('m-desc').value.trim();
     const price=parseInt(document.getElementById('m-price').value)||0,cat=document.getElementById('m-cat').value;
@@ -1648,12 +1637,13 @@ async function saveProduct(){
     else{result=await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
     if(result===null){alert('Error al guardar. Revisá tu conexión e intentá de nuevo.');return;}
     closeModal();await loadProducts();
-    // Invalidate client-side product cache so changes show immediately
-    try{localStorage.removeItem('churros_prods');localStorage.removeItem('churros_prods_ts');}catch(e){}
+    try{localStorage.removeItem('churros_prods');localStorage.removeItem('churros_prods_ts');localStorage.removeItem('churros_prods_v');}catch(e){}
     showToast('✅ Producto guardado correctamente');
   }catch(e){
     console.error('saveProduct error:',e);
     alert('Error al guardar: '+e.message);
+  }finally{
+    if(saveBtn)saveBtn.disabled=false;
   }
 }
 async function deleteProduct(){
@@ -1799,7 +1789,6 @@ async function saveCfg(){
     anticipado:_cfg.anticipado||false,
     anticipadoDias:parseInt(gv('cfg-anticipado-dias'))||14,
     diasDisponibles:_cfg.diasDisponibles||[5,6,0],
-    sonido:gv('cfg-sonido')||'alcancia',
   };
   if(nu){data.adminUser=nu;_adminUser=nu;}
   if(np){data.adminPass=np;_adminPass=np;}
@@ -2054,82 +2043,22 @@ let _lastOrderCount=0;
 let _notifInterval=null;
 let _audioCtx=null;
 
-function _getAudioCtx(){
-  if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  return _audioCtx;
-}
-
-function _playTones(tones,type='triangle'){
-  const ctx=_getAudioCtx();
-  tones.forEach(([freq,start,dur,vol=1.0])=>{
-    const osc=ctx.createOscillator();
-    const gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.frequency.value=freq;osc.type=type;
-    const t=ctx.currentTime+start;
-    gain.gain.setValueAtTime(0,t);
-    gain.gain.linearRampToValueAtTime(vol,t+0.03);
-    gain.gain.exponentialRampToValueAtTime(0.01,t+dur);
-    osc.start(t);osc.stop(t+dur+0.05);
-  });
-}
-
-const _sonidos={
-  alcancia:()=>{
-    // Sonido de moneda cayendo en alcancía
-    _playTones([
-      [1200,0,0.06,0.8],[900,0.06,0.04,0.5],[1500,0.10,0.08,0.9],
-      [1100,0.18,0.05,0.6],[800,0.23,0.15,0.4]
-    ],'sine');
-    const ctx=_getAudioCtx();
-    // Ruido metálico corto
-    const buf=ctx.createBuffer(1,ctx.sampleRate*0.1,ctx.sampleRate);
-    const data=buf.getChannelData(0);
-    for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/800);
-    const src=ctx.createBufferSource();
-    const filt=ctx.createBiquadFilter();
-    filt.type='bandpass';filt.frequency.value=3000;filt.Q.value=2;
-    src.buffer=buf;src.connect(filt);filt.connect(ctx.destination);
-    src.start(ctx.currentTime+0.05);
-  },
-  caja:()=>{
-    // Caja registradora: "cha-ching"
-    _playTones([
-      [800,0,0.04,0.9],[1200,0.04,0.03,0.8],[1600,0.07,0.05,1.0],
-      [900,0.15,0.03,0.7],[1300,0.18,0.03,0.8],[1700,0.21,0.08,0.9]
-    ],'square');
-  },
-  campanita:()=>{
-    // Campanita clara
-    _playTones([
-      [1046,0,0.5,0.7],[1318,0.1,0.5,0.7],[1568,0.2,0.6,0.8]
-    ],'sine');
-  },
-  chime:()=>{
-    // Chime suave y agradable
-    _playTones([
-      [523,0,0.4,0.5],[659,0.15,0.4,0.5],[784,0.30,0.5,0.6],[1046,0.45,0.6,0.5]
-    ],'sine');
-  },
-  original:()=>{
-    _playTones([
-      [520,0,0.25,1.0],[660,0.18,0.25,1.0],[800,0.36,0.25,1.0],
-      [520,0.54,0.25,1.0],[660,0.72,0.25,1.0],[800,0.90,0.25,1.0]
-    ],'triangle');
-  }
-};
-
 function playBeep(){
   try{
-    const tipo=_cfg.sonido||'alcancia';
-    (_sonidos[tipo]||_sonidos.alcancia)();
-  }catch(e){console.log('Audio error:',e);}
-}
-
-function previewSonido(){
-  try{
-    const tipo=document.getElementById('cfg-sonido').value;
-    (_sonidos[tipo]||_sonidos.alcancia)();
+    if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    // Play 3 loud ascending tones x2
+    const tones=[520,660,800,520,660,800];
+    tones.forEach((freq,i)=>{
+      const osc=_audioCtx.createOscillator();
+      const gain=_audioCtx.createGain();
+      osc.connect(gain);gain.connect(_audioCtx.destination);
+      osc.frequency.value=freq;osc.type='triangle';
+      const t=_audioCtx.currentTime+(i*0.18);
+      gain.gain.setValueAtTime(0,t);
+      gain.gain.linearRampToValueAtTime(1.0,t+0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01,t+0.25);
+      osc.start(t);osc.stop(t+0.3);
+    });
   }catch(e){console.log('Audio error:',e);}
 }
 
