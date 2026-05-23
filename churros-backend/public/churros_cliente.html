@@ -352,13 +352,26 @@ async function init(){
   try{
     const cached=localStorage.getItem('churros_prods');
     const cachedTs=parseInt(localStorage.getItem('churros_prods_ts')||'0');
-    if(cached && (Date.now()-cachedTs)<10000){
+    if(cached && (Date.now()-cachedTs)<120000){
       productsData=JSON.parse(cached);
-      apiFetch('/api/products').then(f=>{if(f){localStorage.setItem('churros_prods',JSON.stringify(f));localStorage.setItem('churros_prods_ts',String(Date.now()));products=applyProductOrder(f,cfg);renderMenu();}}).catch(()=>{});
+      apiFetch('/api/products').then(f=>{
+        if(f){
+          localStorage.setItem('churros_prods',JSON.stringify(f));
+          localStorage.setItem('churros_prods_ts',String(Date.now()));
+          // Check if prices changed and re-render silently
+          const oldStr=JSON.stringify(products.map(p=>({id:p.id,price:p.price})));
+          const newStr=JSON.stringify(f.map(p=>({id:p.id,price:p.price})));
+          if(oldStr!==newStr){
+            products=applyProductOrder(f,cfg);
+            renderMenu();
+          }
+        }
+      }).catch(()=>{});
     } else {
       productsData=await apiFetch('/api/products')||[];
       localStorage.setItem('churros_prods',JSON.stringify(productsData));
       localStorage.setItem('churros_prods_ts',String(Date.now()));
+      localStorage.setItem('churros_prods_v',serverV);
     }
   }catch(e){productsData=await apiFetch('/api/products')||[];}
 
@@ -445,7 +458,6 @@ function showVariantPicker(p){
   inner.appendChild(title);
   const grid=document.createElement('div');
   grid.className='variante-sel';
-  p.variantes=[...p.variantes].sort((a,b)=>{const o=['unidad','media docena','docena'];const ai=o.findIndex(x=>a.nombre.toLowerCase().includes(x));const bi=o.findIndex(x=>b.nombre.toLowerCase().includes(x));return (ai===-1?999:ai)-(bi===-1?999:bi);});
   p.variantes.forEach(v=>{
     const btn=document.createElement('button');
     btn.className='var-opt';
@@ -482,19 +494,8 @@ function remItem(id){
 // Store pres data globally indexed by pid for safe onclick access
 var _presData={};
 
-function sortPresentaciones(arr){
-  const orden=['unidad','media docena','docena'];
-  return [...arr].sort(function(a,b){
-    var ai=orden.findIndex(function(o){return a.nombre.toLowerCase().includes(o);});
-    var bi=orden.findIndex(function(o){return b.nombre.toLowerCase().includes(o);});
-    if(ai===-1)ai=999;if(bi===-1)bi=999;
-    return ai-bi;
-  });
-}
-
 function renderPresRows(p){
   var pid=String(p.id);
-  p=Object.assign({},p,{presentaciones:sortPresentaciones(p.presentaciones)});
   _presData[pid]=p.presentaciones;
   var selIdx=-1;var selQty=0;
   p.presentaciones.forEach(function(pr,i){
