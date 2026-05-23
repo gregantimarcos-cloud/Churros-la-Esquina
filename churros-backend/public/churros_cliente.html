@@ -331,33 +331,15 @@ async function init(){
   slots = slotsData || slots || [];
   try{localStorage.setItem('churros_cfg_cache',JSON.stringify(cfg));localStorage.setItem('churros_slots_cache',JSON.stringify(slots));}catch(e){}
 
-  // STEP 3: Products — use cache or fetch fresh
+  // Always fetch fresh products — no cache to avoid stale prices
   let productsData = [];
   try{
-    const cached=localStorage.getItem('churros_prods');
-    const cachedTs=parseInt(localStorage.getItem('churros_prods_ts')||'0');
-    if(cached && (Date.now()-cachedTs)<120000){
-      productsData=JSON.parse(cached);
-      apiFetch('/api/products').then(f=>{
-        if(f){
-          localStorage.setItem('churros_prods',JSON.stringify(f));
-          localStorage.setItem('churros_prods_ts',String(Date.now()));
-          // Check if prices changed and re-render silently
-          const oldStr=JSON.stringify(products.map(p=>({id:p.id,price:p.price})));
-          const newStr=JSON.stringify(f.map(p=>({id:p.id,price:p.price})));
-          if(oldStr!==newStr){
-            products=applyProductOrder(f,cfg);
-            renderMenu();
-          }
-        }
-      }).catch(()=>{});
-    } else {
-      productsData=await apiFetch('/api/products')||[];
-      localStorage.setItem('churros_prods',JSON.stringify(productsData));
-      localStorage.setItem('churros_prods_ts',String(Date.now()));
-
-    }
-  }catch(e){productsData=await apiFetch('/api/products')||[];}
+    productsData = await apiFetch('/api/products') || [];
+    try{localStorage.setItem('churros_prods', JSON.stringify(productsData));localStorage.setItem('churros_prods_ts', String(Date.now()));}catch(e){}
+  }catch(e){
+    // Fallback to cache if fetch fails
+    try{const c=localStorage.getItem('churros_prods');if(c)productsData=JSON.parse(c);}catch(e2){}
+  }
 
   const rawProducts = productsData || [];
   products = applyProductOrder(rawProducts, cfgData);
