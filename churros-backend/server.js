@@ -93,7 +93,15 @@ app.use(function(req, res, next){
   }
   next();
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if(filePath.endsWith('.html')){
+      // Never cache HTML files so price/product changes show immediately
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.set('Pragma', 'no-cache');
+    }
+  }
+}));
 
 // ── Auth ────────────────────────────────────────────────────────────
 async function requireAdmin(req, res, next) {
