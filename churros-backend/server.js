@@ -142,7 +142,7 @@ app.get('/api/products', async (req, res) => {
       return res.status(304).end();
     }
     res.set('ETag', version);
-    res.set('Cache-Control','public,max-age=60');
+    res.set('Cache-Control','no-cache, no-store, must-revalidate');
     res.json(products);
   }
   catch (e) { res.status(500).json({ error: e.message }); }
@@ -176,7 +176,7 @@ app.delete('/api/products/:id', requireAdmin, async (req, res) => {
 
 // ── Slots ───────────────────────────────────────────────────────────
 app.get('/api/slots', async (req, res) => {
-  try { res.set('Cache-Control','public,max-age=30'); res.json(await getSlots()); }
+  try { res.set('Cache-Control','no-cache, no-store, must-revalidate'); res.json(await getSlots()); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
