@@ -322,23 +322,7 @@ let _splashTimer2 = setTimeout(()=>{
 async function init(){
   checkRecovery();
 
-  // STEP 1: Show cached products immediately (instant LCP)
-  try{
-    const cached=localStorage.getItem('churros_prods');
-    const cachedCfg=localStorage.getItem('churros_cfg_cache');
-    const cachedSlots=localStorage.getItem('churros_slots_cache');
-    if(cached&&cachedCfg){
-      cfg=JSON.parse(cachedCfg);
-      slots=cachedSlots?JSON.parse(cachedSlots):[];
-      products=applyProductOrder(JSON.parse(cached),cfg);
-      applyConfigToUI(cfg);
-      renderMenu();
-      showView('v-customer');
-      hideSplash();
-    }
-  }catch(e){}
-
-  // STEP 2: Fetch fresh data in background
+  // Fetch fresh data
   const [cfgData, slotsData] = await Promise.all([
     apiFetch('/api/cfg'),
     apiFetch('/api/slots'),
@@ -371,7 +355,7 @@ async function init(){
       productsData=await apiFetch('/api/products')||[];
       localStorage.setItem('churros_prods',JSON.stringify(productsData));
       localStorage.setItem('churros_prods_ts',String(Date.now()));
-      localStorage.setItem('churros_prods_v',serverV);
+
     }
   }catch(e){productsData=await apiFetch('/api/products')||[];}
 
