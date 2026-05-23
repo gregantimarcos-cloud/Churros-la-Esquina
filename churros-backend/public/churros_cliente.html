@@ -352,7 +352,7 @@ async function init(){
   try{
     const cached=localStorage.getItem('churros_prods');
     const cachedTs=parseInt(localStorage.getItem('churros_prods_ts')||'0');
-    if(cached && (Date.now()-cachedTs)<120000){
+    if(cached && (Date.now()-cachedTs)<10000){
       productsData=JSON.parse(cached);
       apiFetch('/api/products').then(f=>{if(f){localStorage.setItem('churros_prods',JSON.stringify(f));localStorage.setItem('churros_prods_ts',String(Date.now()));products=applyProductOrder(f,cfg);renderMenu();}}).catch(()=>{});
     } else {
