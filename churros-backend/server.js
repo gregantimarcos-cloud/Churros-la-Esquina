@@ -215,7 +215,7 @@ app.get('/api/orders', requireAdmin, async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   try {
     const body = req.body;
-    if (body.slot) {
+    if (body.slot && !body.manual) {
       const slots = await getSlots();
       const cfg = await getCfg();
       const slotMatch = slots.find(s => `${s.from} – ${s.to}` === body.slot && s.active);
