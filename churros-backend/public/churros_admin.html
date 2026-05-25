@@ -1322,6 +1322,7 @@ function renderOrders(){
         +'<span style="color:var(--brown-light);white-space:nowrap;font-weight:400">'+delivery+' '+hora+'</span></div>'
         +'<div style="font-size:12px;color:var(--brown-light);margin-bottom:4px">'+items+'</div>'
         +(o.address?'<div style="font-size:11px;color:var(--brown-light);margin-bottom:4px">'+o.address+'</div>':'')
+        +(o.obs?'<div style="font-size:12px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:5px 9px;margin:4px 0;color:#92400e">📝 '+o.obs+'</div>':'')
         +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-top:4px">'
         +'<span style="font-size:11px">'+pagoIcon+' <b style="color:var(--red-warm)">'+fmt(o.total||0)+'</b> '+comprobante+'</span>'
         +'<div style="display:flex;gap:4px">'
