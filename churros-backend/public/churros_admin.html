@@ -2908,6 +2908,23 @@ document.addEventListener('click', function(e){
   if(panel&&panel.classList.contains('active')) btn.style.display='block';
   else btn.style.display='none';
 });
+
+// ── OCULTAR IMPORTES ──────────────────────────────────────────────
+let _amountsHidden=false;
+function toggleAmounts(){
+  _amountsHidden=!_amountsHidden;
+  const icon=document.getElementById('toggle-amounts-icon');
+  const label=document.getElementById('toggle-amounts-label');
+  if(icon)icon.textContent=_amountsHidden?'🙈':'👁️';
+  if(label)label.textContent=_amountsHidden?'Mostrar importes':'Ocultar importes';
+  applyAmountsVisibility();
+}
+function applyAmountsVisibility(){
+  document.querySelectorAll('.stat-amount').forEach(el=>{
+    el.style.filter=_amountsHidden?'blur(6px)':'none';
+    el.style.userSelect=_amountsHidden?'none':'auto';
+  });
+}
 </script>
 <!-- MODAL RECORTAR IMAGEN -->
 <div id="crop-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;align-items:center;justify-content:center;padding:16px">
