@@ -1161,12 +1161,11 @@ async function confirmOrder(){
   } else {
     msg='Hola '+nombre+'!'+nl+nl
       +'Tu pedido en Churros La Esquina fue confirmado.'+nl+nl
-      +'Detalle:'+nl+itemsList+nl+nl
-      +'Total: '+fmt(totalFinal)+nl
-      +pagoTxt+nl+nl
-      +entregaTxt
-      +pagoExtra+nl+nl
-      +'Gracias por elegirnos!';
+      +'📦 Detalle:'+nl+itemsList+nl+nl
+      +'💰 Total: '+fmt(totalFinal)+nl+nl
+      +'📍 Entrega: '+entregaTxt+nl+nl
+      +'💳 Pago: '+confirmPagoTxt+nl+nl
+      +'¡Gracias por elegirnos!';
   }
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
