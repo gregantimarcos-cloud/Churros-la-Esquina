@@ -81,7 +81,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .pcard-pres{padding:4px 0 2px;}
 .pres-select-row{display:flex;gap:5px;align-items:center;width:100%;}
 .pres-select{flex:1;min-width:0;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:6px 4px;font-family:'Crimson Text',serif;font-size:12px;color:var(--brown);cursor:pointer;outline:none;max-width:calc(100% - 44px);}
-.pres-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--cream-dark);}
+.pres-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--cream-dark);-webkit-tap-highlight-color:transparent;}
 .pres-row:last-child{border-bottom:none;}
 .pres-row-info{display:flex;flex-direction:column;gap:1px;}
 .pres-row-name{font-size:13px;font-weight:600;color:var(--brown);}
@@ -474,11 +474,11 @@ function renderPresRows(p){
     var qty=cart[k]||0;
     var qtyCtrl=qty>0
       ?('<div class="pres-qty-ctrl">'
-        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presRemBtn(this)">−</button>'
+        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presRemBtn(this,event)">−</button>'
         +'<span>'+qty+'</span>'
-        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddBtn(this)">+</button>'
+        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddBtn(this,event)">+</button>'
         +'</div>')
-      :'<button class="pres-add-btn" data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddDirect(this)">Agregar</button>';
+      :'<button class="pres-add-btn" data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddDirect(this,event)">Agregar</button>';
     return '<div class="pres-row">'
       +'<div class="pres-row-info">'
       +'<span class="pres-row-name">'+pr.nombre+'</span>'
@@ -497,12 +497,14 @@ function presAddFromBtn(btn){
   var idx=Number(sel.value);
   presAdd(pid,idx);
 }
-function presAddBtn(btn){
+function presAddBtn(btn,e){
+  if(e)e.stopPropagation();
   var pid=btn.getAttribute('data-pid');
   var idx=Number(btn.getAttribute('data-idx'));
   presAdd(pid,idx);
 }
-function presRemBtn(btn){
+function presRemBtn(btn,e){
+  if(e)e.stopPropagation();
   var pid=btn.getAttribute('data-pid');
   var idx=Number(btn.getAttribute('data-idx'));
   presRem2(pid,idx);
