@@ -145,12 +145,12 @@ app.get('/api/products', async (req, res) => {
   try {
     const products = await getProducts();
     // Use timestamp-based version so cache busts after any update
-    const version = products.length + '_' + (products[products.length-1]?.id||0) + '_' + Math.max(...products.map(p=>p.updatedAt||0), 0);
+    const version = require('crypto').createHash('md5').update(JSON.stringify(products)).digest('hex');
     if(req.headers['if-none-match'] === version) {
       return res.status(304).end();
     }
     res.set('ETag', version);
-    res.set('Cache-Control','public,max-age=300');
+    res.set('Cache-Control','no-cache');
     res.json(products);
   }
   catch (e) { res.status(500).json({ error: e.message }); }
