@@ -86,7 +86,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .pres-row-info{display:flex;flex-direction:column;gap:1px;}
 .pres-row-name{font-size:13px;font-weight:600;color:var(--brown);}
 .pres-row-price{font-size:13px;color:var(--red-warm);font-weight:700;}
-.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;padding:7px 10px;white-space:nowrap;box-sizing:border-box;font-family:sans-serif;letter-spacing:0;}
+.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:50%;font-size:20px;font-weight:300;cursor:pointer;flex-shrink:0;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;line-height:1;padding:0;}
 .pres-select:focus{border-color:var(--brown);}
 .pres-qty-ctrl{display:flex;align-items:center;gap:3px;flex-shrink:0;}
 .pres-qty-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;font-weight:700;flex-shrink:0;}
@@ -469,7 +469,17 @@ var _presData={};
 function renderPresRows(p){
   var pid=String(p.id);
   _presData[pid]=p.presentaciones;
-  var rows=p.presentaciones.map(function(pr,i){
+  // Sort: Unidad first, Media Docena second, Docena third
+  var presOrden=['unidad','media docena','docena'];
+  var presSorted=p.presentaciones.slice().sort(function(a,b){
+    var ai=presOrden.findIndex(function(o){return a.nombre.toLowerCase().includes(o);});
+    var bi=presOrden.findIndex(function(o){return b.nombre.toLowerCase().includes(o);});
+    if(ai===-1)ai=99;if(bi===-1)bi=99;
+    return ai-bi;
+  });
+  var rows=presSorted.map(function(pr,i){
+    var origIdx=p.presentaciones.indexOf(pr);
+    i=origIdx;
     var k=presKey(pid,pr.nombre);
     var qty=cart[k]||0;
     var qtyCtrl=qty>0
@@ -478,7 +488,7 @@ function renderPresRows(p){
         +'<span>'+qty+'</span>'
         +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddBtn(this,event)">+</button>'
         +'</div>')
-      :'<button class="pres-add-btn" data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddDirect(this,event)">Agregar</button>';
+      :'<button class="pres-add-btn" data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddDirect(this,event)">+</button>';
     return '<div class="pres-row">'
       +'<div class="pres-row-info">'
       +'<span class="pres-row-name">'+pr.nombre+'</span>'
