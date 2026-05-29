@@ -871,7 +871,7 @@ body::before{display:none}
 const API='';
 let _adminUser=sessionStorage.getItem('au')||'',_adminPass=sessionStorage.getItem('ap')||'';
 let _cfg={},_orders=[],_products=[],_slots=[];
-let orderFilter='all', orderDateFilter=null, editId=null, currentImg='', _compOrderId=null;
+let orderFilter='all', orderDateFilter=null, editId=null, currentImg='', _compOrderId=null, _imgUploading=false;
 
 function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR')}
 function gv(id){const el=document.getElementById(id);return el?el.value:'';}
@@ -1568,12 +1568,17 @@ function openModal(id){
   renderCompList();
   document.getElementById('modal-overlay').classList.add('open');
 }
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editId=null;currentImg='';_editPresentaciones=[];}
+function closeModal(){
+  if(_imgUploading){return;} // no cerrar mientras sube foto
+  document.getElementById('modal-overlay').classList.remove('open');
+  editId=null;currentImg='';_editPresentaciones=[];
+}
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 function toggleUnlimited(){const c=document.getElementById('m-unlimited').checked;document.getElementById('m-stock').disabled=c;if(c)document.getElementById('m-stock').value='';}
 function handleImgUpload(event){
   const file=event.target.files[0];if(!file)return;
   (async()=>{
+  _imgUploading=true;
   const label=document.getElementById('img-upload-label');
   const origText=label?label.textContent:'';
   if(label)label.textContent='⏳ Subiendo...';
@@ -1587,6 +1592,7 @@ function handleImgUpload(event){
     if(data.secure_url){
       // Save URL directly - no crop editor
       currentImg=data.secure_url.replace('/upload/','/upload/c_fill,w_800,h_600,q_auto,f_auto/');
+      console.log('✅ Cloudinary OK, currentImg:', currentImg.slice(0,80));
       document.getElementById('img-preview').src=currentImg;
       document.getElementById('img-preview').style.display='block';
       if(label)label.style.display='none';
@@ -1599,6 +1605,8 @@ function handleImgUpload(event){
     console.error('Cloudinary error:',e);
     alert('Error al subir la foto: '+e.message);
     if(label){label.textContent=origText;}
+  }finally{
+    _imgUploading=false;
   }
   })();
 }
@@ -1641,7 +1649,7 @@ async function saveProduct(){
     const grupo=document.getElementById('m-grupo').value.trim();
     const uds=parseInt(document.getElementById('m-uds').value)||1;
     const composicion=(_editComp&&_editComp.length>0)?JSON.parse(JSON.stringify(_editComp)):null;
-    console.log('Guardando img:', currentImg?currentImg.slice(0,80):'vacío');
+    console.log('Guardando img:', currentImg ? currentImg.slice(0,100) : '⚠️ VACÍO - la imagen no se va a guardar');
     const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds,composicion};
     let result;
     if(editId){result=await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
