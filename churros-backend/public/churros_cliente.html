@@ -235,7 +235,7 @@ window.addEventListener('load',function(){
       <div style="font-size:22px;margin-bottom:4px">🥐</div>
       <div style="font-size:13px;color:var(--brown);font-style:italic">Estamos preparando tu pedido...</div>
     </div>
-    <p id="suc-msg"></p>
+    <p id="suc-msg" style="line-height:1.7;text-align:left;font-size:14px"></p>
     <div id="suc-mp-box" style="display:none;background:#fefce8;border:2px solid #fde047;border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
       <div style="font-family:'Playfair Display',serif;font-size:13px;color:#713f12;font-weight:600;margin-bottom:6px;">💳 Monto a pagar</div>
       <div id="suc-mp-amount" style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#92400e;margin-bottom:10px;"></div>
@@ -1170,7 +1170,7 @@ async function confirmOrder(){
   }
   document.getElementById('suc-icon').textContent=icon;
   document.getElementById('suc-title').textContent=title;
-  document.getElementById('suc-msg').textContent=msg;
+  document.getElementById('suc-msg').innerHTML=msg.replace(/\n/g,'<br>');
   document.getElementById('suc-mp-box').style.display='none';
   const compBox=document.getElementById('suc-comprobante-box');
   compBox.style.display=payment==='transferencia'?'block':'none';
