@@ -81,6 +81,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .pcard-pres{padding:4px 0 2px;}
 .pres-select-row{display:flex;gap:5px;align-items:center;width:100%;}
 .pres-select{flex:1;min-width:0;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:6px 4px;font-family:'Crimson Text',serif;font-size:12px;color:var(--brown);cursor:pointer;outline:none;max-width:calc(100% - 44px);}
+.pres-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--cream-dark);}
+.pres-row:last-child{border-bottom:none;}
+.pres-row-info{display:flex;flex-direction:column;gap:1px;}
+.pres-row-name{font-size:13px;font-weight:600;color:var(--brown);}
+.pres-row-price{font-size:13px;color:var(--red-warm);font-weight:700;}
+.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Playfair Display',serif;}
 .pres-select:focus{border-color:var(--brown);}
 .pres-qty-ctrl{display:flex;align-items:center;gap:3px;flex-shrink:0;}
 .pres-qty-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;font-weight:700;flex-shrink:0;}
@@ -463,32 +469,26 @@ var _presData={};
 function renderPresRows(p){
   var pid=String(p.id);
   _presData[pid]=p.presentaciones;
-  var selIdx=-1;var selQty=0;
-  p.presentaciones.forEach(function(pr,i){
+  var rows=p.presentaciones.map(function(pr,i){
     var k=presKey(pid,pr.nombre);
-    if((cart[k]||0)>0){selIdx=i;selQty=cart[k];}
-  });
-  var optsHtml=p.presentaciones.map(function(pr,i){
-    var isSel=(i===selIdx)?'selected':'';
-    return '<option value="'+i+'" '+isSel+'>'+pr.nombre+' — '+fmt(pr.precio)+'</option>';
-  }).join('');
-  // Use data attributes to avoid quoting issues in onclick
-  var selId='pres-sel-'+pid;
-  var ctrlHtml;
-  if(selIdx>=0&&selQty>0){
-    ctrlHtml='<div class="pres-qty-ctrl">'
-      +'<button data-pid="'+pid+'" data-idx="'+selIdx+'" onclick="presRemBtn(this)">-</button>'
-      +'<span>'+selQty+'</span>'
-      +'<button data-pid="'+pid+'" data-idx="'+selIdx+'" onclick="presAddBtn(this)">+</button>'
+    var qty=cart[k]||0;
+    var qtyCtrl=qty>0
+      ?('<div class="pres-qty-ctrl">'
+        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presRemBtn(this)">−</button>'
+        +'<span>'+qty+'</span>'
+        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddBtn(this)">+</button>'
+        +'</div>')
+      :'<button class="pres-add-btn" data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddDirect(this)">Agregar</button>';
+    return '<div class="pres-row">'
+      +'<div class="pres-row-info">'
+      +'<span class="pres-row-name">'+pr.nombre+'</span>'
+      +'<span class="pres-row-price">'+fmt(pr.precio)+'</span>'
+      +'</div>'
+      +qtyCtrl
       +'</div>';
-  } else {
-    ctrlHtml='<button class="pres-add-btn" data-pid="'+pid+'" data-sel="'+selId+'" onclick="presAddFromBtn(this)">+</button>';
-  }
-  return '<div class="pcard-pres"><div class="pres-select-row">'
-    +'<select class="pres-select" id="'+selId+'">'+optsHtml+'</select>'
-    +ctrlHtml+'</div></div>';
+  }).join('');
+  return '<div class="pcard-pres">'+rows+'</div>';
 }
-
 function presAddFromBtn(btn){
   var pid=btn.getAttribute('data-pid');
   var selId=btn.getAttribute('data-sel');
