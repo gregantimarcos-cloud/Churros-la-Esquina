@@ -1578,7 +1578,6 @@ function handleImgUpload(event){
   const origText=label?label.textContent:'';
   if(label)label.textContent='⏳ Subiendo...';
   try{
-    // Upload to Cloudinary
     const formData=new FormData();
     formData.append('file',file);
     formData.append('upload_preset','churros_productos');
@@ -1586,10 +1585,13 @@ function handleImgUpload(event){
     const res=await fetch('https://api.cloudinary.com/v1_1/dn97ddnzg/image/upload',{method:'POST',body:formData});
     const data=await res.json();
     if(data.secure_url){
-      // Open crop editor instead of showing directly
+      // Save URL directly - no crop editor
+      currentImg=data.secure_url.replace('/upload/','/upload/c_fill,w_800,h_600,q_auto,f_auto/');
+      document.getElementById('img-preview').src=currentImg;
+      document.getElementById('img-preview').style.display='block';
       if(label)label.style.display='none';
       document.getElementById('img-remove-btn').style.display='inline-block';
-      openCrop(file, data.secure_url);
+      showToast('✅ Foto subida correctamente');
     } else {
       throw new Error(data.error?.message||'Error al subir');
     }
