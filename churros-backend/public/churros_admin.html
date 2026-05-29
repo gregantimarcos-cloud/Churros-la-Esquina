@@ -2682,8 +2682,16 @@ function applyCrop(){
     const sW=Math.min(imgW-sX,Math.round(cW/_cropZoom));
     const sH=Math.min(imgH-sY,Math.round(cH/_cropZoom));
     // Build Cloudinary crop URL: c_crop,x_,y_,w_,h_/c_fill,w_800,h_600
-    const baseUrl=_cropUploadUrl.replace('/upload/',`/upload/c_crop,x_${sX},y_${sY},w_${sW},h_${sH}/c_fill,w_800,h_600,q_82/`);
-    currentImg=baseUrl;
+    console.log('Crop values:', {sX,sY,sW,sH,imgW,imgH,cW,cH,zoom:_cropZoom});
+    // Validate - if crop values are invalid, use original URL
+    if(sW>10&&sH>10){
+      const baseUrl=_cropUploadUrl.replace('/upload/',`/upload/c_crop,x_${sX},y_${sY},w_${sW},h_${sH}/c_fill,w_800,h_600,q_82/`);
+      currentImg=baseUrl;
+    } else {
+      // Fallback: use original without crop, just resize
+      currentImg=_cropUploadUrl.replace('/upload/','/upload/c_fill,w_800,h_600,q_82/');
+    }
+    console.log('currentImg set to:', currentImg.slice(0,80));
   } else {
     // Fallback: use URL as-is
     currentImg=_cropUploadUrl||currentImg;
