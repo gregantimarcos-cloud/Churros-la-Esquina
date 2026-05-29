@@ -1652,8 +1652,8 @@ async function saveProduct(){
     console.log('Guardando img:', currentImg ? currentImg.slice(0,100) : '⚠️ VACÍO - la imagen no se va a guardar');
     const data={img:currentImg,name,desc,price,cat,stock,unlimited,presentaciones:_editPresentaciones,grupo,uds,composicion};
     let result;
-    if(editId){result=await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
-    else{result=await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
+    if(editId){result=await apiFetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});console.log('PUT result img:', result?.img?result.img.slice(0,80):'❌ sin img en respuesta');}
+    else{result=await apiFetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});console.log('POST result img:', result?.img?result.img.slice(0,80):'❌ sin img en respuesta');}
     if(result===null){alert('Error al guardar. Revisá tu conexión e intentá de nuevo.');return;}
     closeModal();await loadProducts();
     try{localStorage.removeItem('churros_prods');localStorage.removeItem('churros_prods_ts');localStorage.removeItem('churros_prods_v');}catch(e){}
