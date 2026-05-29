@@ -1061,6 +1061,8 @@ async function loadStats(){
     <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-val stat-amount">${fmt(todayIncome)}</div><div class="stat-lbl">Hoy (${todayDone.length} pedidos)</div></div>
     <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val stat-amount">${fmt(totalIncome)}</div><div class="stat-lbl">Total cobrado</div></div>`;
   applyAmountsVisibility();
+  // Re-apply after any DOM update
+  setTimeout(applyAmountsVisibility, 50);
 
   // ── Top products — group by "grupo" field, count real churros ──
   const pc={};
@@ -2669,25 +2671,9 @@ function setupCropEvents(){
 }
 
 function applyCrop(){
-  const container=document.getElementById('crop-container');
-  const cropImg=document.getElementById('crop-img');
-  const cW=container.offsetWidth, cH=container.offsetHeight;
-
-  // Use Cloudinary transformations to crop server-side (avoids CORS issues)
-  if(_cropUploadUrl&&_cropUploadUrl.includes('cloudinary.com')){
-    // Calculate crop in image coordinates
-    const imgW=cropImg.naturalWidth, imgH=cropImg.naturalHeight;
-    const sX=Math.max(0,Math.round(-_cropX/_cropZoom));
-    const sY=Math.max(0,Math.round(-_cropY/_cropZoom));
-    const sW=Math.min(imgW-sX,Math.round(cW/_cropZoom));
-    const sH=Math.min(imgH-sY,Math.round(cH/_cropZoom));
-    // Build Cloudinary crop URL: c_crop,x_,y_,w_,h_/c_fill,w_800,h_600
-    // Use Cloudinary auto-resize without crop to ensure compatibility
+  // Always use original Cloudinary URL with auto optimization
+  if(_cropUploadUrl){
     currentImg=_cropUploadUrl.replace('/upload/','/upload/c_fill,w_800,h_600,q_auto,f_auto/');
-    console.log('currentImg:', currentImg.slice(0,80));
-  } else {
-    // Fallback: use URL as-is
-    currentImg=_cropUploadUrl||currentImg;
   }
 
   document.getElementById('img-preview').src=currentImg;
