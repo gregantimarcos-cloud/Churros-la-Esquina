@@ -1250,11 +1250,12 @@ function filterOrders(f){
 function renderOrders(){
   // Calcular hoy en AR (UTC-3)
   const _todayAR=new Date(Date.now()-3*60*60*1000).toISOString().slice(0,10);
-  // Mostrar solo pedidos de hoy en adelante (no done), salvo filtro de fecha activo
+  // Mostrar pedidos activos (no done) de hoy en adelante
+  // Usar o.fecha si existe, sino ts — pero si no tiene fecha asumir que es de hoy para no perderlo
   let allActive=_orders.filter(o=>{
     if(o.status==='done') return false;
-    const fecha=o.fecha||new Date(o.ts||0).toISOString().slice(0,10);
-    return fecha>=_todayAR;
+    if(!o.fecha) return true; // sin fecha explícita, siempre mostrar
+    return o.fecha>=_todayAR;
   });
   let filtered=[...allActive];
 
