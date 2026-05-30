@@ -76,14 +76,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .field-error{font-size:11px;color:#b91c1c;font-style:italic;margin-top:4px;display:none;}
 .field-error.show{display:block;}
 .slots-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
-.pcard-pres{padding:4px 0 2px;}
-.pres-select-row{display:flex;gap:5px;align-items:center;width:100%;}
-.pres-select{flex:1;min-width:0;background:var(--cream-dark);border:1.5px solid var(--kraft);border-radius:8px;padding:6px 4px;font-family:'Crimson Text',serif;font-size:12px;color:var(--brown);cursor:pointer;outline:none;max-width:calc(100% - 44px);}
-.pres-select:focus{border-color:var(--brown);}
+.pcard-pres{padding:4px 0 2px;display:flex;flex-direction:column;gap:5px;}
+.pres-row{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.pres-label{font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);flex:1;}
+.pres-price{font-size:12px;color:var(--brown-light);margin-right:4px;}
 .pres-qty-ctrl{display:flex;align-items:center;gap:3px;flex-shrink:0;}
 .pres-qty-ctrl button{background:var(--brown);color:var(--kraft);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;font-weight:700;flex-shrink:0;}
 .pres-qty-ctrl span{font-size:12px;font-weight:700;min-width:16px;text-align:center;color:var(--brown);}
-.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:8px;width:34px;height:34px;min-width:34px;cursor:pointer;font-size:20px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.pres-add-btn{background:var(--brown);color:var(--kraft);border:none;border-radius:8px;width:26px;height:26px;min-width:26px;cursor:pointer;font-size:18px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .slot-btn{padding:7px 13px;border:1.5px solid var(--kraft);border-radius:9px;background:var(--cream);font-family:'Crimson Text',serif;font-size:13px;color:var(--brown);cursor:pointer;transition:all .15s;}
 .slot-btn.on{border-color:var(--brown);background:var(--cream-dark);font-weight:600;}
 .slot-btn.full{opacity:.45;pointer-events:none;text-decoration:line-through;}
@@ -431,30 +431,24 @@ var _presData={};
 function renderPresRows(p){
   var pid=String(p.id);
   _presData[pid]=p.presentaciones;
-  var selIdx=-1;var selQty=0;
-  p.presentaciones.forEach(function(pr,i){
+  // Una fila por presentación, con +/− individual
+  var rowsHtml=p.presentaciones.map(function(pr,i){
     var k=presKey(pid,pr.nombre);
-    if((cart[k]||0)>0){selIdx=i;selQty=cart[k];}
-  });
-  var optsHtml=p.presentaciones.map(function(pr,i){
-    var isSel=(i===selIdx)?'selected':'';
-    return '<option value="'+i+'" '+isSel+'>'+pr.nombre+' — '+fmt(pr.precio)+'</option>';
-  }).join('');
-  // Use data attributes to avoid quoting issues in onclick
-  var selId='pres-sel-'+pid;
-  var ctrlHtml;
-  if(selIdx>=0&&selQty>0){
-    ctrlHtml='<div class="pres-qty-ctrl">'
-      +'<button data-pid="'+pid+'" data-idx="'+selIdx+'" onclick="presRemBtn(this)">-</button>'
-      +'<span>'+selQty+'</span>'
-      +'<button data-pid="'+pid+'" data-idx="'+selIdx+'" onclick="presAddBtn(this)">+</button>'
+    var qty=cart[k]||0;
+    var ctrl=qty>0
+      ?'<div class="pres-qty-ctrl">'
+        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presRemBtn(this)">−</button>'
+        +'<span>'+qty+'</span>'
+        +'<button data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddBtn(this)">+</button>'
+        +'</div>'
+      :'<button class="pres-add-btn" data-pid="'+pid+'" data-idx="'+i+'" onclick="presAddIdxBtn(this)">+</button>';
+    return '<div class="pres-row">'
+      +'<span class="pres-label">'+pr.nombre+'</span>'
+      +'<span class="pres-price">'+fmt(pr.precio)+'</span>'
+      +ctrl
       +'</div>';
-  } else {
-    ctrlHtml='<button class="pres-add-btn" data-pid="'+pid+'" data-sel="'+selId+'" onclick="presAddFromBtn(this)">+</button>';
-  }
-  return '<div class="pcard-pres"><div class="pres-select-row">'
-    +'<select class="pres-select" id="'+selId+'">'+optsHtml+'</select>'
-    +ctrlHtml+'</div></div>';
+  }).join('');
+  return '<div class="pcard-pres">'+rowsHtml+'</div>';
 }
 
 function presAddFromBtn(btn){
@@ -463,6 +457,11 @@ function presAddFromBtn(btn){
   var sel=document.getElementById(selId);
   if(!sel)return;
   var idx=Number(sel.value);
+  presAdd(pid,idx);
+}
+function presAddIdxBtn(btn){
+  var pid=btn.getAttribute('data-pid');
+  var idx=Number(btn.getAttribute('data-idx'));
   presAdd(pid,idx);
 }
 function presAddBtn(btn){
