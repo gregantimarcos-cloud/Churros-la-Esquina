@@ -1206,7 +1206,7 @@ async function cerrarPedidosViejos(){
   if(!viejos.length){alert('No hay pedidos anteriores pendientes.');return;}
   if(!confirm('Hay '+viejos.length+' pedido(s) de días anteriores sin cerrar. ¿Marcarlos como Entregados?'))return;
   for(const o of viejos){
-    await apiFetch('/api/orders/'+o.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'done'})});
+    await apiFetch('/api/orders/'+o.id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'done'})});
   }
   await loadOrders();
   showToast('✅ '+viejos.length+' pedido(s) cerrado(s)');
@@ -1248,15 +1248,7 @@ function filterOrders(f){
   renderOrders();
 }
 function renderOrders(){
-  // Calcular hoy en AR (UTC-3)
-  const _todayAR=new Date(Date.now()-3*60*60*1000).toISOString().slice(0,10);
-  // Mostrar pedidos activos (no done) de hoy en adelante
-  // Usar o.fecha si existe, sino ts — pero si no tiene fecha asumir que es de hoy para no perderlo
-  let allActive=_orders.filter(o=>{
-    if(o.status==='done') return false;
-    if(!o.fecha) return true; // sin fecha explícita, siempre mostrar
-    return o.fecha>=_todayAR;
-  });
+  let allActive=_orders.filter(o=>o.status!=='done');
   let filtered=[...allActive];
 
   // Apply status filter
