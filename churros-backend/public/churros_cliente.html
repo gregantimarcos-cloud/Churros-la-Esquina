@@ -431,9 +431,11 @@ var _presData={};
 
 function renderPresRows(p){
   var pid=String(p.id);
-  _presData[pid]=p.presentaciones;
+  // Ordenar presentaciones por uds (unidad < media docena < docena)
+  var presOrdenadas=p.presentaciones.slice().sort(function(a,b){return (a.uds||1)-(b.uds||1);});
+  _presData[pid]=presOrdenadas;
   // Una fila por presentación, con +/− individual
-  var rowsHtml=p.presentaciones.map(function(pr,i){
+  var rowsHtml=presOrdenadas.map(function(pr,i){
     var k=presKey(pid,pr.nombre);
     var qty=cart[k]||0;
     var ctrl=qty>0

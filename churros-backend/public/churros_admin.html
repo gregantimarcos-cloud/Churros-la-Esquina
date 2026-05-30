@@ -281,6 +281,14 @@ body::before{display:none}
         <div class="admin-sub" id="admin-sub-name">Churros La Esquina</div>
       </div>
       <button id="notif-btn" onclick="toggleNotifications()" title="Notificaciones" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;position:relative;">🔔<span id="notif-dot" style="display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:#ef4444;border-radius:50%;"></span></button>
+      <select id="sound-sel" onchange="saveSoundPref(this.value)" title="Sonido de notificación" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 6px;font-size:12px;cursor:pointer;max-width:130px;">
+        <option value="beep">🔔 Beep</option>
+        <option value="caja">🛒 Caja registradora</option>
+        <option value="monedas">🪙 Monedas</option>
+        <option value="campana">🔔 Campana</option>
+        <option value="chime">✨ Chime</option>
+      </select>
+      <button onclick="playBeep()" title="Probar sonido" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--kraft);border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer;">▶ Test</button>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
     <div class="nav-tabs">
@@ -933,6 +941,10 @@ async function initAdmin(cfg){
   document.getElementById('admin-sub-name').textContent=_cfg.name||'Churros La Esquina';
   fillConfigForm(_cfg);
   await Promise.all([loadStats(),loadProducts(),loadSlots()]);
+  // Restaurar preferencia de sonido
+  const _savedSound=getSoundPref();
+  const _soundSel=document.getElementById('sound-sel');
+  if(_soundSel)_soundSel.value=_savedSound;
   // Start notifications polling after login
   _lastOrderCount=0;
   // Start polling for new orders every 20 seconds
@@ -2062,23 +2074,99 @@ let _lastOrderCount=0;
 let _notifInterval=null;
 let _audioCtx=null;
 
+function saveSoundPref(v){localStorage.setItem('churros_sound',v);}
+function getSoundPref(){return localStorage.getItem('churros_sound')||'beep';}
+
 function playBeep(){
   try{
     if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    // Play 3 loud ascending tones x2
-    const tones=[520,660,800,520,660,800];
-    tones.forEach((freq,i)=>{
-      const osc=_audioCtx.createOscillator();
-      const gain=_audioCtx.createGain();
-      osc.connect(gain);gain.connect(_audioCtx.destination);
-      osc.frequency.value=freq;osc.type='triangle';
-      const t=_audioCtx.currentTime+(i*0.18);
-      gain.gain.setValueAtTime(0,t);
-      gain.gain.linearRampToValueAtTime(1.0,t+0.05);
-      gain.gain.exponentialRampToValueAtTime(0.01,t+0.25);
-      osc.start(t);osc.stop(t+0.3);
-    });
+    const ac=_audioCtx;
+    const sel=document.getElementById('sound-sel');
+    const pref=sel?sel.value:getSoundPref();
+    if(pref==='caja') _playCaja(ac);
+    else if(pref==='monedas') _playMonedas(ac);
+    else if(pref==='campana') _playCampana(ac);
+    else if(pref==='chime') _playChime(ac);
+    else _playBeepDefault(ac);
   }catch(e){console.log('Audio error:',e);}
+}
+
+function _tone(ac,freq,type,start,dur,vol,attack){
+  const osc=ac.createOscillator(),g=ac.createGain();
+  osc.connect(g);g.connect(ac.destination);
+  osc.frequency.value=freq;osc.type=type||'sine';
+  g.gain.setValueAtTime(0,start);
+  g.gain.linearRampToValueAtTime(vol||0.8,start+(attack||0.01));
+  g.gain.exponentialRampToValueAtTime(0.001,start+dur);
+  osc.start(start);osc.stop(start+dur+0.05);
+}
+
+function _noise(ac,start,dur,vol){
+  const buf=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate);
+  const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1);
+  const src=ac.createBufferSource();src.buffer=buf;
+  const g=ac.createGain(),filt=ac.createBiquadFilter();
+  filt.type='bandpass';filt.frequency.value=3000;filt.Q.value=0.5;
+  src.connect(filt);filt.connect(g);g.connect(ac.destination);
+  g.gain.setValueAtTime(vol||0.3,start);
+  g.gain.exponentialRampToValueAtTime(0.001,start+dur);
+  src.start(start);src.stop(start+dur+0.05);
+}
+
+function _playBeepDefault(ac){
+  // Beep triple ascendente original
+  [520,660,800,520,660,800].forEach((f,i)=>_tone(ac,f,'triangle',ac.currentTime+i*0.18,0.25,1.0,0.05));
+}
+
+function _playCaja(ac){
+  // Sonido de caja registradora: "cha-ching"
+  // Golpe metálico inicial
+  const t=ac.currentTime;
+  _noise(ac,t,0.04,0.6);
+  _tone(ac,1200,'square',t,0.06,0.5,0.002);
+  // Campana de caja (tono alto sostenido)
+  _tone(ac,2200,'sine',t+0.05,0.5,0.7,0.01);
+  _tone(ac,1760,'sine',t+0.05,0.4,0.4,0.01);
+  // Segundo "ching"
+  _noise(ac,t+0.12,0.03,0.4);
+  _tone(ac,2600,'sine',t+0.14,0.35,0.6,0.005);
+  _tone(ac,1980,'sine',t+0.14,0.3,0.35,0.005);
+}
+
+function _playMonedas(ac){
+  // Cascada de monedas cayendo
+  const t=ac.currentTime;
+  const coinFreqs=[1800,2100,1650,2400,1900,2200,1750,2050];
+  coinFreqs.forEach((f,i)=>{
+    const ct=t+i*0.06+(Math.random()*0.02);
+    _tone(ac,f,'sine',ct,0.18,0.55,0.003);
+    _tone(ac,f*1.5,'sine',ct,0.1,0.2,0.003);
+    _noise(ac,ct,0.05,0.1);
+  });
+}
+
+function _playCampana(ac){
+  // Campana tipo iglesia/timbre — tono puro con larga resonancia
+  const t=ac.currentTime;
+  const base=880;
+  _tone(ac,base,'sine',t,1.2,0.9,0.005);
+  _tone(ac,base*2,'sine',t,0.9,0.5,0.005);
+  _tone(ac,base*3,'sine',t,0.6,0.25,0.005);
+  _tone(ac,base*4.2,'sine',t,0.4,0.12,0.005);
+  // Segunda campanada
+  _tone(ac,base,'sine',t+0.5,1.0,0.7,0.005);
+  _tone(ac,base*2,'sine',t+0.5,0.7,0.4,0.005);
+}
+
+function _playChime(ac){
+  // Chime tipo marimba/xilofón — notas alegres
+  const t=ac.currentTime;
+  const notes=[523,659,784,1047]; // Do Mi Sol Do (octava arriba)
+  notes.forEach((f,i)=>{
+    const ct=t+i*0.15;
+    _tone(ac,f,'sine',ct,0.6,0.8,0.005);
+    _tone(ac,f*2,'sine',ct,0.3,0.15,0.005);
+  });
 }
 
 function showNewOrderBanner(count){
