@@ -556,29 +556,13 @@ function getAvailableSlots(deliveryType){
   });
 }
 
-function getTodayAR(){
-  const now=new Date();
-  const ar=new Date(now.getTime()-3*60*60*1000);
-  return ar.toISOString().slice(0,10);
-}
-function getAvailableDates(){
-  const diasDisponibles=cfg.diasDisponibles&&cfg.diasDisponibles.length?cfg.diasDisponibles:[0,1,2,3,4,5,6];
-  const maxDias=cfg.anticipadoDias||14;
-  const dates=[];
-  const today=getTodayAR();
-  for(let i=0;i<=maxDias&&dates.length<maxDias;i++){
-    const d=new Date(today+'T12:00:00');
-    d.setDate(d.getDate()+i);
-    if(diasDisponibles.includes(d.getDay()))dates.push(d.toISOString().slice(0,10));
-  }
-  return dates;
-}
 function slotStatus(s,fechaTarget){
+  // Returns: 'ok', 'pasado', 'pronto', 'full'
   if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
-  const today=getTodayAR();
-  const fecha=fechaTarget||today;
-  if(fecha>today)return'ok';
-  const buffer=cfg.slotBuffer||15;
+  // Si es para un día futuro, el horario no importa — siempre disponible
+  const todayStr=new Date(new Date().getTime()-3*60*60*1000).toISOString().slice(0,10);
+  if(fechaTarget&&fechaTarget>todayStr)return'ok';
+  const buffer=s.buffer||cfg.slotBuffer||15; // buffer específico del slot o global
   const now=new Date();
   const [toH,toM]=s.to.split(':').map(Number);
   const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
@@ -586,7 +570,7 @@ function slotStatus(s,fechaTarget){
   const slotStart=new Date();slotStart.setHours(fromH,fromM,0,0);
   const msBuffer=buffer*60*1000;
   if(now>=slotEnd)return'pasado';
-  if(now>=new Date(slotEnd-msBuffer))return'pronto';
+  if(now>=new Date(slotStart-msBuffer))return'pronto'; // buffer ANTES del inicio, no del fin
   return'ok';
 }
 
@@ -629,27 +613,21 @@ function renderCart(){
   const ship=delivery==='delivery'?(cfg.envio||0):0;
   const total=sub+ship;
   const availSlots=getAvailableSlots(delivery);
-  // Selector de fecha si hay config de días disponibles
-  const availDates=getAvailableDates();
-  const today=getTodayAR();
-  if(!selectedFecha&&availDates.length)selectedFecha=availDates[0];
-  const fechaHtml=availDates.length>1?`<div style="height:8px"></div><label class="flabel">📅 Fecha de entrega <span class="req">*</span></label>
-    <select class="finput" id="fecha-select" onchange="selectFecha(this.value)" style="margin-top:4px">
-      ${availDates.map(f=>{
-        const d=new Date(f+'T12:00:00');
-        const lbl=f===today?'Hoy — '+d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})
-          :d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-        return `<option value="${f}" ${selectedFecha===f?'selected':''}>${lbl}</option>`;
-      }).join('')}
-    </select>`:'';
-  const fechaTarget=selectedFecha||today;
-  const availSlotsFiltered=availSlots.filter(s=>slotStatus(s,fechaTarget)!=='pasado');
+  // Fechas disponibles según config del admin
+  const _todayStr=new Date(new Date().getTime()-3*60*60*1000).toISOString().slice(0,10);
+  const _diasDisp=cfg.diasDisponibles&&cfg.diasDisponibles.length?cfg.diasDisponibles:[0,1,2,3,4,5,6];
+  const _maxDias=cfg.anticipadoDias||7;
+  const _availDates=[];
+  for(let i=0;i<=_maxDias*2&&_availDates.length<=_maxDias;i++){const _d=new Date(_todayStr+'T12:00:00');_d.setDate(_d.getDate()+i);if(_diasDisp.includes(_d.getDay()))_availDates.push(_d.toISOString().slice(0,10));}
+  if(!selectedFecha||!_availDates.includes(selectedFecha))selectedFecha=_availDates[0]||_todayStr;
+  const _fechaHtml=_availDates.length>1?`<div style="height:8px"></div><label class="flabel">📅 Fecha de entrega</label><select class="finput" id="fecha-select" onchange="selectFecha(this.value)" style="margin-top:4px">${_availDates.map(f=>{const _d2=new Date(f+'T12:00:00');const _lbl=f===_todayStr?'Hoy, '+_d2.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}):_d2.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});return`<option value="${f}"${selectedFecha===f?' selected':''}>${_lbl}</option>`;}).join('')}</select>`:''
+  const availSlotsFiltered=availSlots.filter(s=>slotStatus(s,selectedFecha)!=='pasado');
   const slotsHtml=availSlotsFiltered.length
-    ?`<div style="height:8px"></div><label class="flabel">⏰ Franja horaria <span class="req">*</span></label>
+    ?`<div style="height:8px"></div><label class="flabel">Franja horaria <span class="req">*</span></label>
       <select class="finput" id="slot-select" onchange="selectSlotFromSelect(this.value)" style="margin-top:4px">
-        <option value="">Elegí un horario...</option>
+        <option value="">⏰ Elegí un horario...</option>
         ${availSlotsFiltered.map(s=>{
-          const st=slotStatus(s,fechaTarget);
+          const st=slotStatus(s,selectedFecha);
           const blocked=st==='full'||st==='pronto';
           const label=st==='full'?' — Completo':st==='pronto'?' — Cerrando':'';
           const sel=selectedSlot===String(s.id)?'selected':'';
@@ -706,7 +684,7 @@ function renderCart(){
       </div>
       ${retiroInfoHtml}
       ${locHtml}
-      ${fechaHtml}
+      ${_fechaHtml}
       ${slotsHtml}
     </div>
     <div class="sec-label">Forma de pago</div>
@@ -783,7 +761,7 @@ function markField(id,hasError,msg){
 }
 function checkForm(){validateForm();}
 function selectSlot(id){selectedSlot=String(id);renderCart();}
-function selectFecha(f){selectedFecha=f;selectedSlot="";renderCart();}
+function selectFecha(f){selectedFecha=f;selectedSlot='';renderCart();}
 function selectSlotFromSelect(val){
   // Save current address and GPS before any re-render
   const addrEl=document.getElementById('f-addr');
@@ -915,7 +893,7 @@ async function confirmOrder(){
     else descuento=Math.min(_cuponAplicado.valor,sub+ship);
   }
   const totalFinal=Math.max(0,total-descuento);
-  const today2=getTodayAR();const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:selectedFecha||today2};
+  const _todayStr2=new Date(new Date().getTime()-3*60*60*1000).toISOString().slice(0,10);const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:selectedFecha||_todayStr2};
   gaEvent('purchase',{currency:'ARS',value:totalFinal,items:items.map(i=>({item_name:i.name,quantity:i.qty,price:i.price}))});
 
   let orderId=null;

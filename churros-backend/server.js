@@ -288,11 +288,11 @@ app.post('/api/orders', async (req, res) => {
       }
 
       if (slotMatch && slotMatch.maxPedidos > 0) {
-        const today = new Date().toDateString();
+        const orderDate = body.fecha || new Date().toISOString().slice(0, 10);
         const orders = await getOrders();
         const count = orders.filter(o =>
           o.slot === body.slot && o.status !== 'done' &&
-          new Date(o.ts || 0).toDateString() === today
+          (o.fecha || new Date(o.ts || 0).toISOString().slice(0, 10)) === orderDate
         ).length;
         if (count >= slotMatch.maxPedidos) {
           return res.status(409).json({ error: 'Esta franja horaria ya está completa. Por favor elegí otra.' });
