@@ -247,8 +247,12 @@ app.post('/api/orders', async (req, res) => {
       // ── Validar que la franja no haya vencido (buffer del servidor) ──
       if (slotMatch) {
         const orderDate = body.fecha || new Date().toISOString().slice(0, 10);
-        const today = new Date().toISOString().slice(0, 10);
-        if (orderDate === today) {
+        // Calcular "hoy" en zona horaria Argentina (UTC-3) igual que el cliente
+        const tzOffset = cfg.tzOffset !== undefined ? cfg.tzOffset : -3;
+        const nowAR0 = new Date(Date.now() + tzOffset * 60 * 60 * 1000);
+        const today = nowAR0.toISOString().slice(0, 10);
+        // Los pedidos manuales del admin saltean la validación de horario
+        if (orderDate === today && !body.manual) {
           // Solo validar horario si es para hoy
           // Use slot-specific buffer if set, otherwise global buffer
           const buffer = slotMatch.buffer || cfg.slotBuffer || 0;
