@@ -692,9 +692,9 @@ function renderCart(){
     <div class="sec-label">Forma de pago</div>
     <div class="fbox" style="margin-bottom:10px">
       <div class="opts3">
-        <div class="opt ${payment==='efectivo'?'on':''}" onclick="setPayment('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>
-        <div class="opt ${payment==='transferencia'?'on':''}" onclick="setPayment('transferencia')"><div class="oi">📲</div><div class="ol">Transfer.</div></div>
-        <div class="opt ${payment==='mercadopago'?'on':''}" onclick="setPayment('mercadopago')"><div class="oi">💳</div><div class="ol">Merc.Pago</div></div>
+        ${(cfg.pagosHabilitados?.efectivo!==false)?`<div class="opt ${payment==='efectivo'?'on':''}" onclick="setPayment('efectivo')"><div class="oi">💵</div><div class="ol">Efectivo</div></div>`:''}
+        ${(cfg.pagosHabilitados?.transferencia!==false)?`<div class="opt ${payment==='transferencia'?'on':''}" onclick="setPayment('transferencia')"><div class="oi">📲</div><div class="ol">Transfer.</div></div>`:''}
+        ${(cfg.pagosHabilitados?.mp!==false)?`<div class="opt ${payment==='mercadopago'?'on':''}" onclick="setPayment('mercadopago')"><div class="oi">💳</div><div class="ol">Merc.Pago</div></div>`:''}
       </div>
       ${payExtra}
     </div>
@@ -724,8 +724,8 @@ function renderCart(){
       <textarea class="finput" id="f-obs" rows="2" placeholder="Ej: casa roja con planta en frente, timbre no funciona..." style="resize:none;line-height:1.5;min-height:60px;margin-bottom:0"></textarea>
     </div>
     <div class="form-errors" id="form-errors"></div>
-    ${isClosed?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||'🔒 El local está cerrado.'}</div>`:''}
-    <button class="cfmbtn" id="cfm-btn" onclick="tryConfirm()" ${isClosed?'disabled style="display:none"':''}>${confirmTxt}</button>
+    ${(isClosed&&!cfg.anticipado)?`<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:9px;padding:11px;margin-bottom:10px;font-size:13px;color:#b91c1c;font-style:italic;text-align:center">${cfg.txtCerradoInline||'🔒 El local está cerrado.'}</div>`:''}
+    <button class="cfmbtn" id="cfm-btn" onclick="tryConfirm()" ${(isClosed&&!cfg.anticipado)?'disabled style="display:none"':''}>${confirmTxt}</button>
     <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
   </div>`;
   setTimeout(()=>validateForm(),0);
@@ -853,7 +853,7 @@ function tryConfirm(){
 }
 
 async function confirmOrder(){
-  if(!cfg.open){alert('El local está cerrado.');return;}
+  if(!cfg.open&&!cfg.anticipado){alert('El local está cerrado.');return;}
   const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'';
   const ship=delivery==='delivery'?(cfg.envio||0):0;
