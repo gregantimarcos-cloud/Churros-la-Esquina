@@ -46,6 +46,7 @@ async function initDB() {
     );
     CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
   `);
+  try { await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_data_id ON orders (((data->>'id')::int))"); console.log('✅ Unique index ready'); } catch(e){ console.log('⚠️ Unique index skipped:', e.message); }
   console.log('✅ Database tables ready');
 }
 
