@@ -347,6 +347,22 @@ app.delete('/api/orders/:id', requireAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Endpoint temporal para limpiar duplicados y crear índice único
+app.post('/api/admin/fix-duplicates', requireAdmin, async (req, res) => {
+  try {
+    // Eliminar duplicados manteniendo el registro más antiguo (menor ctid) de cada data->>'id'
+    const del = await pool.query(`
+      DELETE FROM orders WHERE ctid NOT IN (
+        SELECT min(ctid) FROM orders GROUP BY (data->>'id')::int
+      )
+    `);
+    // Crear índice único ahora que no hay duplicados
+    await pool.query(`DROP INDEX IF EXISTS idx_orders_data_id`);
+    await pool.query(`CREATE UNIQUE INDEX idx_orders_data_id ON orders (((data->>'id')::int))`);
+    res.json({ ok: true, deleted: del.rowCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Stock deduction ─────────────────────────────────────────────────
 app.post('/api/stock/deduct', async (req, res) => {
   try {
