@@ -668,7 +668,7 @@ function renderCart(){
 
   let payExtra='';
   if(payment==='efectivo')payExtra=`<div class="pay-efectivo"><div class="pt">💵 Pago en efectivo</div><div class="ps">Tené listos ${fmt(totalFinal)} al ${delivery==='delivery'?'recibir el pedido':'retirar'}.</div></div>`;
-  if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:600">${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(totalFinal)}</span></div></div>`;
+  if(payment==='transferencia')payExtra=`<div class="pay-transferencia"><div class="pt">📲 Transferencia bancaria</div><div class="tf-row"><span>Alias</span><span style="font-weight:700;font-size:18px;letter-spacing:0.05em;color:#1e3a8a">${cfg.alias||'churros.local'}</span></div><div class="tf-row"><span>Monto exacto</span><span style="font-weight:600;color:var(--red-warm)">${fmt(totalFinal)}</span></div></div>`;
   if(payment==='mercadopago')payExtra=`<div class="pay-mp"><div class="pt">💳 Mercado Pago</div><div class="ps">Al confirmar, Mercado Pago se abrirá automáticamente.</div></div>`;
 
   const isClosed=!cfg.open;
@@ -999,22 +999,33 @@ async function confirmOrder(){
     ?`El pago fue realizado por Mercado Pago por ${fmt(totalFinal)}.`
     :`El pago es en efectivo por ${fmt(totalFinal)} al momento del ${delivery==='delivery'?'envío':'retiro'}.`;
 
-  msg=`¡Muchas gracias, ${nombre}! Tu pedido de ${detallePedido} por el importe de ${fmt(totalFinal)} fue ingresado correctamente. ${entregaTxt} ${pagoTxt} ¡Muchas gracias por confiar en nosotros, esperamos que los disfrutes!`;
-  document.getElementById('suc-icon').textContent=icon;
-  document.getElementById('suc-title').textContent=title;
-  document.getElementById('suc-msg').textContent=msg;
+  const nl='\n';
+  msg=`¡Muchas gracias, ${nombre}!${nl}${nl}`
+    +`Tu pedido de *${detallePedido}* fue ingresado correctamente.${nl}${nl}`
+    +`💰 *Total: ${fmt(totalFinal)}*${nl}${nl}`
+    +`${entregaTxt}${nl}${nl}`
+    +`${pagoTxt}${nl}${nl}`
+    +`¡Esperamos que los disfrutes! 🥐`;
+
+  // Mostrar mensaje con saltos de línea reales en el HTML
+  const msgEl=document.getElementById('suc-msg');
+  if(msgEl){msgEl.style.whiteSpace='pre-line';msgEl.textContent=msg.replace(/\*/g,'');}
   document.getElementById('suc-mp-box').style.display='none';
   const compBox=document.getElementById('suc-comprobante-box');
   compBox.style.display=payment==='transferencia'?'block':'none';
 
-  // WhatsApp confirmation button
+  // WhatsApp al número del NEGOCIO (cfg.whatsapp), no al cliente
   const waBox=document.getElementById('suc-wa-box');
   if(waBox){
-    const waPhone=(getFieldVal('f-phone')||'').replace(/\D/g,'');
-    const waMsg=encodeURIComponent(msg);
-    const waUrl=waPhone?`https://wa.me/549${waPhone}?text=${waMsg}`:`https://wa.me/?text=${waMsg}`;
-    waBox.style.display='block';
-    document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
+    const negocioPhone=(cfg.whatsapp||'').replace(/\D/g,'');
+    if(negocioPhone){
+      const waMsg=encodeURIComponent(msg);
+      const waUrl=`https://wa.me/549${negocioPhone}?text=${waMsg}`;
+      waBox.style.display='block';
+      document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
+    } else {
+      waBox.style.display='none';
+    }
   }
 
   showView('v-success');
