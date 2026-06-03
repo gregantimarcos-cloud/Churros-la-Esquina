@@ -555,6 +555,10 @@ function getAvailableSlots(deliveryType){
     if(!s.active)return false;
     if(s.type!=='both'&&s.type!==deliveryType)return false;
     return true;
+  }).sort((a,b)=>{
+    const [ah,am]=a.from.split(':').map(Number);
+    const [bh,bm]=b.from.split(':').map(Number);
+    return (ah*60+am)-(bh*60+bm);
   });
 }
 
@@ -698,7 +702,7 @@ function renderCart(){
       </div>
       ${payExtra}
     </div>
-    <div class="sec-label">Cupón de descuento</div>
+    ${cfg.cupones!==false?`<div class="sec-label">Cupón de descuento</div>
     <div class="fbox" style="margin-bottom:10px">
       <label class="flabel">¿Tenés un código de descuento?</label>
       <div class="cupon-row">
@@ -707,13 +711,18 @@ function renderCart(){
       </div>
       <div class="cupon-ok" id="cupon-ok"></div>
       <div class="cupon-err" id="cupon-err"></div>
-    </div>
+    </div>`:''}
     <div class="sec-label">Tus datos</div>
     <div class="fbox">
-      <label class="flabel">Nombre completo <span class="req">*</span></label>
+      <label class="flabel">Nombre <span class="req">*</span></label>
       <div class="field-wrap">
-        <input class="finput" id="f-name" placeholder="Ej: María González" oninput="checkForm()">
-        <div class="field-error" id="f-name-err">Ingresá tu nombre completo</div>
+        <input class="finput" id="f-name" placeholder="Ej: María" oninput="checkForm()">
+        <div class="field-error" id="f-name-err">Ingresá tu nombre</div>
+      </div>
+      <label class="flabel">Apellido <span class="req">*</span></label>
+      <div class="field-wrap">
+        <input class="finput" id="f-apellido" placeholder="Ej: González" oninput="checkForm()">
+        <div class="field-error" id="f-apellido-err">Ingresá tu apellido</div>
       </div>
       <label class="flabel">Teléfono <span class="req">*</span></label>
       <div class="field-wrap">
@@ -733,20 +742,23 @@ function renderCart(){
 
 // ── VALIDATION ─────────────────────────────────────────────────────────
 function validateForm(){
-  const name=getFieldVal('f-name'),phone=getFieldVal('f-phone');
+  const name=getFieldVal('f-name'),phone=getFieldVal('f-phone'),apellido2=getFieldVal('f-apellido');
+  const apellido=getFieldVal('f-apellido');
   const addr=delivery==='delivery'?getFieldVal('f-addr'):'ok';
   const availSlots=getAvailableSlots(delivery);
   const slotOk=availSlots.length===0||selectedSlot!=='';
-  markField('f-name',!name,'Ingresá tu nombre completo');
+  markField('f-name',!name,'Ingresá tu nombre');
+  markField('f-apellido',!apellido,'Ingresá tu apellido');
   markField('f-phone',!phone,'Ingresá tu teléfono');
   if(delivery==='delivery')markField('f-addr',!addr.trim(),'Ingresá tu dirección');
   const slotErr=document.getElementById('slot-error');
   if(slotErr)slotErr.classList.toggle('show',!slotOk&&availSlots.length>0);
-  const valid=!!(name&&phone&&addr.trim()&&slotOk);
+  const valid=!!(name&&apellido&&phone&&addr.trim()&&slotOk);
   const summary=document.getElementById('form-errors');
   if(summary&&triedSubmit&&!valid){
     const errors=[];
-    if(!name)errors.push('Nombre completo');
+    if(!name)errors.push('Nombre');
+    if(!apellido)errors.push('Apellido');
     if(!phone)errors.push('Teléfono');
     if(delivery==='delivery'&&!addr.trim())errors.push('Dirección de entrega');
     if(!slotOk&&availSlots.length>0)errors.push('Franja horaria');
@@ -792,19 +804,24 @@ function selectSlotFromSelect(val){
 }
 function setDelivery(d){
   const savedName=getFieldVal('f-name');
+  const savedApellido=getFieldVal('f-apellido');
   const savedPhone=getFieldVal('f-phone');
+  const savedAddr=getFieldVal('f-addr');
   const savedObs=getFieldVal('f-obs');
   const savedCupon=getFieldVal('f-cupon');
   delivery=d;selectedSlot='';triedSubmit=false;
   renderCart();
   const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const ap=document.getElementById('f-apellido');if(ap&&savedApellido)ap.value=savedApellido;
   const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
+  const addr=document.getElementById('f-addr');if(addr&&savedAddr)addr.value=savedAddr;
   const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
   const cup=document.getElementById('f-cupon');if(cup&&savedCupon)cup.value=savedCupon;
 }
 function setPayment(p){
   // Save form state before re-render
   const savedName=getFieldVal('f-name');
+  const savedApellido=getFieldVal('f-apellido');
   const savedPhone=getFieldVal('f-phone');
   const savedAddr=getFieldVal('f-addr');
   const savedObs=getFieldVal('f-obs');
@@ -814,6 +831,7 @@ function setPayment(p){
   renderCart();
   // Restore form state after re-render
   const n=document.getElementById('f-name');if(n&&savedName)n.value=savedName;
+  const ap=document.getElementById('f-apellido');if(ap&&savedApellido)ap.value=savedApellido;
   const ph=document.getElementById('f-phone');if(ph&&savedPhone)ph.value=savedPhone;
   const addr=document.getElementById('f-addr');if(addr&&savedAddr)addr.value=savedAddr;
   const obs=document.getElementById('f-obs');if(obs&&savedObs)obs.value=savedObs;
@@ -895,7 +913,7 @@ async function confirmOrder(){
     else descuento=Math.min(_cuponAplicado.valor,sub+ship);
   }
   const totalFinal=Math.max(0,total-descuento);
-  const _todayStr2=new Date(new Date().getTime()-3*60*60*1000).toISOString().slice(0,10);const orderData={customer:name,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:selectedFecha||_todayStr2};
+  const _todayStr2=new Date(new Date().getTime()-3*60*60*1000).toISOString().slice(0,10);const _apellidoVal=getFieldVal('f-apellido');const orderData={customer:(name+' '+_apellidoVal).trim(),nombre:name,apellido:_apellidoVal,phone,address:addr,gps:geoLocation?`${geoLocation.lat.toFixed(5)},${geoLocation.lng.toFixed(5)}`:'',obs,items,total:totalFinal,cupon:_cuponAplicado?.codigo||'',delivery,payment,slot:slotLabel,fecha:selectedFecha||_todayStr2};
   gaEvent('purchase',{currency:'ARS',value:totalFinal,items:items.map(i=>({item_name:i.name,quantity:i.qty,price:i.price}))});
 
   let orderId=null;
