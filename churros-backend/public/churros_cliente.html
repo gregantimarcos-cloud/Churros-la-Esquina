@@ -774,8 +774,18 @@ function markField(id,hasError,msg){
   if(errEl){errEl.textContent=msg;errEl.classList.toggle('show',hasError&&triedSubmit);}
 }
 function checkForm(){validateForm();}
-function selectSlot(id){selectedSlot=String(id);renderCart();}
-function selectFecha(f){selectedFecha=f;selectedSlot='';renderCart();}
+function _saveAndRender(){
+  const sn=getFieldVal('f-name'),sa=getFieldVal('f-apellido'),sp=getFieldVal('f-phone'),saddr=getFieldVal('f-addr'),sobs=getFieldVal('f-obs'),scup=getFieldVal('f-cupon');
+  renderCart();
+  const fn=document.getElementById('f-name');if(fn&&sn)fn.value=sn;
+  const fa=document.getElementById('f-apellido');if(fa&&sa)fa.value=sa;
+  const fp=document.getElementById('f-phone');if(fp&&sp)fp.value=sp;
+  const faddr=document.getElementById('f-addr');if(faddr&&saddr)faddr.value=saddr;
+  const fobs=document.getElementById('f-obs');if(fobs&&sobs)fobs.value=sobs;
+  const fcup=document.getElementById('f-cupon');if(fcup&&scup)fcup.value=scup;
+}
+function selectSlot(id){selectedSlot=String(id);_saveAndRender();}
+function selectFecha(f){selectedFecha=f;selectedSlot='';_saveAndRender();}
 function selectSlotFromSelect(val){
   // Save current address and GPS before any re-render
   const addrEl=document.getElementById('f-addr');
