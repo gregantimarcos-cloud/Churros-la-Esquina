@@ -2040,24 +2040,46 @@ function downloadCSV(filename, rows){
 function exportarPedidos(){
   const orders=_orders;
   if(!orders.length){alert('No hay pedidos para exportar.');return;}
-  const header=['ID','Fecha','Hora','Cliente','Teléfono','Entrega','Dirección','GPS','Franja','Productos','Cantidad items','Total','Pago','Estado','Observaciones'];
+
+  // Calcula unidades reales según presentación
+  function calcUnidades(item){
+    const nombre=(item.name||'').toLowerCase();
+    const pres=(item.presentacion||'').toLowerCase();
+    const uds=item.uds||1;
+    // Detectar docena (12 unidades)
+    if(nombre.includes('docena')&&!nombre.includes('media')||pres.includes('docena')&&!pres.includes('media')||uds===12)
+      return item.qty*12;
+    // Detectar media docena (6 unidades)
+    if(nombre.includes('media docena')||pres.includes('media docena')||uds===6)
+      return item.qty*6;
+    // Unidad suelta
+    return item.qty*(uds||1);
+  }
+
+  const header=['ID','Fecha','Detalle Producto','Unidades','Total','Pago','Entrega'];
   const rows=[header];
+
   orders.forEach(o=>{
-    const fecha=new Date(o.ts);
-    const fechaStr=fecha.toLocaleDateString('es-AR');
-    const horaStr=fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-    const productos=(o.items||[]).map(it=>`${it.qty}x ${it.name}`).join(' | ');
-    const cantItems=(o.items||[]).reduce((a,it)=>a+it.qty,0);
+    const fechaStr=o.fecha
+      ? o.fecha.split('-').reverse().join('/')
+      : new Date(o.ts).toLocaleDateString('es-AR');
     const entrega=o.delivery==='delivery'?'Envío':'Retiro';
-    const pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia':'Mercado Pago';
-    const estado={new:'Nuevo',prep:'Preparando',ready:'Listo',done:'Entregado'}[o.status]||o.status;
-    rows.push([
-      o.id, fechaStr, horaStr, o.customer, o.phone||'',
-      entrega, o.address||'', o.gps||'', o.slot||'',
-      productos, cantItems, o.total,
-      pago, estado, o.obs||''
-    ]);
+    const pago=o.payment==='efectivo'?'Efectivo':o.payment==='transferencia'?'Transferencia':o.payment==='mercadopago'?'Mercado Pago':o.payment||'';
+    const items=o.items||[];
+    if(!items.length){
+      // Pedido sin items — igual exportar una fila
+      rows.push([o.id, fechaStr, '', 0, o.total||0, pago, entrega]);
+    } else {
+      // Una fila por producto
+      items.forEach(it=>{
+        const unidades=calcUnidades(it);
+        // Precio proporcional por item
+        const totalItem=items.length===1?(o.total||0):Math.round((o.total||0)*(it.qty*(it.price||0))/Math.max(1,items.reduce((s,x)=>s+x.qty*(x.price||0),0)));
+        rows.push([o.id, fechaStr, it.name||'', unidades, totalItem, pago, entrega]);
+      });
+    }
   });
+
   const fecha=new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
   downloadCSV(`churros-pedidos-${fecha}.csv`, rows);
 }
