@@ -984,8 +984,9 @@ async function confirmOrder(){
   const totalChurros=items.reduce((a,it)=>a+it.qty,0);
   const detallePedido=items.map(it=>`${it.qty}x ${it.name}`).join(', ');
   const horarioTxt=slotLabel?`en el horario ${slotLabel}`:'a la brevedad';
+  const _addrLimpia=(addr&&addr!=='ok'&&!addr.match(/^-?\d+\.\d+,-?\d+\.\d+$/))?addr:null;
   const direccionTxt=delivery==='delivery'
-    ?(addr&&addr!=='ok'?`en ${addr}`:'en tu domicilio')
+    ?(_addrLimpia?`en ${_addrLimpia}`:geoLocation?'en tu domicilio (📍 ubicación compartida)':'en tu domicilio')
     :'en Malvinas Argentinas 297';
   const entregaTxt=delivery==='delivery'
     ?`Lo recibís ${direccionTxt} ${horarioTxt}.`
