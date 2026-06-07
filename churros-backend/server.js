@@ -310,13 +310,15 @@ app.post('/api/orders', async (req, res) => {
     const r = await pool.query('INSERT INTO orders(data) VALUES($1) RETURNING id', [JSON.stringify(orderData)]);
     const orderId = r.rows[0].id;
     res.json({ id: orderId });
-    // Push notification to all admins
-    const items = (orderData.items||[]).map(i=>i.qty+'x '+i.name).join(', ');
-    sendPushToAll(
-      '🥐 Nuevo pedido #'+orderId,
-      (orderData.customer||'Cliente')+' · '+items+' · $'+(orderData.total||0),
-      '/churros_admin.html'
-    );
+    // Push notification — en bloque separado para que un error no mate el servidor
+    try {
+      const items = (orderData.items||[]).map(i=>i.qty+'x '+i.name).join(', ');
+      sendPushToAll(
+        '🥐 Nuevo pedido #'+orderId,
+        (orderData.customer||'Cliente')+' · '+items+' · $'+(orderData.total||0),
+        '/churros_admin.html'
+      );
+    } catch(pushErr) { console.error('Push error:', pushErr.message); }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
