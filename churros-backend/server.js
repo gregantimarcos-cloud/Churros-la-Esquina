@@ -352,16 +352,43 @@ app.delete('/api/orders/:id', requireAdmin, async (req, res) => {
 // Endpoint temporal para limpiar duplicados y crear índice único
 app.post('/api/admin/fix-duplicates', requireAdmin, async (req, res) => {
   try {
-    // Eliminar duplicados manteniendo el registro más antiguo (menor ctid) de cada data->>'id'
-    const del = await pool.query(`
-      DELETE FROM orders WHERE ctid NOT IN (
-        SELECT min(ctid) FROM orders GROUP BY (data->>'id')::int
-      )
+    // Encontrar IDs duplicados en data->>'id'
+    const dups = await pool.query(`
+      SELECT (data->>'id')::int as data_id, array_agg(ctid ORDER BY ctid ASC) as ctids
+      FROM orders
+      GROUP BY (data->>'id')::int
+      HAVING count(*) > 1
     `);
-    // Crear índice único ahora que no hay duplicados
+    
+    // Para cada duplicado: el más nuevo (mayor ctid) es el real, el viejo se reasigna a un ID alto
+    let maxId = await pool.query(`SELECT MAX((data->>'id')::int) FROM orders`);
+    let nextId = Math.max(1250, (maxId.rows[0].max || 0) + 1);
+    let reasignados = 0;
+    
+    for (const row of dups.rows) {
+      // ctids[0] = más viejo, ctids[last] = más nuevo
+      // Reasignamos todos excepto el más nuevo
+      const viejos = row.ctids.slice(0, -1);
+      for (const ctid of viejos) {
+        await pool.query(
+          `UPDATE orders SET data = jsonb_set(data, '{id}', $1::jsonb) WHERE ctid = $2`,
+          [nextId.toString(), ctid]
+        );
+        nextId++;
+        reasignados++;
+      }
+    }
+    
+    // Actualizar la secuencia para que nuevos pedidos no colisionen
+    await pool.query(`SELECT setval('orders_id_seq', $1)`, [nextId + 100]);
+    
+    // Crear índice único
     await pool.query(`DROP INDEX IF EXISTS idx_orders_data_id`);
-    await pool.query(`CREATE UNIQUE INDEX idx_orders_data_id ON orders (((data->>'id')::int))`);
-    res.json({ ok: true, deleted: del.rowCount });
+    try {
+      await pool.query(`CREATE UNIQUE INDEX idx_orders_data_id ON orders (((data->>'id')::int))`);
+    } catch(e) { console.log('Index warning:', e.message); }
+    
+    res.json({ ok: true, reasignados, nextId });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
