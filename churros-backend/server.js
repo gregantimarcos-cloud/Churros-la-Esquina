@@ -352,34 +352,33 @@ app.delete('/api/orders/:id', requireAdmin, async (req, res) => {
 // Endpoint temporal para limpiar duplicados y crear índice único
 app.post('/api/admin/fix-duplicates', requireAdmin, async (req, res) => {
   try {
-    // Encontrar IDs duplicados en data->>'id'
+    // Encontrar IDs duplicados en data->>'id' usando id de fila (pk) en lugar de ctid
     const dups = await pool.query(`
-      SELECT (data->>'id')::int as data_id, array_agg(ctid ORDER BY ctid ASC) as ctids
+      SELECT (data->>'id')::int as data_id, array_agg(id ORDER BY id ASC) as row_ids
       FROM orders
+      WHERE data->>'id' IS NOT NULL
       GROUP BY (data->>'id')::int
       HAVING count(*) > 1
     `);
     
-    // Para cada duplicado: el más nuevo (mayor ctid) es el real, el viejo se reasigna a un ID alto
-    let maxId = await pool.query(`SELECT MAX((data->>'id')::int) FROM orders`);
+    let maxId = await pool.query(`SELECT MAX((data->>'id')::int) FROM orders WHERE data->>'id' IS NOT NULL`);
     let nextId = Math.max(1250, (maxId.rows[0].max || 0) + 1);
     let reasignados = 0;
     
     for (const row of dups.rows) {
-      // ctids[0] = más viejo, ctids[last] = más nuevo
-      // Reasignamos todos excepto el más nuevo
-      const viejos = row.ctids.slice(0, -1);
-      for (const ctid of viejos) {
+      // row_ids ordenados ASC: el primero es el más viejo, reasignamos todos menos el último (más nuevo)
+      const viejos = row.row_ids.slice(0, -1);
+      for (const rowId of viejos) {
         await pool.query(
-          `UPDATE orders SET data = jsonb_set(data, '{id}', $1::jsonb) WHERE ctid = $2`,
-          [nextId.toString(), ctid]
+          `UPDATE orders SET data = jsonb_set(data, '{id}', $1::jsonb) WHERE id = $2`,
+          [nextId.toString(), rowId]
         );
         nextId++;
         reasignados++;
       }
     }
     
-    // Actualizar la secuencia para que nuevos pedidos no colisionen
+    // Actualizar la secuencia
     await pool.query(`SELECT setval('orders_id_seq', $1)`, [nextId + 100]);
     
     // Crear índice único
