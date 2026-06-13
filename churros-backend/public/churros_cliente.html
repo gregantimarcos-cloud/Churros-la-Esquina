@@ -327,6 +327,28 @@ function applyProductOrder(raw, cfgData){
   return [...ordered, ...rest];
 }
 
+function checkPedidoPendiente(){
+  try{
+    const p=JSON.parse(localStorage.getItem('churros_pedido_pendiente')||'null');
+    if(!p)return;
+    const banner=document.getElementById('pedido-pendiente-banner');
+    if(banner){
+      document.getElementById('ppb-id').textContent='#'+p.id;
+      document.getElementById('ppb-nombre').textContent=p.nombre;
+      banner.style.display='flex';
+    }
+  }catch(e){}
+}
+function verPedidoPendiente(){
+  showView('v-success');
+  const banner=document.getElementById('pedido-pendiente-banner');
+  if(banner)banner.style.display='none';
+}
+function ignorarPedidoPendiente(){
+  localStorage.removeItem('churros_pedido_pendiente');
+  const banner=document.getElementById('pedido-pendiente-banner');
+  if(banner)banner.style.display='none';
+}
 async function init(){
   // Load config, products and slots in parallel
   const [cfgData, productsData, slotsData] = await Promise.all([
