@@ -226,11 +226,18 @@ window.addEventListener('load',function(){
       <div style="font-size:12px;color:#92400e;font-style:italic;margin-bottom:12px;">Si Mercado Pago no se abrió automáticamente, usá este botón:</div>
       <button id="suc-mp-btn" style="background:#009ee3;color:#fff;border:none;border-radius:9px;padding:11px 24px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;width:100%;">Abrir Mercado Pago →</button>
     </div>
+    <!-- Caja de alias siempre visible para transferencia -->
+    <div id="suc-alias-box" style="display:none;background:#eff6ff;border:2px solid #93c5fd;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:12px;color:#1e3a8a;font-weight:600;margin-bottom:6px;">📲 Datos para la transferencia</div>
+      <div id="suc-alias-val" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#1e3a8a;letter-spacing:0.05em;margin-bottom:4px;"></div>
+      <div id="suc-alias-monto" style="font-size:14px;color:#1e3a8a;font-weight:600;"></div>
+      <div style="font-size:11px;color:#64748b;margin-top:6px;font-style:italic">Guardá esta pantalla hasta completar la transferencia</div>
+    </div>
     <div id="suc-wa-box" style="display:none;margin-bottom:16px;">
       <button id="suc-wa-btn" style="width:100%;background:#25D366;color:#fff;border:none;border-radius:11px;padding:14px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-        💬 Enviar confirmación por WhatsApp
+        📲 Enviar comprobante por WhatsApp
       </button>
-      <div style="font-size:11px;color:var(--brown-light);text-align:center;margin-top:4px;font-style:italic">Se abre WhatsApp con el resumen del pedido listo para enviar</div>
+      <div style="font-size:11px;color:var(--brown-light);text-align:center;margin-top:4px;font-style:italic">Abrí WhatsApp y envianos la foto del comprobante</div>
     </div>
     <div id="suc-comprobante-box" style="display:none;margin-bottom:20px;">
       <div class="comprobante-box">
@@ -251,6 +258,15 @@ window.addEventListener('load',function(){
 
 </div>
 <script>
+// Aviso si intenta salir después de confirmar pedido
+let _pedidoConfirmado=false;
+window.addEventListener('beforeunload', function(e){
+  if(_pedidoConfirmado){
+    e.preventDefault();
+    e.returnValue='Tu pedido ya fue confirmado. ¿Seguro que querés salir?';
+    return e.returnValue;
+  }
+});
 // ── API BASE URL ───────────────────────────────────────────────────────
 // Auto-detect: if running on Railway use relative URLs, otherwise use full URL
 const API = '';  // relative — works on Railway and locally if served by server
@@ -944,6 +960,7 @@ async function confirmOrder(){
     await apiFetch('/api/stock/deduct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
     const updProds=await apiFetch('/api/products');if(updProds)products=updProds;
     _pendingOrderId=orderId;
+  _pedidoConfirmado=true;
     const mpUrl=prefData?.init_point||cfg.mp||'https://www.mercadopago.com.ar';
     const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
     const msg=tpl(cfg.txtMsgMP||'Pedido #{id}{horario}',{id:orderId,horario});
@@ -990,8 +1007,9 @@ async function confirmOrder(){
   const detallePedido=items.map(it=>`${it.qty}x ${it.name}`).join(', ');
   const horarioTxt=slotLabel?`en el horario ${slotLabel}`:'a la brevedad';
   // Limpiar dirección: si es coordenadas o vacía, usar texto descriptivo
-  const _addrLimpia=(addr&&addr!=='ok'&&addr.trim()!==''&&!addr.match(/^-?\d+[.,]\d+[\s,]*-?\d+[.,]\d+$/))?addr.trim():null;
-  const _tieneGPS=!!geoLocation;
+  const _esGPSText=addr&&(addr.toLowerCase().includes('ubicaci')||addr.match(/^-?\d+[.,]\d+/));
+  const _addrLimpia=(addr&&addr!=='ok'&&addr.trim()!==''&&!_esGPSText)?addr.trim():null;
+  const _tieneGPS=!!geoLocation||_esGPSText;
   const direccionTxt=delivery==='delivery'
     ?(_addrLimpia?`en ${_addrLimpia}`:_tieneGPS?'en tu domicilio (📍 ubicación compartida)':'en tu domicilio')
     :'en Malvinas Argentinas 297';
@@ -1021,19 +1039,33 @@ async function confirmOrder(){
   document.getElementById('suc-mp-box').style.display='none';
   const compBox=document.getElementById('suc-comprobante-box');
   compBox.style.display=payment==='transferencia'?'block':'none';
+  // Mostrar alias y monto para transferencia
+  const aliasBox=document.getElementById('suc-alias-box');
+  if(aliasBox){
+    if(payment==='transferencia'){
+      aliasBox.style.display='block';
+      const aliasEl=document.getElementById('suc-alias-val');
+      const montoEl=document.getElementById('suc-alias-monto');
+      if(aliasEl)aliasEl.textContent=cfg.alias||'churros.local';
+      if(montoEl)montoEl.textContent='Monto exacto: '+fmt(totalFinal);
+    } else {
+      aliasBox.style.display='none';
+    }
+  }
 
-  // WhatsApp al número del NEGOCIO (cfg.whatsapp), no al cliente
+  // WhatsApp al número del NEGOCIO para enviar comprobante
   const waBox=document.getElementById('suc-wa-box');
   if(waBox){
     let negocioPhone=(cfg.whatsapp||'').replace(/\D/g,'');
-    // Normalizar: quitar 54 o 549 del inicio si ya están, y el 0 inicial
     if(negocioPhone.startsWith('549'))negocioPhone=negocioPhone.slice(3);
     else if(negocioPhone.startsWith('54'))negocioPhone=negocioPhone.slice(2);
     if(negocioPhone.startsWith('0'))negocioPhone=negocioPhone.slice(1);
     if(negocioPhone){
-      const waMsg=encodeURIComponent(msg);
-      const waUrl=`https://wa.me/549${negocioPhone}?text=${waMsg}`;
-      waBox.style.display='block';
+      // Texto simple para que el cliente envíe el comprobante
+      const waMsgComp=encodeURIComponent('Hola! Te envío el comprobante de transferencia del pedido #'+orderId+' a nombre de '+name+'.');
+      const waUrl=`https://wa.me/549${negocioPhone}?text=${waMsgComp}`;
+      waBox.style.display=payment==='transferencia'?'block':'none';
+      document.getElementById('suc-wa-btn').textContent='📲 Enviar comprobante por WhatsApp';
       document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
     } else {
       waBox.style.display='none';
@@ -1119,6 +1151,7 @@ function showAddedToast(){
 }
 
 function resetApp(){
+  _pedidoConfirmado=false;
   cart={};delivery='pickup';payment='efectivo';geoLocation=null;selectedSlot='';triedSubmit=false;_comprobanteFile=null;_pendingOrderId=null;_cuponAplicado=null;
   updBadge();goTab('menu');renderMenu();showView('v-customer');
 }
