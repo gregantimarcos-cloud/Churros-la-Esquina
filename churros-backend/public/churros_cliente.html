@@ -271,10 +271,14 @@ window.addEventListener('load',function(){
 // Aviso si intenta salir después de confirmar pedido
 let _pedidoConfirmado=false;
 window.addEventListener('beforeunload', function(e){
+  if(_pedidoConfirmado){e.preventDefault();e.returnValue='';return '';}
+});
+window.addEventListener('load', function(){history.pushState(null,'',location.href);});
+window.addEventListener('popstate', function(){
   if(_pedidoConfirmado){
-    e.preventDefault();
-    e.returnValue='Tu pedido ya fue confirmado. ¿Seguro que querés salir?';
-    return e.returnValue;
+    history.pushState(null,'',location.href);
+    const av=document.getElementById('suc-back-warn');
+    if(av){av.style.display='block';setTimeout(()=>av.style.display='none',4000);}
   }
 });
 // ── API BASE URL ───────────────────────────────────────────────────────
@@ -363,7 +367,6 @@ async function init(){
   const rawProducts = productsData || [];
   products = applyProductOrder(rawProducts, cfgData);
   checkPedidoPendiente();
-  history.pushState(null,'',location.href);
 
   // Apply config to UI
   const defTxts={
@@ -995,6 +998,7 @@ async function confirmOrder(){
     const updProds=await apiFetch('/api/products');if(updProds)products=updProds;
     _pendingOrderId=orderId;
   _pedidoConfirmado=true;
+  try{localStorage.setItem('churros_pedido_pendiente',JSON.stringify({id:orderId,nombre:name,ts:Date.now()}));}catch(e){}
     const mpUrl=prefData?.init_point||cfg.mp||'https://www.mercadopago.com.ar';
     const horario=slotLabel?` · ⏰ ${slotLabel}`:'';
     const msg=tpl(cfg.txtMsgMP||'Pedido #{id}{horario}',{id:orderId,horario});
@@ -1041,8 +1045,12 @@ async function confirmOrder(){
   const detallePedido=items.map(it=>`${it.qty}x ${it.name}`).join(', ');
   const horarioTxt=slotLabel?`en el horario ${slotLabel}`:'a la brevedad';
   // Limpiar dirección: si es coordenadas o vacía, usar texto descriptivo
-  const _esGPSText=addr&&(addr.toLowerCase().includes('ubicaci')||addr.match(/^-?\d+[.,]\d+/));
-  const _addrLimpia=(addr&&addr!=='ok'&&addr.trim()!==''&&!_esGPSText)?addr.trim():null;
+  // Detectar si addr es GPS, teléfono (solo números largos) o texto válido
+  const _addrRaw2=delivery==='delivery'?getFieldVal('f-addr'):'';
+  const _esSoloNumeros=_addrRaw2&&/^[\d\s\+\-\.]{7,}$/.test(_addrRaw2.trim());
+  const _esGPSText=_addrRaw2&&(_addrRaw2.toLowerCase().includes('ubicaci')||_addrRaw2.toLowerCase().includes('gps')||/^-?\d+[.,]\d+/.test(_addrRaw2));
+  const _addrInvalida=_esSoloNumeros||_esGPSText;
+  const _addrLimpia=(delivery==='delivery'&&_addrRaw2&&_addrRaw2!=='ok'&&_addrRaw2.trim()!==''&&!_addrInvalida)?_addrRaw2.trim():null;
   const _tieneGPS=!!geoLocation||_esGPSText;
   const direccionTxt=delivery==='delivery'
     ?(_addrLimpia?`en ${_addrLimpia}`:_tieneGPS?'en tu domicilio (📍 ubicación compartida)':'en tu domicilio')
