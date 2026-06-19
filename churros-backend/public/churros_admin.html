@@ -302,7 +302,6 @@ body::before{display:none}
       <div class="nav-tab" onclick="showPanel('clientes')" id="ntab-clientes">👥 Clientes</div>
       <div class="nav-tab" onclick="showPanel('cupones')" id="ntab-cupones">🎟 Cupones</div>
       <div class="nav-tab" onclick="showPanel('promos')" id="ntab-promos">🎁 Promos</div>
-      <div class="nav-tab" onclick="showPanel('promos')" id="ntab-promos">🎁 Promos</div>
     </div>
   </div>
 
@@ -802,69 +801,6 @@ body::before{display:none}
     <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
   </div>
 </div>
-<!-- PANEL PROMOS -->
-<div class="panel" id="panel-promos">
-  <div style="padding-top:8px">
-    <div class="ornament">· · · ✦ · · ·</div>
-    <div class="fbox">
-      <div class="sec-label" style="padding-top:0">Nueva promoción</div>
-      <div class="row2" style="margin-bottom:8px">
-        <div>
-          <label class="flabel">Emoji</label>
-          <input class="finput field-mb" id="promo-emoji" placeholder="🥐" maxlength="4" style="font-size:22px;width:70px">
-        </div>
-        <div style="flex:2">
-          <label class="flabel">Nombre de la promo</label>
-          <input class="finput field-mb" id="promo-nombre" placeholder="Ej: Combo Día del Padre">
-        </div>
-      </div>
-      <label class="flabel">Badge / etiqueta del banner</label>
-      <input class="finput field-mb" id="promo-badge" placeholder="Ej: 🎁 Día del Padre · Edición especial">
-      <label class="flabel">Descripción corta <small>(opcional)</small></label>
-      <input class="finput field-mb" id="promo-desc" placeholder="Ej: La combinación perfecta para papá">
-      <div class="sec-label" style="padding:8px 0 6px">Productos incluidos en el combo</div>
-      <div id="promo-items-list" style="margin-bottom:8px"></div>
-      <div style="background:var(--cream-dark);border-radius:9px;padding:10px;margin-bottom:10px">
-        <label class="flabel">Agregar producto</label>
-        <select class="finput field-mb" id="promo-prod-sel" onchange="promoUpdatePres()">
-          <option value="">— Elegí un producto —</option>
-        </select>
-        <select class="finput field-mb" id="promo-pres-sel" style="display:none">
-          <option value="">— Elegí presentación —</option>
-        </select>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
-          <input class="finput" id="promo-qty" type="number" value="1" min="1" style="width:70px">
-          <span style="font-size:12px;color:var(--brown-light)">cantidad</span>
-          <span id="promo-precio-display" style="font-size:13px;font-weight:700;color:var(--red-warm);margin-left:auto"></span>
-        </div>
-        <button onclick="promoAddItem()" style="background:var(--brown);color:var(--kraft);border:none;border-radius:7px;padding:7px 14px;cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;width:100%">+ Agregar al combo</button>
-      </div>
-      <div class="row2" style="margin-bottom:10px">
-        <div>
-          <label class="flabel">Precio original ($) <small>(para mostrar tachado)</small></label>
-          <input class="finput" type="number" id="promo-precio-original" placeholder="0" oninput="promoCalcPrecio()">
-        </div>
-        <div>
-          <label class="flabel">Descuento (%)</label>
-          <input class="finput" type="number" id="promo-descuento" placeholder="0" min="0" max="100" oninput="promoCalcPrecio()">
-        </div>
-      </div>
-      <label class="flabel">Precio final ($)</label>
-      <input class="finput field-mb" type="number" id="promo-precio" placeholder="0">
-      <label class="flabel">Estado</label>
-      <div class="opts2" style="margin-bottom:12px">
-        <div class="opt on" id="promo-activa-on" onclick="setPromoActiva(true)"><div class="oi">✅</div><div class="ol">Activa</div></div>
-        <div class="opt" id="promo-activa-off" onclick="setPromoActiva(false)"><div class="oi">❌</div><div class="ol">Inactiva</div></div>
-      </div>
-      <button class="savebtn" onclick="savePromo()" id="promo-save-btn">Guardar promoción</button>
-      <button class="delbtn" id="promo-del-btn" style="display:none" onclick="deletePromo()">Eliminar esta promoción</button>
-      <button class="cancelbtn" onclick="cancelEditPromo()" id="promo-cancel-btn" style="display:none">Cancelar edición</button>
-    </div>
-    <div class="sec-label">Promociones configuradas</div>
-    <div id="promos-admin-list"></div>
-    <div class="ornament" style="margin-top:12px">· · · ✦ · · ·</div>
-  </div>
-</div>
 <!-- MANUAL ORDER MODAL -->
 <div class="modal-overlay" id="manual-order-overlay" style="align-items:flex-start;padding-top:20px;">
   <div class="modal-box" style="max-width:500px;max-height:90vh;overflow-y:auto;">
@@ -1126,7 +1062,6 @@ function showPanel(id){
   if(id==='calc'){renderInsumos();calcularPrecio();}
   if(id==='clientes')loadClientes();
   if(id==='cupones')loadCupones();
-  if(id==='promos'){loadPromosAdmin();initPromoForm();}
   if(id==='promos'){loadPromosAdmin();initPromoForm();}
 }
 
@@ -3199,149 +3134,6 @@ function renderPromosAdmin(){
       <button class="edit-btn" onclick="editPromo('${p.id}')">Editar</button>
     </div>`;
   }).join('');
-}
-
-// ── PROMOS ADMIN ──────────────────────────────────────────────────────
-let _promos=[], _editPromoId=null, _promoItems=[], _promoActiva=true;
-
-async function loadPromosAdmin(){
-  const data=await apiFetch('/api/promos')||[];
-  _promos=data;
-  renderPromosAdmin();
-}
-function initPromoForm(){
-  const sel=document.getElementById('promo-prod-sel');
-  if(!sel)return;
-  sel.innerHTML='<option value="">— Elegí un producto —</option>'+_products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-  document.getElementById('promo-pres-sel').style.display='none';
-  document.getElementById('promo-precio-display').textContent='';
-}
-function promoUpdatePres(){
-  const pid=document.getElementById('promo-prod-sel').value;
-  const p=_products.find(x=>String(x.id)===pid);
-  const presSel=document.getElementById('promo-pres-sel');
-  const precioEl=document.getElementById('promo-precio-display');
-  if(!p){presSel.style.display='none';precioEl.textContent='';return;}
-  if(p.presentaciones&&p.presentaciones.length){
-    presSel.style.display='block';
-    presSel.innerHTML='<option value="">— Elegí presentación —</option>'+p.presentaciones.map((pr,i)=>`<option value="${i}">${pr.nombre} — ${fmt(pr.precio)}</option>`).join('');
-    presSel.onchange=function(){
-      const idx=parseInt(this.value);
-      if(!isNaN(idx)&&p.presentaciones[idx]){precioEl.textContent=fmt(p.presentaciones[idx].precio)+' c/u';recalcPromoOriginal();}
-      else precioEl.textContent='';
-    };
-    precioEl.textContent='';
-  } else {
-    presSel.style.display='none';
-    precioEl.textContent=fmt(p.price)+' c/u';
-  }
-}
-function promoAddItem(){
-  const pid=document.getElementById('promo-prod-sel').value;
-  const p=_products.find(x=>String(x.id)===pid);
-  if(!p){alert('Elegí un producto');return;}
-  const qty=parseInt(document.getElementById('promo-qty').value)||1;
-  let nombre=p.name, precio=p.price, uds=p.uds||1;
-  if(p.presentaciones&&p.presentaciones.length){
-    const presIdx=parseInt(document.getElementById('promo-pres-sel').value);
-    if(isNaN(presIdx)){alert('Elegí una presentación');return;}
-    const pres=p.presentaciones[presIdx];
-    nombre=p.name+' — '+pres.nombre;
-    precio=pres.precio;
-    uds=pres.uds||1;
-  }
-  _promoItems.push({nombre,precio,qty,uds,prodId:p.id});
-  renderPromoItems();
-  recalcPromoOriginal();
-}
-function recalcPromoOriginal(){
-  const total=_promoItems.reduce((a,it)=>a+it.precio*it.qty,0);
-  document.getElementById('promo-precio-original').value=total;
-  promoCalcPrecio();
-}
-function promoCalcPrecio(){
-  const original=parseFloat(document.getElementById('promo-precio-original').value)||0;
-  const desc=parseFloat(document.getElementById('promo-descuento').value)||0;
-  if(original>0&&desc>0){
-    document.getElementById('promo-precio').value=Math.round(original*(1-desc/100));
-  }
-}
-function renderPromoItems(){
-  const list=document.getElementById('promo-items-list');
-  if(!_promoItems.length){list.innerHTML='';return;}
-  list.innerHTML=_promoItems.map((it,i)=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cream-dark);border-radius:7px;padding:6px 10px;margin-bottom:5px">
-      <span style="font-size:13px">${it.qty}× ${it.nombre}</span>
-      <span style="font-size:13px;font-weight:700;color:var(--red-warm)">${fmt(it.precio*it.qty)}</span>
-      <button onclick="promoRemItem(${i})" style="background:none;border:none;color:#b91c1c;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
-    </div>`).join('');
-}
-function promoRemItem(i){_promoItems.splice(i,1);renderPromoItems();recalcPromoOriginal();}
-function setPromoActiva(on){
-  _promoActiva=on;
-  document.getElementById('promo-activa-on').classList.toggle('on',on);
-  document.getElementById('promo-activa-off').classList.toggle('on',!on);
-}
-async function savePromo(){
-  const nombre=gv('promo-nombre').trim();
-  if(!nombre){alert('Ingresá el nombre de la promo');return;}
-  if(!_promoItems.length){alert('Agregá al menos un producto al combo');return;}
-  const precio=parseFloat(gv('promo-precio'))||0;
-  if(!precio){alert('Ingresá el precio final');return;}
-  const data={nombre,emoji:gv('promo-emoji')||'🎁',badge:gv('promo-badge')||'🎁 Promoción especial',desc:gv('promo-desc'),items:_promoItems,precioOriginal:parseFloat(gv('promo-precio-original'))||0,descuento:parseFloat(gv('promo-descuento'))||0,precio,activa:_promoActiva};
-  if(_editPromoId){
-    await apiFetch('/api/promos/'+_editPromoId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    showToast('✅ Promo actualizada');
-  } else {
-    await apiFetch('/api/promos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    showToast('✅ Promo creada');
-  }
-  cancelEditPromo();
-  await loadPromosAdmin();
-}
-function editPromo(id){
-  const p=_promos.find(x=>String(x.id)===String(id));if(!p)return;
-  _editPromoId=id;_promoItems=JSON.parse(JSON.stringify(p.items||[]));_promoActiva=p.activa!==false;
-  document.getElementById('promo-nombre').value=p.nombre||'';
-  document.getElementById('promo-emoji').value=p.emoji||'🎁';
-  document.getElementById('promo-badge').value=p.badge||'';
-  document.getElementById('promo-desc').value=p.desc||'';
-  document.getElementById('promo-precio-original').value=p.precioOriginal||0;
-  document.getElementById('promo-descuento').value=p.descuento||0;
-  document.getElementById('promo-precio').value=p.precio||0;
-  setPromoActiva(_promoActiva);
-  renderPromoItems();
-  document.getElementById('promo-save-btn').textContent='Guardar cambios';
-  document.getElementById('promo-del-btn').style.display='block';
-  document.getElementById('promo-cancel-btn').style.display='block';
-  window.scrollTo(0,0);
-}
-async function deletePromo(){
-  if(!_editPromoId||!confirm('¿Eliminar esta promoción?'))return;
-  await apiFetch('/api/promos/'+_editPromoId,{method:'DELETE'});
-  cancelEditPromo();await loadPromosAdmin();showToast('✅ Promo eliminada');
-}
-function cancelEditPromo(){
-  _editPromoId=null;_promoItems=[];
-  ['promo-nombre','promo-emoji','promo-badge','promo-desc','promo-precio-original','promo-descuento','promo-precio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  renderPromoItems();setPromoActiva(true);
-  document.getElementById('promo-save-btn').textContent='Guardar promoción';
-  document.getElementById('promo-del-btn').style.display='none';
-  document.getElementById('promo-cancel-btn').style.display='none';
-}
-function renderPromosAdmin(){
-  const list=document.getElementById('promos-admin-list');if(!list)return;
-  if(!_promos.length){list.innerHTML='<div class="empty-state">No hay promociones creadas todavía.</div>';return;}
-  list.innerHTML=_promos.map(p=>`
-    <div class="ap-item" style="opacity:${p.activa!==false?1:0.6}">
-      <div style="font-size:24px;flex-shrink:0">${p.emoji||'🎁'}</div>
-      <div class="ap-inf">
-        <div class="ap-name">${p.nombre}${p.activa===false?'<span style="font-size:11px;color:#b91c1c;margin-left:6px">(inactiva)</span>':''}</div>
-        <div class="ap-meta">${(p.items||[]).map(it=>it.qty+'x '+it.nombre).join(' · ')}</div>
-        <div class="ap-meta" style="font-weight:700;color:var(--red-warm)">${fmt(p.precio||0)}${p.descuento?' · '+p.descuento+'% OFF':''}</div>
-      </div>
-      <button class="edit-btn" onclick="editPromo('${p.id}')">Editar</button>
-    </div>`).join('');
 }
 
 function abrirCocina(){
