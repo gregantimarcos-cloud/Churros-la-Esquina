@@ -349,7 +349,82 @@ app.delete('/api/orders/:id', requireAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── PROMOCIONES ────────────────────────────────────────────────────────
+app.get('/api/promos', async (req, res) => {
+  try { const cfg=await getCfg(); res.json(cfg.promos||[]); }
+  catch(e){ res.status(500).json({error:e.message}); }
+});
+app.post('/api/promos', requireAdmin, async (req, res) => {
+  try {
+    const cfg=await getCfg();
+    if(!cfg.promos)cfg.promos=[];
+    const promo={...req.body,id:Date.now()};
+    cfg.promos.push(promo);
+    await setCfg(cfg);
+    res.json({ok:true,id:promo.id});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+app.put('/api/promos/:id', requireAdmin, async (req, res) => {
+  try {
+    const cfg=await getCfg();
+    if(!cfg.promos)cfg.promos=[];
+    const idx=cfg.promos.findIndex(p=>String(p.id)===String(req.params.id));
+    if(idx<0)return res.status(404).json({error:'No encontrada'});
+    cfg.promos[idx]={...cfg.promos[idx],...req.body,id:cfg.promos[idx].id};
+    await setCfg(cfg);
+    res.json({ok:true});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+app.delete('/api/promos/:id', requireAdmin, async (req, res) => {
+  try {
+    const cfg=await getCfg();
+    cfg.promos=(cfg.promos||[]).filter(p=>String(p.id)!==String(req.params.id));
+    await setCfg(cfg);
+    res.json({ok:true});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
 // Endpoint temporal para limpiar duplicados y crear índice único
+// ── PROMOCIONES ────────────────────────────────────────────────────────
+app.get('/api/promos', async (req, res) => {
+  try {
+    const cfg = await getCfg();
+    res.json(cfg.promos || []);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/promos', requireAdmin, async (req, res) => {
+  try {
+    const cfg = await getCfg();
+    if (!cfg.promos) cfg.promos = [];
+    const promo = { ...req.body, id: Date.now() };
+    cfg.promos.push(promo);
+    await pool.query("INSERT INTO config(key,value) VALUES('main',$1) ON CONFLICT (key) DO UPDATE SET value=$1", [JSON.stringify(cfg)]);
+    res.json({ ok: true, id: promo.id });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/promos/:id', requireAdmin, async (req, res) => {
+  try {
+    const cfg = await getCfg();
+    if (!cfg.promos) cfg.promos = [];
+    const idx = cfg.promos.findIndex(p => String(p.id) === String(req.params.id));
+    if (idx < 0) return res.status(404).json({ error: 'No encontrada' });
+    cfg.promos[idx] = { ...cfg.promos[idx], ...req.body, id: cfg.promos[idx].id };
+    await pool.query("INSERT INTO config(key,value) VALUES('main',$1) ON CONFLICT (key) DO UPDATE SET value=$1", [JSON.stringify(cfg)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/promos/:id', requireAdmin, async (req, res) => {
+  try {
+    const cfg = await getCfg();
+    if (!cfg.promos) cfg.promos = [];
+    cfg.promos = cfg.promos.filter(p => String(p.id) !== String(req.params.id));
+    await pool.query("INSERT INTO config(key,value) VALUES('main',$1) ON CONFLICT (key) DO UPDATE SET value=$1", [JSON.stringify(cfg)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/admin/fix-duplicates', requireAdmin, async (req, res) => {
   try {
     // Encontrar IDs duplicados en data->>'id' usando id de fila (pk) en lugar de ctid
