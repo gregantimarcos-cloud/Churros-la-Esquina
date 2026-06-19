@@ -1106,14 +1106,18 @@ async function confirmOrder(){
   const compBox=document.getElementById('suc-comprobante-box');
   compBox.style.display=payment==='transferencia'?'block':'none';
 
-  // WhatsApp al número del NEGOCIO (cfg.whatsapp), no al cliente
+  // WhatsApp al número del NEGOCIO para enviar el comprobante
   const waBox=document.getElementById('suc-wa-box');
   if(waBox){
-    const negocioPhone=(cfg.whatsapp||'').replace(/\D/g,'');
-    if(negocioPhone){
-      const waMsg=encodeURIComponent(msg);
-      const waUrl=`https://wa.me/549${negocioPhone}?text=${waMsg}`;
+    let negocioPhone=(cfg.whatsapp||'').replace(/\D/g,'');
+    if(negocioPhone.startsWith('549'))negocioPhone=negocioPhone.slice(3);
+    else if(negocioPhone.startsWith('54'))negocioPhone=negocioPhone.slice(2);
+    if(negocioPhone.startsWith('0'))negocioPhone=negocioPhone.slice(1);
+    if(negocioPhone&&payment==='transferencia'){
+      const waMsgComp=encodeURIComponent('Hola! Te comparto el comprobante de la transferencia.');
+      const waUrl=`https://wa.me/549${negocioPhone}?text=${waMsgComp}`;
       waBox.style.display='block';
+      document.getElementById('suc-wa-btn').textContent='📲 Enviar comprobante por WhatsApp';
       document.getElementById('suc-wa-btn').onclick=()=>window.open(waUrl,'_blank');
     } else {
       waBox.style.display='none';
