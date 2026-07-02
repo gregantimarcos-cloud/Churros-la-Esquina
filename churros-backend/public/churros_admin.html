@@ -1119,7 +1119,7 @@ function filterOrdersByDate(orders){
 
 
 async function loadStats(){
-  const allOrders=await apiFetch('/api/orders')||[];
+  const allOrders=await apiFetch('/api/orders?days=365')||[];
   _orders=allOrders;
   const orders=filterOrdersByDate(allOrders);
   const done=orders.filter(o=>o.status==='done'||o.status==='ready'||o.status==='prep'||o.status==='new');
@@ -1903,6 +1903,8 @@ async function saveCfg(){
   if(np){data.adminPass=np;_adminPass=np;}
   const result=await apiFetch('/api/cfg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   if(result?.ok){
+    // Sincronizar _cfg con lo que se acaba de guardar para no perder slotBlocks ni promos
+    _cfg={..._cfg,...data};
     document.getElementById('cfg-admin-pass').value='';
     document.getElementById('admin-sub-name').textContent=data.name;
     alert('Configuración guardada ✓');
@@ -2596,18 +2598,20 @@ async function addSlotBlock(){
   const exists = _cfg.slotBlocks.find(b=>b.date===date&&String(b.slotId)===String(slotId));
   if(exists){ alert('Esa franja ya está bloqueada para esa fecha'); return; }
   _cfg.slotBlocks.push({slotId: slot.id, date, from: slot.from, to: slot.to});
-  await saveCfg();
+  // Guardar solo slotBlocks sin tocar el resto de la config
+  await apiFetch('/api/cfg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({..._cfg})});
   renderBlocksList();
   document.getElementById('block-date').value = '';
   document.getElementById('block-slot-sel').value = '';
-  alert('✅ Franja bloqueada para el ' + new Date(date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}));
+  showToast('✅ Franja bloqueada para el ' + new Date(date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}));
 }
 
 async function removeSlotBlock(idx){
   if(!_cfg.slotBlocks) return;
   _cfg.slotBlocks.splice(idx, 1);
-  await saveCfg();
+  await apiFetch('/api/cfg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({..._cfg})});
   renderBlocksList();
+  showToast('✅ Bloqueo eliminado');
 }
 
 // ── COMPOSICIÓN DE COMBOS ──────────────────────────────────────────
