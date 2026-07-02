@@ -633,10 +633,15 @@ function getAvailableSlots(deliveryType){
 function slotStatus(s,fechaTarget){
   // Returns: 'ok', 'pasado', 'pronto', 'full'
   if(s.maxPedidos>0&&(s.pedidosActuales||0)>=s.maxPedidos)return'full';
-  // Si es para un día futuro, el horario no importa — siempre disponible
   const todayStr=new Date(new Date().getTime()-3*60*60*1000).toISOString().slice(0,10);
-  if(fechaTarget&&fechaTarget>todayStr)return'ok';
-  const buffer=s.buffer||cfg.slotBuffer||15; // buffer específico del slot o global
+  const fechaCheck=fechaTarget||todayStr;
+  // Verificar bloqueos por fecha específica — SIEMPRE, incluso para fechas futuras
+  const blocks=cfg.slotBlocks||[];
+  const isBlocked=blocks.some(b=>b.date===fechaCheck&&String(b.slotId)===String(s.id));
+  if(isBlocked)return'pasado';
+  // Si es para un día futuro, el horario no importa — siempre disponible
+  if(fechaCheck>todayStr)return'ok';
+  const buffer=s.buffer||cfg.slotBuffer||15;
   const now=new Date();
   const [toH,toM]=s.to.split(':').map(Number);
   const slotEnd=new Date();slotEnd.setHours(toH,toM,0,0);
