@@ -310,6 +310,9 @@ app.post('/api/orders', async (req, res) => {
     const r = await pool.query('INSERT INTO orders(data) VALUES($1) RETURNING id', [JSON.stringify(orderData)]);
     const orderId = r.rows[0].id;
     res.json({ id: orderId });
+    // Incrementar uso del cupón (si hay) — aislado para no romper el pedido
+    try { if(orderData.cupon) await incrementarUsoCupon(orderData.cupon); }
+    catch(cupErr){ console.error('Cupón error:', cupErr.message); }
     // Push notification — en bloque separado para que un error no mate el servidor
     try {
       const items = (orderData.items||[]).map(i=>i.qty+'x '+i.name).join(', ');
@@ -383,6 +386,82 @@ app.delete('/api/promos/:id', requireAdmin, async (req, res) => {
     res.json({ok:true});
   } catch(e){ res.status(500).json({error:e.message}); }
 });
+// ── CUPONES ────────────────────────────────────────────────────────────
+// Guardados en cfg.cuponesList (cfg.cupones es el flag on/off de la sección)
+
+// Listar cupones — SOLO admin (no exponer códigos públicamente)
+app.get('/api/cupones', requireAdmin, async (req, res) => {
+  try { const cfg=await getCfg(); res.json(cfg.cuponesList||[]); }
+  catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// Validar un cupón — público, solo devuelve el descuento si es válido
+app.post('/api/cupones/validar', async (req, res) => {
+  try {
+    const codigo=String(req.body.codigo||'').trim().toUpperCase();
+    if(!codigo) return res.status(400).json({ok:false,error:'Ingresá un código'});
+    const cfg=await getCfg();
+    if(cfg.cupones===false) return res.status(403).json({ok:false,error:'Los cupones no están habilitados'});
+    const lista=cfg.cuponesList||[];
+    const c=lista.find(x=>String(x.codigo).toUpperCase()===codigo);
+    if(!c||!c.activo) return res.status(404).json({ok:false,error:'Cupón no válido o inactivo'});
+    if(c.usos>0 && (c.usosUsados||0)>=c.usos) return res.status(409).json({ok:false,error:'Este cupón ya agotó sus usos'});
+    const hoy=new Date(Date.now()-3*60*60*1000).toISOString().slice(0,10);
+    if(c.vence && c.vence<hoy) return res.status(409).json({ok:false,error:'Este cupón está vencido'});
+    res.json({ok:true,codigo:c.codigo,tipo:c.tipo,valor:c.valor});
+  } catch(e){ res.status(500).json({ok:false,error:e.message}); }
+});
+
+app.post('/api/cupones', requireAdmin, async (req, res) => {
+  try {
+    const cfg=await getCfg();
+    if(!cfg.cuponesList)cfg.cuponesList=[];
+    const codigo=String(req.body.codigo||'').trim().toUpperCase();
+    if(!codigo) return res.status(400).json({error:'Falta el código'});
+    if(cfg.cuponesList.find(c=>String(c.codigo).toUpperCase()===codigo))
+      return res.status(409).json({error:'Ya existe un cupón con ese código'});
+    const cupon={...req.body,codigo,id:Date.now(),usosUsados:0,activo:req.body.activo!==false};
+    cfg.cuponesList.push(cupon);
+    await setCfg(cfg);
+    res.json({ok:true,id:cupon.id});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+app.put('/api/cupones/:id', requireAdmin, async (req, res) => {
+  try {
+    const cfg=await getCfg();
+    if(!cfg.cuponesList)cfg.cuponesList=[];
+    const idx=cfg.cuponesList.findIndex(c=>String(c.id)===String(req.params.id));
+    if(idx<0) return res.status(404).json({error:'No encontrado'});
+    cfg.cuponesList[idx]={...cfg.cuponesList[idx],...req.body,id:cfg.cuponesList[idx].id};
+    await setCfg(cfg);
+    res.json({ok:true});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+app.delete('/api/cupones/:id', requireAdmin, async (req, res) => {
+  try {
+    const cfg=await getCfg();
+    cfg.cuponesList=(cfg.cuponesList||[]).filter(c=>String(c.id)!==String(req.params.id));
+    await setCfg(cfg);
+    res.json({ok:true});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// Incrementar el uso de un cupón (se llama al crear el pedido)
+async function incrementarUsoCupon(codigo){
+  if(!codigo) return;
+  try {
+    const cfg=await getCfg();
+    const lista=cfg.cuponesList||[];
+    const idx=lista.findIndex(c=>String(c.codigo).toUpperCase()===String(codigo).toUpperCase());
+    if(idx<0) return;
+    lista[idx].usosUsados=(lista[idx].usosUsados||0)+1;
+    cfg.cuponesList=lista;
+    await setCfg(cfg);
+  } catch(e){ console.error('Error al incrementar uso de cupón:', e.message); }
+}
+
 // Endpoint temporal para limpiar duplicados y crear índice único
 // ── PROMOCIONES ────────────────────────────────────────────────────────
 app.get('/api/promos', async (req, res) => {

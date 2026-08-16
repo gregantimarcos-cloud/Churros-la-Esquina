@@ -1160,21 +1160,38 @@ async function guardarComprobante(){
   reader.readAsDataURL(_comprobanteFile);
 }
 
-function aplicarCupon(){
-  const codigo=document.getElementById('f-cupon').value.trim().toUpperCase();
+async function aplicarCupon(){
+  const inputEl=document.getElementById('f-cupon');
+  const codigo=inputEl?inputEl.value.trim().toUpperCase():'';
   const okEl=document.getElementById('cupon-ok');
   const errEl=document.getElementById('cupon-err');
-  okEl.style.display='none';errEl.style.display='none';
+  if(okEl)okEl.style.display='none';
+  if(errEl)errEl.style.display='none';
   if(!codigo)return;
-  const cupones=JSON.parse(localStorage.getItem('churros_cupones')||'[]');
-  const c=cupones.find(x=>x.codigo===codigo&&x.activo);
-  if(!c){errEl.textContent='Cupón no válido o inactivo.';errEl.style.display='block';_cuponAplicado=null;renderCart();return;}
-  if(c.usos>0&&c.usosUsados>=c.usos){errEl.textContent='Este cupón ya agotó sus usos.';errEl.style.display='block';_cuponAplicado=null;renderCart();return;}
-  if(c.vence&&c.vence<new Date().toISOString().split('T')[0]){errEl.textContent='Este cupón está vencido.';errEl.style.display='block';_cuponAplicado=null;renderCart();return;}
-  _cuponAplicado={codigo:c.codigo,tipo:c.tipo,valor:c.valor};
-  const descTxt=c.tipo==='pct'?c.valor+'% de descuento':'$'+Math.round(c.valor).toLocaleString('es-AR')+' de descuento';
-  okEl.textContent='✓ Cupón aplicado: '+descTxt;okEl.style.display='block';
-  renderCart();
+  // Validar contra el servidor — los cupones ya no viven en el navegador
+  let data=null;
+  try{
+    const res=await fetch(API+'/api/cupones/validar',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({codigo}),
+    });
+    data=await res.json();
+  }catch(e){
+    if(errEl){errEl.textContent='No pudimos verificar el cupón. Revisá tu conexión.';errEl.style.display='block';}
+    return;
+  }
+  if(!data||!data.ok){
+    if(errEl){errEl.textContent=(data&&data.error)?data.error+'.':'Cupón no válido.';errEl.style.display='block';}
+    _cuponAplicado=null;
+    _saveAndRender();
+    return;
+  }
+  _cuponAplicado={codigo:data.codigo,tipo:data.tipo,valor:data.valor};
+  const descTxt=data.tipo==='pct'?data.valor+'% de descuento':'$'+Math.round(data.valor).toLocaleString('es-AR')+' de descuento';
+  _saveAndRender();
+  // Mostrar el mensaje después del re-render
+  const okEl2=document.getElementById('cupon-ok');
+  if(okEl2){okEl2.textContent='✓ Cupón aplicado: '+descTxt;okEl2.style.display='block';}
 }
 
 // ── PRESENTACION CART FUNCTIONS ────────────────────────────────────

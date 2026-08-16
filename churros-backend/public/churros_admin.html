@@ -1045,8 +1045,23 @@ function fillConfigForm(c){
   fill('cfg-txt-retiro',c.txtRetiro||'Podés pasar a retirar tu pedido en nuestra dirección. ¡Te esperamos!');
   fill('cfg-whatsapp',c.whatsapp||'');
   fill('cfg-ga',c.gaId||'');
+  fill('cfg-wa-template',c.waTemplate||'');
+  fill('cfg-confirm-template',c.confirmTemplate||'');
+  fill('cfg-anticipado-dias',c.anticipadoDias||14);
   document.getElementById('cfg-open').classList.toggle('on',c.open!==false);
   document.getElementById('cfg-closed').classList.toggle('on',c.open===false);
+  // Restaurar toggle de cupones desde la config guardada
+  const _cupOn=c.cupones!==false;
+  const _cupOnEl=document.getElementById('cfg-cupon-on');
+  const _cupOffEl=document.getElementById('cfg-cupon-off');
+  if(_cupOnEl)_cupOnEl.classList.toggle('on',_cupOn);
+  if(_cupOffEl)_cupOffEl.classList.toggle('on',!_cupOn);
+  // Restaurar métodos de pago habilitados
+  renderPagosHabilitados();
+  // Restaurar pedidos anticipados (silent = no guardar al restaurar)
+  toggleAnticipado(c.anticipado===true, true);
+  // Restaurar días disponibles
+  renderDiasDisponibles();
 }
 
 // ── NAVIGATION ─────────────────────────────────────────────────────────
@@ -2282,52 +2297,70 @@ function renderClientes(lista){
 }
 
 // ── CUPONES ────────────────────────────────────────────────────────
-function getCupones(){return JSON.parse(localStorage.getItem('churros_cupones')||'[]');}
-function saveCupones(c){localStorage.setItem('churros_cupones',JSON.stringify(c));}
+// Cupones guardados en el servidor (antes estaban en localStorage y no
+// funcionaban para los clientes, porque cada dispositivo tiene el suyo)
+let _cupones=[];
 
-function crearCupon(){
+async function crearCupon(){
   const codigo=gv('cupon-codigo').trim().toUpperCase();
   const tipo=gv('cupon-tipo');
   const valor=parseFloat(gv('cupon-valor'))||0;
   const usos=parseInt(gv('cupon-usos'))||0;
   const vence=gv('cupon-vence');
   if(!codigo||!valor){alert('Completá el código y el valor del descuento.');return;}
-  const cupones=getCupones();
-  if(cupones.find(c=>c.codigo===codigo)){alert('Ya existe un cupón con ese código.');return;}
-  cupones.push({id:Date.now(),codigo,tipo,valor,usos,usosUsados:0,vence,activo:true});
-  saveCupones(cupones);
+  const res=await apiFetch('/api/cupones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codigo,tipo,valor,usos,vence,activo:true})});
+  if(!res||!res.ok){alert('No se pudo crear el cupón. Puede que ya exista ese código.');return;}
   document.getElementById('cupon-codigo').value='';
   document.getElementById('cupon-valor').value='';
   document.getElementById('cupon-usos').value='0';
   document.getElementById('cupon-vence').value='';
-  loadCupones();
+  showToast('✅ Cupón creado');
+  await loadCupones();
 }
 
-function loadCupones(){
-  const cupones=getCupones();
-  if(!cupones.length){document.getElementById('cupones-list').innerHTML='<div class="empty-state">No hay cupones creados.</div>';return;}
-  const hoy=new Date().toISOString().split('T')[0];
-  document.getElementById('cupones-list').innerHTML=cupones.map(c=>{
+async function loadCupones(){
+  _cupones=await apiFetch('/api/cupones')||[];
+  renderCupones();
+}
+
+function renderCupones(){
+  const list=document.getElementById('cupones-list');
+  if(!list)return;
+  if(!_cupones.length){list.innerHTML='<div class="empty-state">No hay cupones creados.</div>';return;}
+  const hoy=new Date(Date.now()-3*60*60*1000).toISOString().slice(0,10);
+  list.innerHTML=_cupones.map(c=>{
     const vencido=c.vence&&c.vence<hoy;
-    const agotado=c.usos>0&&c.usosUsados>=c.usos;
+    const agotado=c.usos>0&&(c.usosUsados||0)>=c.usos;
     const estado=!c.activo||vencido||agotado?'inactivo':'activo';
     const descTxt=c.tipo==='pct'?c.valor+'% de descuento':'$'+Math.round(c.valor).toLocaleString('es-AR')+' de descuento';
-    const usosTxt=c.usos>0?`${c.usosUsados}/${c.usos} usos`:'Ilimitado';
+    const usosTxt=c.usos>0?`${c.usosUsados||0}/${c.usos} usos`:`Ilimitado (${c.usosUsados||0} usados)`;
     const venceTxt=c.vence?'Vence: '+c.vence:'Sin vencimiento';
+    const motivo=vencido?' · vencido':agotado?' · agotado':'';
     return`<div class="cupon-item">
       <div style="flex:1">
         <div class="cupon-code">${c.codigo}</div>
         <div class="cupon-info">${descTxt} · ${usosTxt} · ${venceTxt}</div>
       </div>
-      <span class="cupon-badge cupon-${estado}">${estado==='activo'?'✓ Activo':'Inactivo'}</span>
-      <button onclick="toggleCupon(${c.id})" class="edit-btn" style="font-size:11px">${c.activo?'Desact.':'Activar'}</button>
-      <button onclick="eliminarCupon(${c.id})" class="slot-del">✕</button>
+      <span class="cupon-badge cupon-${estado}">${estado==='activo'?'✓ Activo':'Inactivo'+motivo}</span>
+      <button onclick="toggleCupon('${c.id}')" class="edit-btn" style="font-size:11px">${c.activo?'Desact.':'Activar'}</button>
+      <button onclick="eliminarCupon('${c.id}')" class="slot-del">✕</button>
     </div>`;
   }).join('');
 }
 
-function toggleCupon(id){const cupones=getCupones();const c=cupones.find(x=>x.id===id);if(c)c.activo=!c.activo;saveCupones(cupones);loadCupones();}
-function eliminarCupon(id){if(!confirm('¿Eliminar este cupón?'))return;saveCupones(getCupones().filter(c=>c.id!==id));loadCupones();}
+async function toggleCupon(id){
+  const c=_cupones.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  await apiFetch('/api/cupones/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({activo:!c.activo})});
+  await loadCupones();
+}
+
+async function eliminarCupon(id){
+  if(!confirm('¿Eliminar este cupón?'))return;
+  await apiFetch('/api/cupones/'+id,{method:'DELETE'});
+  await loadCupones();
+  showToast('✅ Cupón eliminado');
+}
 
 // ── WHATSAPP LINK HELPER (for orders) ─────────────────────────────
 // ── MANUAL ORDERS ─────────────────────────────────────────────────
